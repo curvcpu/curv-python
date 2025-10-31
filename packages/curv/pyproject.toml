@@ -29,4 +29,5 @@ authors = [{name="Mike Goelzer"}]
 classifiers = ["Programming Language :: Python :: 3 :: Only"]
 dependencies = [
   "curvpyutils>=0",
+  "curvpyutils>=0.0.1",
 ]

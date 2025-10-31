@@ -5,8 +5,6 @@ repos:
       - id: ruff
         args: [--fix, --exit-non-zero-on-fix]
         exclude: _version\.py$
-      - id: ruff-format
-        exclude: _version\.py$
 
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
