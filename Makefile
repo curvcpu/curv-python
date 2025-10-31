@@ -72,7 +72,7 @@ check-clean:
 # Version bump + tag + push; hatch-vcs reads tags on build/publish
 .PHONY: publish
 publish: check-clean
-	@set -e; \
+	set -e; \
 	LEVEL=$${LEVEL:-patch}; \
 	PKG=$${PKG:-all}; \
 	case "$$PKG" in \
