@@ -52,7 +52,9 @@ test-e2e:
 .PHONY: build
 build:
 	for p in $(PACKAGES); do \
-		$(UV) run -C $$p -m build --sdist --wheel ; \
+		cd $$p >/dev/null; \
+		$(UV) run -m build --sdist --wheel ; \
+		cd ../.. >/dev/null; \
 	done
 
 .PHONY: clean
