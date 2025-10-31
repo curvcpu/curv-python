@@ -1,4 +1,5 @@
 # <repo-root>/Makefile
+SHELL := /bin/bash
 UV ?= uv
 VENVDIR ?= .venv
 PYTEST = uv run pytest
