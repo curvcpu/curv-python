@@ -13,6 +13,10 @@ DEPENDENT_LEVEL ?= patch
 setup:
 	$(UV) sync
 
+.PHONY: pre-commit
+pre-commit:
+	$(UV) run pre-commit run --all-files
+
 .PHONY: venv
 venv: $(VENVDIR)/bin/python
 $(VENVDIR)/bin/python:
