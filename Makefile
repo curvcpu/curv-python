@@ -3,10 +3,10 @@ UV ?= uv
 VENVDIR ?= .venv
 PYTEST = uv run pytest
 PYTEST_OPTS = -q -n auto
-PACKAGES = packages/curv packages/curvtool
+PACKAGES = packages/curv packages/curvtools
 REMOTE ?= origin
 PKG_CURV = packages/curv
-PKG_CURVTOOL = packages/curvtool
+PKG_curvtools = packages/curvtools
 DEPENDENT_LEVEL ?= patch
 
 .PHONY: setup
@@ -21,7 +21,7 @@ $(VENVDIR)/bin/python:
 .PHONY: install-min
 install-min: venv
 	$(UV) pip install -e $(PKG_CURV)
-	$(UV) pip install -e $(PKG_CURVTOOL)
+	$(UV) pip install -e $(PKG_curvtools)
 
 .PHONY: install-dev
 install-dev: install-min
@@ -70,16 +70,16 @@ publish: check-clean
 	LEVEL=$${LEVEL:-patch}; \
 	PKG=$${PKG:-all}; \
 	case "$$PKG" in \
-	  all|"") ORDER="curv curvtool" ;; \
+	  all|"") ORDER="curv curvtools" ;; \
 	  curv)   ORDER="curv" ;; \
-	  curvtool) ORDER="curvtool" ;; \
-	  *) echo "Unknown PKG=$$PKG (expected curv|curvtool|all)"; exit 1 ;; \
+	  curvtools) ORDER="curvtools" ;; \
+	  *) echo "Unknown PKG=$$PKG (expected curv|curvtools|all)"; exit 1 ;; \
 	esac; \
 	for name in $$ORDER; do \
 		if [ "$$name" = "curv" ]; then \
 			dir="$(PKG_CURV)"; prefix="curv-v"; this_level="$$LEVEL"; \
 		else \
-			dir="$(PKG_CURVTOOL)"; prefix="curvtool-v"; \
+			dir="$(PKG_curvtools)"; prefix="curvtools-v"; \
 			if [ "$$PKG" = "curv" ]; then this_level="$(DEPENDENT_LEVEL)"; else this_level="$$LEVEL"; fi; \
 		fi; \
 		$(UV) run -C $$dir hatch version $$this_level >/dev/null; \
@@ -90,4 +90,4 @@ publish: check-clean
 	done; \
 	git push $(REMOTE) HEAD; \
 	git push $(REMOTE) --tags; \
-	echo "Published PKG=$$PKG (level=$$LEVEL). When PKG=curv, curvtool auto-bumped at $(DEPENDENT_LEVEL)."
+	echo "Published PKG=$$PKG (level=$$LEVEL). When PKG=curv, curvtools auto-bumped at $(DEPENDENT_LEVEL)."

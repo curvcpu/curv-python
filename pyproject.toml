@@ -15,6 +15,6 @@ dependencies = [
 [tool.uv.workspace]
 members = ["packages/*"]
 
-# Make sure local 'curv' is used by 'curvtool' during dev/CI
+# Make sure local 'curv' is used by 'curvtools' during dev/CI
 [tool.uv.sources]
 curv = { workspace = true }

@@ -3,7 +3,7 @@ name: CI
 on:
   push:
     branches: [ main ]
-    tags: [ "curv-v*", "curvtool-v*" ]
+    tags: [ "curv-v*", "curvtools-v*" ]
   pull_request:
 
 jobs:
@@ -55,14 +55,14 @@ jobs:
       - name: Build both packages
         run: |
           uv run -C packages/curv -m build --sdist --wheel
-          uv run -C packages/curvtool -m build --sdist --wheel
+          uv run -C packages/curvtools -m build --sdist --wheel
       - name: Publish curv (tag curv-v*)
         if: startsWith(github.ref_name, 'curv-v')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: packages/curv/dist
-      - name: Publish curvtool (tag curvtool-v*)
-        if: startsWith(github.ref_name, 'curvtool-v')
+      - name: Publish curvtools (tag curvtools-v*)
+        if: startsWith(github.ref_name, 'curvtools-v')
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
-          packages-dir: packages/curvtool/dist
+          packages-dir: packages/curvtools/dist
