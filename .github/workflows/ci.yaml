@@ -52,10 +52,12 @@ jobs:
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@v4
-      - name: Build both packages
-        run: |
-          uv run -C packages/curv -m build --sdist --wheel
-          uv run -C packages/curvtools -m build --sdist --wheel
+      - name: Build curv package (sdist+wheel)
+        working-directory: packages/curv
+        run: uv run -m build --sdist --wheel
+      - name: Build curvtools package (sdist+wheel)
+        working-directory: packages/curvtools
+        run: uv run -m build --sdist --wheel
       - name: Publish curv (tag curv-v*)
         if: startsWith(github.ref_name, 'curv-v')
         uses: pypa/gh-action-pypi-publish@release/v1
