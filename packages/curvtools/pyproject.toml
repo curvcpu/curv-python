@@ -30,7 +30,6 @@ dependencies = [
   "curv>=0",      # will resolve to workspace in dev/CI; to PyPI when published
   "curvpyutils>=0",  # will resolve to workspace in dev/CI; to PyPI when published
   "click>=8",
-  "curvpyutils>=0.0.1",
 ]
 
 [project.scripts]

@@ -66,39 +66,13 @@ next_tag() {
   printf '%s%s\n' "$pfx" "$ver"
 }
 
-# Update dependency in pyproject.toml
-update_dependency() {
-  local pkg_file="$1"
-  local dep_name="$2"
-  local dep_ver="$3"
-
-  if grep -q "\"${dep_name}>=" "$pkg_file"; then
-    sed -i "s/\"${dep_name}>=[^\"]*\"/\"${dep_name}>=${dep_ver}\"/" "$pkg_file"
-  else
-    awk -v dep="\"${dep_name}>=${dep_ver}\"," 'BEGIN { in_deps=0 }
-      /^dependencies = \[/ { in_deps=1; print; next }
-      in_deps && /^\]/ { print "  " dep; in_deps=0 }
-      { print }
-    ' "$pkg_file" > "${pkg_file}.tmp" && mv "${pkg_file}.tmp" "$pkg_file"
-  fi
-}
-
 # Calculate next tag
 NEW_TAG=$(next_tag "$TAG_PFX" "$LEVEL")
-NEW_VER=$(echo "$NEW_TAG" | sed -E "s/^${TAG_PFX}//")
 
 echo "Tagging $PACKAGE → $NEW_TAG"
 
 # Create the tag
 git tag "$NEW_TAG"
-
-# Update dependencies
-if [[ "$PACKAGE" == "curvpyutils" ]]; then
-  update_dependency "packages/curv/pyproject.toml" "curvpyutils" "$NEW_VER"
-  update_dependency "packages/curvtools/pyproject.toml" "curvpyutils" "$NEW_VER"
-elif [[ "$PACKAGE" == "curv" ]]; then
-  update_dependency "packages/curvtools/pyproject.toml" "curv" "$NEW_VER"
-fi
 
 # Push HEAD and tags
 git push "$REMOTE" HEAD
