@@ -6,7 +6,7 @@ PYTEST_OPTS = -q -n auto
 PACKAGES = packages/curv packages/curvtools
 REMOTE ?= origin
 PKG_CURV = packages/curv
-PKG_curvtools = packages/curvtools
+PKG_CURVTOOLS = packages/curvtools
 DEPENDENT_LEVEL ?= patch
 
 .PHONY: setup
@@ -21,7 +21,7 @@ $(VENVDIR)/bin/python:
 .PHONY: install-min
 install-min: venv
 	$(UV) pip install -e $(PKG_CURV)
-	$(UV) pip install -e $(PKG_curvtools)
+	$(UV) pip install -e $(PKG_CURVTOOLS)
 
 .PHONY: install-dev
 install-dev: install-min
@@ -79,7 +79,7 @@ publish: check-clean
 		if [ "$$name" = "curv" ]; then \
 			dir="$(PKG_CURV)"; prefix="curv-v"; this_level="$$LEVEL"; \
 		else \
-			dir="$(PKG_curvtools)"; prefix="curvtools-v"; \
+			dir="$(PKG_CURVTOOLS)"; prefix="curvtools-v"; \
 			if [ "$$PKG" = "curv" ]; then this_level="$(DEPENDENT_LEVEL)"; else this_level="$$LEVEL"; fi; \
 		fi; \
 		$(UV) run -C $$dir hatch version $$this_level >/dev/null; \
