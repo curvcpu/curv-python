@@ -71,109 +71,201 @@ check-clean:
 
 # -------- Version bump + publish (via tags only) --------
 # Usage:
-#   make publish                    # PKG=all, LEVEL=patch
-#   make publish PKG=curv LEVEL=minor
-#   make publish PKG=curvtools LEVEL=patch
-#   make publish PKG=curvpyutils LEVEL=patch
+#   make publish-curvpyutils LEVEL=patch
+#   make publish-curv LEVEL=minor
+#   make publish-curvtools LEVEL=patch
 # Notes:
 #   - With hatch-vcs, version is derived from tags; we never edit pyproject.toml.
-#   - Before publishing any package, checks if curvpyutils has new commits and publishes it first if needed.
+#   - Dependencies: curv depends on curvpyutils, curvtools depends on both.
+#   - LEVEL must be 'patch' or 'minor' (major not allowed).
 
-.PHONY: publish
-publish: check-clean
-	set -e; \
-	LEVEL=$${LEVEL:-patch}; \
-	PKG=$${PKG:-all}; \
-	DEPENDENT_LEVEL=$${DEPENDENT_LEVEL:-patch}; \
-	case "$$PKG" in \
-	  all|"") ORDER="curv curvtools" ;; \
-	  curv)   ORDER="curv" ;; \
-	  curvtools) ORDER="curvtools" ;; \
-	  curvpyutils) ORDER="curvpyutils" ;; \
-	  *) echo "Unknown PKG=$$PKG (expected curv|curvtools|curvpyutils|all)"; exit 1 ;; \
-	esac; \
-	\
-	bump() { \
-	  v="$${1:-0.0.0}"; lvl="$${2:-patch}"; \
-	  set -- $$(printf '%s' "$$v" | tr '.' ' '); \
-	  MA=$${1:-0}; MI=$${2:-0}; PA=$${3:-0}; \
-	  case "$$lvl" in \
-	    major) MA=$$((MA+1)); MI=0; PA=0 ;; \
-	    minor) MI=$$((MI+1)); PA=0 ;; \
-	    patch|*) PA=$$((PA+1)) ;; \
-	  esac; \
-	  printf '%s.%s.%s\n' "$$MA" "$$MI" "$$PA"; \
-	}; \
-	\
-	next_tag() { \
-	  pfx="$$1"; lvl="$$2"; \
-	  last=$$(git tag --list "$${pfx}*" | sed -E "s/^$${pfx}//" \
-	    | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1); \
-	  [ -z "$$last" ] && last="0.0.0"; \
-	  ver=$$(bump "$$last" "$$lvl"); \
-	  printf '%s%s\n' "$$pfx" "$$ver"; \
-	}; \
-	\
+LEVEL ?= patch
+
+# Update commit time stamps - set mtime to last commit time for package directory
+build/.last-commit.curvpyutils.stamp:
+	@mkdir -p build
+	@pkg="packages/curvpyutils"; \
+	commit_time=$$(git log -1 --format=%ct -- "$$pkg" 2>/dev/null || echo ""); \
+	if [ -n "$$commit_time" ]; then \
+	  touch -t "$$(date -u -d "@$$commit_time" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$$commit_time" +%Y%m%d%H%M.%S 2>/dev/null || echo "")" "$@" 2>/dev/null || touch "$@"; \
+	else \
+	  touch "$@"; \
+	fi
+
+build/.last-commit.curv.stamp:
+	@mkdir -p build
+	@pkg="packages/curv"; \
+	commit_time=$$(git log -1 --format=%ct -- "$$pkg" 2>/dev/null || echo ""); \
+	if [ -n "$$commit_time" ]; then \
+	  touch -t "$$(date -u -d "@$$commit_time" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$$commit_time" +%Y%m%d%H%M.%S 2>/dev/null || echo "")" "$@" 2>/dev/null || touch "$@"; \
+	else \
+	  touch "$@"; \
+	fi
+
+build/.last-commit.curvtools.stamp:
+	@mkdir -p build
+	@pkg="packages/curvtools"; \
+	commit_time=$$(git log -1 --format=%ct -- "$$pkg" 2>/dev/null || echo ""); \
+	if [ -n "$$commit_time" ]; then \
+	  touch -t "$$(date -u -d "@$$commit_time" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$$commit_time" +%Y%m%d%H%M.%S 2>/dev/null || echo "")" "$@" 2>/dev/null || touch "$@"; \
+	else \
+	  touch "$@"; \
+	fi
+
+# Publish stamp for curvpyutils
+build/.publish.curvpyutils.stamp: build/.last-commit.curvpyutils.stamp
+	@set -e; \
+	LEVEL="$${LEVEL:-patch}"; \
 	get_last_tag_ver() { \
 	  pfx="$$1"; \
 	  git tag --list "$${pfx}*" | sed -E "s/^$${pfx}//" \
 	    | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1; \
 	}; \
-	\
-	update_dependency() { \
-	  pkg_file="$$1"; dep_name="$$2"; dep_ver="$$3"; \
-	  if grep -q '"'"'$${dep_name}>='"'"' "$$pkg_file"; then \
-	    sed -i "s/\"$${dep_name}>=[^\"]*\"/\"$${dep_name}>=$${dep_ver}\"/" "$$pkg_file"; \
+	get_last_tag_commit() { \
+	  pfx="$$1"; \
+	  ver=$$(get_last_tag_ver "$$pfx"); \
+	  if [ -n "$$ver" ]; then \
+	    git rev-parse "$${pfx}$$ver" 2>/dev/null || echo ""; \
 	  else \
-	    awk -v dep="\"$${dep_name}>=$${dep_ver}\"," 'BEGIN { in_deps=0 } \
-	      /^dependencies = \[/ { in_deps=1; print; next } \
-	      in_deps && /^\]/ { print "  " dep; in_deps=0 } \
-	      { print } \
-	    ' "$$pkg_file" > "$$pkg_file.tmp" && mv "$$pkg_file.tmp" "$$pkg_file"; \
+	    echo ""; \
 	  fi; \
 	}; \
-	\
-	# Check if curvpyutils needs to be published first \
-	if [ "$$PKG" != "curvpyutils" ]; then \
-	  last_ver=$$(get_last_tag_ver "curvpyutils-v"); \
-	  if [ -n "$$last_ver" ]; then \
-	    last_tag="curvpyutils-v$$last_ver"; \
-	    tag_commit=$$(git rev-parse "$$last_tag" 2>/dev/null || echo ""); \
-	    head_commit=$$(git rev-parse HEAD); \
-	    if [ -n "$$tag_commit" ] && [ "$$tag_commit" != "$$head_commit" ]; then \
-	      echo "curvpyutils has new commits since $$last_tag, publishing it first..."; \
-	      curvpy_tag=$$(next_tag "curvpyutils-v" "$$LEVEL"); \
-	      echo "Tagging curvpyutils → $$curvpy_tag"; \
-	      git tag "$$curvpy_tag"; \
-	      curvpy_ver=$$(echo "$$curvpy_tag" | sed -E "s/^curvpyutils-v//"); \
-	      update_dependency "packages/curv/pyproject.toml" "curvpyutils" "$$curvpy_ver"; \
-	      update_dependency "packages/curvtools/pyproject.toml" "curvpyutils" "$$curvpy_ver"; \
-	    fi; \
+	cleanup_tag() { \
+	  git tag -d "$$1" 2>/dev/null || true; \
+	  git push --delete $(REMOTE) "$$1" 2>/dev/null || true; \
+	  git push $(REMOTE) 2>/dev/null || true; \
+	}; \
+	last_tag_commit=$$(get_last_tag_commit "curvpyutils-v"); \
+	head_commit=$$(git rev-parse HEAD); \
+	if [ -n "$$last_tag_commit" ] && [ "$$last_tag_commit" = "$$head_commit" ]; then \
+	  echo "curvpyutils already published at HEAD (no new commits)"; \
+	  touch "$@"; \
+	else \
+	  echo "Publishing curvpyutils..."; \
+	  new_tag=$$(scripts/publish.sh curvpyutils "$$LEVEL"); \
+	  echo "Waiting for GitHub publish result..."; \
+	  if ! scripts/wait-github-publish-result.py "$$new_tag"; then \
+	    echo "Error: GitHub publish failed for $$new_tag"; \
+	    cleanup_tag "$$new_tag"; \
+	    exit 1; \
+	  fi; \
+	  echo "Verifying PyPI publication..."; \
+	  pypi_ver=$$(scripts/chk-pypi-latest-ver.py -L curvpyutils); \
+	  expected_ver=$$(echo "$$new_tag" | sed -E "s/^curvpyutils-v//"); \
+	  if [ "$$pypi_ver" != "$$expected_ver" ]; then \
+	    echo "Error: PyPI version mismatch. Expected $$expected_ver, got $$pypi_ver"; \
+	    cleanup_tag "$$new_tag"; \
+	    exit 1; \
+	  fi; \
+	  echo "curvpyutils published successfully as $$new_tag ($$expected_ver)"; \
+	  touch "$@"; \
+	fi
+
+# Publish stamp for curv (depends on curvpyutils)
+build/.publish.curv.stamp: build/.last-commit.curv.stamp build/.publish.curvpyutils.stamp
+	@set -e; \
+	LEVEL="$${LEVEL:-patch}"; \
+	get_last_tag_ver() { \
+	  pfx="$$1"; \
+	  git tag --list "$${pfx}*" | sed -E "s/^$${pfx}//" \
+	    | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1; \
+	}; \
+	get_last_tag_commit() { \
+	  pfx="$$1"; \
+	  ver=$$(get_last_tag_ver "$$pfx"); \
+	  if [ -n "$$ver" ]; then \
+	    git rev-parse "$${pfx}$$ver" 2>/dev/null || echo ""; \
 	  else \
-	    echo "curvpyutils has no tags, publishing it first..."; \
-	    curvpy_tag=$$(next_tag "curvpyutils-v" "$$LEVEL"); \
-	    echo "Tagging curvpyutils → $$curvpy_tag"; \
-	    git tag "$$curvpy_tag"; \
-	    curvpy_ver=$$(echo "$$curvpy_tag" | sed -E "s/^curvpyutils-v//"); \
-	    update_dependency "packages/curv/pyproject.toml" "curvpyutils" "$$curvpy_ver"; \
-	    update_dependency "packages/curvtools/pyproject.toml" "curvpyutils" "$$curvpy_ver"; \
+	    echo ""; \
 	  fi; \
-	fi; \
-	\
-	for name in $$ORDER; do \
-	  if [ "$$name" = "curv" ]; then \
-	    pfx="curv-v"; lvl="$$LEVEL"; \
-	  elif [ "$$name" = "curvtools" ]; then \
-	    pfx="curvtools-v"; \
-	    if [ "$$PKG" = "curv" ]; then lvl="$$DEPENDENT_LEVEL"; else lvl="$$LEVEL"; fi; \
-	  elif [ "$$name" = "curvpyutils" ]; then \
-	    pfx="curvpyutils-v"; lvl="$$LEVEL"; \
+	}; \
+	cleanup_tag() { \
+	  git tag -d "$$1" 2>/dev/null || true; \
+	  git push --delete $(REMOTE) "$$1" 2>/dev/null || true; \
+	  git push $(REMOTE) 2>/dev/null || true; \
+	}; \
+	last_tag_commit=$$(get_last_tag_commit "curv-v"); \
+	head_commit=$$(git rev-parse HEAD); \
+	if [ -n "$$last_tag_commit" ] && [ "$$last_tag_commit" = "$$head_commit" ]; then \
+	  echo "curv already published at HEAD (no new commits)"; \
+	  touch "$@"; \
+	else \
+	  echo "Publishing curv..."; \
+	  new_tag=$$(scripts/publish.sh curv "$$LEVEL"); \
+	  echo "Waiting for GitHub publish result..."; \
+	  if ! scripts/wait-github-publish-result.py "$$new_tag"; then \
+	    echo "Error: GitHub publish failed for $$new_tag"; \
+	    cleanup_tag "$$new_tag"; \
+	    exit 1; \
 	  fi; \
-	  tag=$$(next_tag "$$pfx" "$$lvl"); \
-	  echo "Tagging $$name → $$tag"; \
-	  git tag "$$tag"; \
-	done; \
-	\
-	git push $(REMOTE) HEAD; \
-	git push $(REMOTE) --tags; \
-	echo "Published PKG=$$PKG (level=$$LEVEL). When PKG=curv, curvtools auto-bumped at $$DEPENDENT_LEVEL)."
+	  echo "Verifying PyPI publication..."; \
+	  pypi_ver=$$(scripts/chk-pypi-latest-ver.py -L curv); \
+	  expected_ver=$$(echo "$$new_tag" | sed -E "s/^curv-v//"); \
+	  if [ "$$pypi_ver" != "$$expected_ver" ]; then \
+	    echo "Error: PyPI version mismatch. Expected $$expected_ver, got $$pypi_ver"; \
+	    cleanup_tag "$$new_tag"; \
+	    exit 1; \
+	  fi; \
+	  echo "curv published successfully as $$new_tag ($$expected_ver)"; \
+	  touch "$@"; \
+	fi
+
+# Publish stamp for curvtools (depends on curvpyutils and curv)
+build/.publish.curvtools.stamp: build/.last-commit.curvtools.stamp build/.publish.curvpyutils.stamp build/.publish.curv.stamp
+	@set -e; \
+	LEVEL="$${LEVEL:-patch}"; \
+	get_last_tag_ver() { \
+	  pfx="$$1"; \
+	  git tag --list "$${pfx}*" | sed -E "s/^$${pfx}//" \
+	    | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1; \
+	}; \
+	get_last_tag_commit() { \
+	  pfx="$$1"; \
+	  ver=$$(get_last_tag_ver "$$pfx"); \
+	  if [ -n "$$ver" ]; then \
+	    git rev-parse "$${pfx}$$ver" 2>/dev/null || echo ""; \
+	  else \
+	    echo ""; \
+	  fi; \
+	}; \
+	cleanup_tag() { \
+	  git tag -d "$$1" 2>/dev/null || true; \
+	  git push --delete $(REMOTE) "$$1" 2>/dev/null || true; \
+	  git push $(REMOTE) 2>/dev/null || true; \
+	}; \
+	last_tag_commit=$$(get_last_tag_commit "curvtools-v"); \
+	head_commit=$$(git rev-parse HEAD); \
+	if [ -n "$$last_tag_commit" ] && [ "$$last_tag_commit" = "$$head_commit" ]; then \
+	  echo "curvtools already published at HEAD (no new commits)"; \
+	  touch "$@"; \
+	else \
+	  echo "Publishing curvtools..."; \
+	  new_tag=$$(scripts/publish.sh curvtools "$$LEVEL"); \
+	  echo "Waiting for GitHub publish result..."; \
+	  if ! scripts/wait-github-publish-result.py "$$new_tag"; then \
+	    echo "Error: GitHub publish failed for $$new_tag"; \
+	    cleanup_tag "$$new_tag"; \
+	    exit 1; \
+	  fi; \
+	  echo "Verifying PyPI publication..."; \
+	  pypi_ver=$$(scripts/chk-pypi-latest-ver.py -L curvtools); \
+	  expected_ver=$$(echo "$$new_tag" | sed -E "s/^curvtools-v//"); \
+	  if [ "$$pypi_ver" != "$$expected_ver" ]; then \
+	    echo "Error: PyPI version mismatch. Expected $$expected_ver, got $$pypi_ver"; \
+	    cleanup_tag "$$new_tag"; \
+	    exit 1; \
+	  fi; \
+	  echo "curvtools published successfully as $$new_tag ($$expected_ver)"; \
+	  touch "$@"; \
+	fi
+
+# Phony targets that users invoke
+.PHONY: publish-curvpyutils publish-curv publish-curvtools
+publish-curvpyutils: check-clean build/.publish.curvpyutils.stamp
+	@echo "curvpyutils publish complete"
+
+publish-curv: check-clean build/.publish.curv.stamp
+	@echo "curv publish complete"
+
+publish-curvtools: check-clean build/.publish.curvtools.stamp
+	@echo "curvtools publish complete"
