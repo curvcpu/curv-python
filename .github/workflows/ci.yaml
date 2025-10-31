@@ -97,4 +97,4 @@ jobs:
               "description": "PyPI publish workflow",
               "target_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             }
-            JSON
+JSON
