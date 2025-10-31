@@ -1,5 +1,4 @@
 # <repo-root>/Makefile
-SHELL := /bin/bash
 UV ?= uv
 VENVDIR ?= .venv
 PYTEST = uv run pytest
@@ -92,38 +91,38 @@ publish: check-clean
 	esac; \
 	\
 	bump() { \
-	  v="$${1:-0.0.0}"; level="$${2:-patch}"; \
-	  IFS=. read -r MA MI PA <<EOF \
-$$v \
-EOF \
-	  || { MA=0; MI=0; PA=0; }; \
-	  case "$$level" in \
+	  v="$${1:-0.0.0}"; lvl="$${2:-patch}"; \
+	  set -- $$(printf '%s' "$$v" | tr '.' ' '); \
+	  MA=$${1:-0}; MI=$${2:-0}; PA=$${3:-0}; \
+	  case "$$lvl" in \
 	    major) MA=$$((MA+1)); MI=0; PA=0 ;; \
 	    minor) MI=$$((MI+1)); PA=0 ;; \
 	    patch|*) PA=$$((PA+1)) ;; \
 	  esac; \
-	  echo "$$MA.$$MI.$$PA"; \
+	  printf '%s.%s.%s\n' "$$MA" "$$MI" "$$PA"; \
 	}; \
 	\
 	next_tag() { \
-	  prefix="$$1"; level="$$2"; \
-	  last=$$(git tag --list "$${prefix}*" | sed -E "s/^$${prefix}//" | sort -V | tail -n1); \
-	  next=$$(bump "$${last:-0.0.0}" "$$level"); \
-	  echo "$$prefix$$next"; \
+	  pfx="$$1"; lvl="$$2"; \
+	  last=$$(git tag --list "$${pfx}*" | sed -E "s/^$${pfx}//" \
+	    | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1); \
+	  [ -z "$$last" ] && last="0.0.0"; \
+	  ver=$$(bump "$$last" "$$lvl"); \
+	  printf '%s%s\n' "$$pfx" "$$ver"; \
 	}; \
 	\
 	for name in $$ORDER; do \
 	  if [ "$$name" = "curv" ]; then \
-	    prefix="curv-v"; level="$$LEVEL"; \
+	    pfx="curv-v"; lvl="$$LEVEL"; \
 	  else \
-	    prefix="curvtools-v"; \
-	    if [ "$$PKG" = "curv" ]; then level="$$DEPENDENT_LEVEL"; else level="$$LEVEL"; fi; \
+	    pfx="curvtools-v"; \
+	    if [ "$$PKG" = "curv" ]; then lvl="$$DEPENDENT_LEVEL"; else lvl="$$LEVEL"; fi; \
 	  fi; \
-	  tag=$$(next_tag "$$prefix" "$$level"); \
+	  tag=$$(next_tag "$$pfx" "$$lvl"); \
 	  echo "Tagging $$name → $$tag"; \
 	  git tag "$$tag"; \
 	done; \
 	\
 	git push $(REMOTE) HEAD; \
 	git push $(REMOTE) --tags; \
-	echo "Published PKG=$$PKG (level=$$LEVEL). When PKG=curv, curvtools auto-bumped at $$DEPENDENT_LEVEL."
+	echo "Published PKG=$$PKG (level=$$LEVEL). When PKG=curv, curvtools auto-bumped at $$DEPENDENT_LEVEL)."
