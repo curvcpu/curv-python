@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.version]
 source = "vcs"                      # derive from git tags
-tag_pattern = "^curv-v(?P<version>.+)$"
+tag_pattern = "^curvpyutils-v(?P<version>.+)$"
 fallback-version = "0.0.0"
 
 [tool.hatch.version.raw-options]
@@ -13,20 +13,18 @@ relative_to = "pyproject.toml"
 
 # write a version file on build
 [tool.hatch.build.hooks.vcs]
-version-file = "src/curv/_version.py"
+version-file = "src/curvpyutils/_version.py"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/curv"]
+packages = ["src/curvpyutils"]
 
 [project]
-name = "curv"
+name = "curvpyutils"
 requires-python = ">=3.10"
 dynamic = ["version"]
-description = "Curv shared library for Curv RISC-V tooling"
+description = "Utility functions for Curv Python packages"
 readme = "readme.md"
 license = {text = "MIT"}
 authors = [{name="Mike Goelzer"}]
 classifiers = ["Programming Language :: Python :: 3 :: Only"]
-dependencies = [
-  "curvpyutils>=0",
-]
+dependencies = []

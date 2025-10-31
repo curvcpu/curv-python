@@ -3,10 +3,11 @@ UV ?= uv
 VENVDIR ?= .venv
 PYTEST = uv run pytest
 PYTEST_OPTS = -q -n auto
-PACKAGES = packages/curv packages/curvtools
+PACKAGES = packages/curv packages/curvtools packages/curvpyutils
 REMOTE ?= origin
 PKG_CURV = packages/curv
 PKG_CURVTOOLS = packages/curvtools
+PKG_CURVPYUTILS = packages/curvpyutils
 DEPENDENT_LEVEL ?= patch
 
 .PHONY: setup
@@ -28,6 +29,7 @@ $(VENVDIR)/bin/python:
 install-min: venv
 	$(UV) pip install -e $(PKG_CURV)
 	$(UV) pip install -e $(PKG_CURVTOOLS)
+	$(UV) pip install -e $(PKG_CURVPYUTILS)
 
 .PHONY: install-dev
 install-dev: install-min
@@ -74,12 +76,14 @@ check-clean:
 #   make publish                    # PKG=all, LEVEL=patch
 #   make publish PKG=curv LEVEL=minor
 #   make publish PKG=curvtools LEVEL=patch
+#   make publish PKG=curvpyutils LEVEL=patch
 # Notes:
 #   - With hatch-vcs, version is derived from tags; we never edit pyproject.toml.
+#   - Before publishing any package, checks if curvpyutils has new commits and publishes it first if needed.
 
 .PHONY: publish
 publish: check-clean
-	@set -e; \
+	set -e; \
 	LEVEL=$${LEVEL:-patch}; \
 	PKG=$${PKG:-all}; \
 	DEPENDENT_LEVEL=$${DEPENDENT_LEVEL:-patch}; \
@@ -87,7 +91,8 @@ publish: check-clean
 	  all|"") ORDER="curv curvtools" ;; \
 	  curv)   ORDER="curv" ;; \
 	  curvtools) ORDER="curvtools" ;; \
-	  *) echo "Unknown PKG=$$PKG (expected curv|curvtools|all)"; exit 1 ;; \
+	  curvpyutils) ORDER="curvpyutils" ;; \
+	  *) echo "Unknown PKG=$$PKG (expected curv|curvtools|curvpyutils|all)"; exit 1 ;; \
 	esac; \
 	\
 	bump() { \
@@ -111,12 +116,60 @@ publish: check-clean
 	  printf '%s%s\n' "$$pfx" "$$ver"; \
 	}; \
 	\
+	get_last_tag_ver() { \
+	  pfx="$$1"; \
+	  git tag --list "$${pfx}*" | sed -E "s/^$${pfx}//" \
+	    | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1; \
+	}; \
+	\
+	update_dependency() { \
+	  pkg_file="$$1"; dep_name="$$2"; dep_ver="$$3"; \
+	  if grep -q '"'"'$${dep_name}>='"'"' "$$pkg_file"; then \
+	    sed -i "s/\"$${dep_name}>=[^\"]*\"/\"$${dep_name}>=$${dep_ver}\"/" "$$pkg_file"; \
+	  else \
+	    awk -v dep="\"$${dep_name}>=$${dep_ver}\"," 'BEGIN { in_deps=0 } \
+	      /^dependencies = \[/ { in_deps=1; print; next } \
+	      in_deps && /^\]/ { print "  " dep; in_deps=0 } \
+	      { print } \
+	    ' "$$pkg_file" > "$$pkg_file.tmp" && mv "$$pkg_file.tmp" "$$pkg_file"; \
+	  fi; \
+	}; \
+	\
+	# Check if curvpyutils needs to be published first \
+	if [ "$$PKG" != "curvpyutils" ]; then \
+	  last_ver=$$(get_last_tag_ver "curvpyutils-v"); \
+	  if [ -n "$$last_ver" ]; then \
+	    last_tag="curvpyutils-v$$last_ver"; \
+	    tag_commit=$$(git rev-parse "$$last_tag" 2>/dev/null || echo ""); \
+	    head_commit=$$(git rev-parse HEAD); \
+	    if [ -n "$$tag_commit" ] && [ "$$tag_commit" != "$$head_commit" ]; then \
+	      echo "curvpyutils has new commits since $$last_tag, publishing it first..."; \
+	      curvpy_tag=$$(next_tag "curvpyutils-v" "$$LEVEL"); \
+	      echo "Tagging curvpyutils → $$curvpy_tag"; \
+	      git tag "$$curvpy_tag"; \
+	      curvpy_ver=$$(echo "$$curvpy_tag" | sed -E "s/^curvpyutils-v//"); \
+	      update_dependency "packages/curv/pyproject.toml" "curvpyutils" "$$curvpy_ver"; \
+	      update_dependency "packages/curvtools/pyproject.toml" "curvpyutils" "$$curvpy_ver"; \
+	    fi; \
+	  else \
+	    echo "curvpyutils has no tags, publishing it first..."; \
+	    curvpy_tag=$$(next_tag "curvpyutils-v" "$$LEVEL"); \
+	    echo "Tagging curvpyutils → $$curvpy_tag"; \
+	    git tag "$$curvpy_tag"; \
+	    curvpy_ver=$$(echo "$$curvpy_tag" | sed -E "s/^curvpyutils-v//"); \
+	    update_dependency "packages/curv/pyproject.toml" "curvpyutils" "$$curvpy_ver"; \
+	    update_dependency "packages/curvtools/pyproject.toml" "curvpyutils" "$$curvpy_ver"; \
+	  fi; \
+	fi; \
+	\
 	for name in $$ORDER; do \
 	  if [ "$$name" = "curv" ]; then \
 	    pfx="curv-v"; lvl="$$LEVEL"; \
-	  else \
+	  elif [ "$$name" = "curvtools" ]; then \
 	    pfx="curvtools-v"; \
 	    if [ "$$PKG" = "curv" ]; then lvl="$$DEPENDENT_LEVEL"; else lvl="$$LEVEL"; fi; \
+	  elif [ "$$name" = "curvpyutils" ]; then \
+	    pfx="curvpyutils-v"; lvl="$$LEVEL"; \
 	  fi; \
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
 	  echo "Tagging $$name → $$tag"; \
