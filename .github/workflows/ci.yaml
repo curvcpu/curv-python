@@ -85,16 +85,15 @@ jobs:
         if: always()
         env:
           STATE: ${{ job.status == 'success' && 'success' || 'failure' }}
+          CONTEXT: ${{ startsWith(github.ref_name, 'curv-v') && 'publish/curv' ||
+                    (startsWith(github.ref_name, 'curvtools-v') && 'publish/curvtools' ||
+                     (startsWith(github.ref_name, 'curvpyutils-v') && 'publish/curvpyutils' || 'publish/unknown')) }}
+          TARGET_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          payload=$(jq -n --arg state "$STATE" --arg ctx "$CONTEXT" --arg url "$TARGET_URL" \
+            '{state:$state, context:$ctx, description:"PyPI publish workflow", target_url:$url}')
           curl -fsSL -X POST \
             -H "Authorization: Bearer ${{ github.token }}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${{ github.repository }}/statuses/${{ github.sha }}" \
-            -d @- <<JSON
-            {
-              "state": "${STATE}",
-              "context": "publish/${{ startsWith(github.ref_name, 'curv-v') && 'curv' || (startsWith(github.ref_name, 'curvtools-v') && 'curvtools' || (startsWith(github.ref_name, 'curvpyutils-v') && 'curvpyutils' || 'unknown')) }}",
-              "description": "PyPI publish workflow",
-              "target_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
-            }
-JSON
+            -d "$payload"
