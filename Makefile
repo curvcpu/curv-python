@@ -69,33 +69,60 @@ clean:
 check-clean:
 	@test -z "$$(git status --porcelain)" || (echo "Error: git working tree is not clean. Commit/stash first."; exit 1)
 
-# Version bump + tag + push; hatch-vcs reads tags on build/publish
+# -------- Version bump + publish (via tags only) --------
+# Usage:
+#   make publish                    # PKG=all, LEVEL=patch
+#   make publish PKG=curv LEVEL=minor
+#   make publish PKG=curvtools LEVEL=patch
+# Notes:
+#   - With hatch-vcs, version is derived from tags; we never edit pyproject.toml.
+
 .PHONY: publish
 publish: check-clean
-	set -e; \
+	@set -e; \
 	LEVEL=$${LEVEL:-patch}; \
 	PKG=$${PKG:-all}; \
+	DEPENDENT_LEVEL=$${DEPENDENT_LEVEL:-patch}; \
 	case "$$PKG" in \
 	  all|"") ORDER="curv curvtools" ;; \
 	  curv)   ORDER="curv" ;; \
 	  curvtools) ORDER="curvtools" ;; \
 	  *) echo "Unknown PKG=$$PKG (expected curv|curvtools|all)"; exit 1 ;; \
 	esac; \
+	\
+	bump() { \
+	  v="$${1:-0.0.0}"; level="$${2:-patch}"; \
+	  IFS=. read -r MA MI PA <<EOF \
+$$v \
+EOF \
+	  || { MA=0; MI=0; PA=0; }; \
+	  case "$$level" in \
+	    major) MA=$$((MA+1)); MI=0; PA=0 ;; \
+	    minor) MI=$$((MI+1)); PA=0 ;; \
+	    patch|*) PA=$$((PA+1)) ;; \
+	  esac; \
+	  echo "$$MA.$$MI.$$PA"; \
+	}; \
+	\
+	next_tag() { \
+	  prefix="$$1"; level="$$2"; \
+	  last=$$(git tag --list "$${prefix}*" | sed -E "s/^$${prefix}//" | sort -V | tail -n1); \
+	  next=$$(bump "$${last:-0.0.0}" "$$level"); \
+	  echo "$$prefix$$next"; \
+	}; \
+	\
 	for name in $$ORDER; do \
-		if [ "$$name" = "curv" ]; then \
-			dir="$(PKG_CURV)"; prefix="curv-v"; this_level="$$LEVEL"; \
-		else \
-			dir="$(PKG_CURVTOOLS)"; prefix="curvtools-v"; \
-			if [ "$$PKG" = "curv" ]; then this_level="$(DEPENDENT_LEVEL)"; else this_level="$$LEVEL"; fi; \
-		fi; \
-		cd $$dir; \
-		$(UV) run hatch version $$this_level >/dev/null; \
-		V=$$(uv run hatch version); \
-		cd ../..; \
-		git add $$dir/pyproject.toml; \
-		git commit -m "$$name: bump version to $$V"; \
-		git tag $$prefix$$V; \
+	  if [ "$$name" = "curv" ]; then \
+	    prefix="curv-v"; level="$$LEVEL"; \
+	  else \
+	    prefix="curvtools-v"; \
+	    if [ "$$PKG" = "curv" ]; then level="$$DEPENDENT_LEVEL"; else level="$$LEVEL"; fi; \
+	  fi; \
+	  tag=$$(next_tag "$$prefix" "$$level"); \
+	  echo "Tagging $$name → $$tag"; \
+	  git tag "$$tag"; \
 	done; \
+	\
 	git push $(REMOTE) HEAD; \
 	git push $(REMOTE) --tags; \
-	echo "Published PKG=$$PKG (level=$$LEVEL). When PKG=curv, curvtools auto-bumped at $(DEPENDENT_LEVEL)."
+	echo "Published PKG=$$PKG (level=$$LEVEL). When PKG=curv, curvtools auto-bumped at $$DEPENDENT_LEVEL."
