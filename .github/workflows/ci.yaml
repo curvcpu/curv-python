@@ -52,6 +52,8 @@ jobs:
         with:
           python-version: "3.12"
       - uses: astral-sh/setup-uv@v4
+      - name: Sync root dev deps
+        run: uv sync
       - name: Build curv package (sdist+wheel)
         working-directory: packages/curv
         run: uv run -m build --sdist --wheel
