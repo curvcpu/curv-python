@@ -13,8 +13,10 @@ DEPENDENT_LEVEL ?= patch
 setup:
 	$(UV) sync
 
+# local convenience: format, then run hooks (will be no-op)
 .PHONY: pre-commit
 pre-commit:
+	$(UV) run ruff format .
 	$(UV) run pre-commit run --all-files
 
 .PHONY: venv
