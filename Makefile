@@ -88,8 +88,10 @@ publish: check-clean
 			dir="$(PKG_CURVTOOLS)"; prefix="curvtools-v"; \
 			if [ "$$PKG" = "curv" ]; then this_level="$(DEPENDENT_LEVEL)"; else this_level="$$LEVEL"; fi; \
 		fi; \
-		$(UV) run -C $$dir hatch version $$this_level >/dev/null; \
-		V=$$(uv run -C $$dir hatch version); \
+		cd $$dir; \
+		$(UV) run hatch version $$this_level >/dev/null; \
+		V=$$(uv run hatch version); \
+		cd ../..; \
 		git add $$dir/pyproject.toml; \
 		git commit -m "$$name: bump version to $$V"; \
 		git tag $$prefix$$V; \
