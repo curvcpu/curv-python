@@ -1,0 +1,20 @@
+# <repo-root>/pyproject.toml
+[project]
+name = "curv-python-workspace"
+version = "0"
+requires-python = ">=3.10"
+dependencies = [
+  "pytest>=7",
+  "pytest-xdist>=3",
+  "ruff>=0.6",
+  "build>=1",
+  "pre-commit>=3.7",
+  "click>=8",            # so CLI e2e tests resolve click in the root dev env
+]
+
+[tool.uv.workspace]
+members = ["packages/*"]
+
+# Make sure local 'curv' is used by 'curvtool' during dev/CI
+[tool.uv.sources]
+curv = { workspace = true }

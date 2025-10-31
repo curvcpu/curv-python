@@ -1,0 +1,11 @@
+.venv/
+.pytest_cache/
+.ruff_cache/
+__pycache__/
+build/
+dist/
+*.egg-info
+uv.lock
+packages/*/dist/
+packages/*/build/
+packages/*/*.egg-info
