@@ -27,4 +27,13 @@ readme = "readme.md"
 license = {text = "MIT"}
 authors = [{name="Mike Goelzer"}]
 classifiers = ["Programming Language :: Python :: 3 :: Only"]
-dependencies = []
+dependencies = [
+  "python-dotenv",
+  "rich",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest>=8",
+  "pytest-cov",
+]
