@@ -28,6 +28,5 @@ license = {text = "MIT"}
 authors = [{name="Mike Goelzer"}]
 classifiers = ["Programming Language :: Python :: 3 :: Only"]
 dependencies = [
-  "curvpyutils>=0.0.8",
-  "curvpyutils>=0.0.8",
+  "curvpyutils>=0", # will resolve to workspace in dev/CI; to PyPI when published
 ]

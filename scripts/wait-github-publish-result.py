@@ -62,16 +62,51 @@ def main() -> int:
         try:
             print(f"fetching status for {get_status_url_for_tag(args.tag[0])}", flush=True)
             data = fetch_status(args.tag[0], token)
+            print(f"DEBUG: Full response JSON:\n{json.dumps(data, indent=2)}", flush=True)
+
+            # Check combined state first (top-level "state" field)
+            combined_state = data.get("state", "").lower()
+            print(f"DEBUG: Combined state: '{combined_state}'", flush=True)
+
             statuses = data.get("statuses", [])
-            if statuses:
-                state = str(statuses[0].get("state", "")).lower()
-                if state == "success":
-                    # optional: print final target_url
-                    print("[SUCCESS] " + statuses[0].get("target_url", ""), flush=True)
-                    return 0
-                if state in {"failure", "error"}:
-                    print("[FAILURE] " + statuses[0].get("target_url", ""), flush=True)
-                    return 2
+            print(f"DEBUG: statuses array length: {len(statuses)}", flush=True)
+
+            # Look for publish status in the statuses array
+            publish_status = None
+            for status in statuses:
+                context = status.get("context", "")
+                print(f"DEBUG: Checking status with context: '{context}'", flush=True)
+                if "publish" in context.lower():
+                    publish_status = status
+                    print(f"DEBUG: Found publish status: {json.dumps(status, indent=2)}", flush=True)
+                    break
+
+            # Use combined state if available, otherwise check publish status
+            if combined_state == "success" and publish_status:
+                state_to_check = str(publish_status.get("state", combined_state)).lower()
+            elif combined_state:
+                state_to_check = combined_state
+            elif publish_status:
+                state_to_check = str(publish_status.get("state", "")).lower()
+            else:
+                state_to_check = None
+
+            print(f"DEBUG: Final state to check: '{state_to_check}'", flush=True)
+
+            if state_to_check == "success":
+                if publish_status:
+                    print("[SUCCESS] " + publish_status.get("target_url", ""), flush=True)
+                else:
+                    print("[SUCCESS] Workflow completed successfully", flush=True)
+                return 0
+            elif state_to_check in {"failure", "error"}:
+                if publish_status:
+                    print("[FAILURE] " + publish_status.get("target_url", ""), flush=True)
+                else:
+                    print("[FAILURE] Workflow failed", flush=True)
+                return 2
+            else:
+                print("DEBUG: Status not yet available or still pending, waiting...", flush=True)
             # else: still pending (empty array)
         except urllib.error.HTTPError as e:
             # 404 while GH wires things up; keep waiting
