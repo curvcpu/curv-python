@@ -236,7 +236,8 @@ build/.publish.curvtools.stamp: build/.publish.curvpyutils.stamp build/.publish.
 publish-curvpyutils: check-clean build/.publish.curvpyutils.stamp
 	@echo "curvpyutils publish complete"
 
-publish-curv: check-clean build/.publish.curv.stamp
+# When publishing curv, also publish curvtools (since curvtools depends on curv)
+publish-curv: check-clean build/.publish.curv.stamp build/.publish.curvtools.stamp
 	@echo "curv publish complete"
 
 publish-curvtools: check-clean build/.publish.curvtools.stamp
