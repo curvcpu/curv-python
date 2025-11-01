@@ -69,7 +69,8 @@ next_tag() {
 # Calculate next tag
 NEW_TAG=$(next_tag "$TAG_PFX" "$LEVEL")
 
-echo "Tagging $PACKAGE → $NEW_TAG"
+# Informational message goes to stderr (so Makefile can capture just the tag from stdout)
+echo "Tagging $PACKAGE → $NEW_TAG" >&2
 
 # Create the tag
 git tag "$NEW_TAG"
@@ -78,5 +79,5 @@ git tag "$NEW_TAG"
 git push "$REMOTE" HEAD
 git push "$REMOTE" --tags
 
-# Output the tag name (used by Makefile)
+# Output only the tag name to stdout (used by Makefile)
 echo "$NEW_TAG"
