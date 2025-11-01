@@ -9,7 +9,6 @@ make install-dev
 make test-unit
 make test-e2e    # exercises installed CLIs
 
-
 ## Publishing
 
 ### show PyPI versions if you're curious
