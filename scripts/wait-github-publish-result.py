@@ -45,12 +45,14 @@ def fetch_status(tag: str, token: str | None) -> dict:
 
 def parse_args():
     parser = argparse.ArgumentParser(description='wait for github tag action to report success')
+    parser.add_argument("-d", "--debug", action="store_true", help='enable debug output')
     parser.add_argument("tag", metavar="TAG", nargs=1, help='a recently published tag, e.g., `curvpyutils-v0.0.7`')
     args = parser.parse_args()
     return args
 
 def main() -> int:
     args = parse_args()
+    debug = args.debug
     try:
         timeout = int(os.environ.get("TIMEOUT", "360"))
     except ValueError:
@@ -60,25 +62,31 @@ def main() -> int:
     start = time.time()
     while True:
         try:
-            print(f"fetching status for {get_status_url_for_tag(args.tag[0])}", flush=True)
+            if debug:
+                print(f"DEBUG: fetching status for {get_status_url_for_tag(args.tag[0])}", flush=True)
             data = fetch_status(args.tag[0], token)
-            print(f"DEBUG: Full response JSON:\n{json.dumps(data, indent=2)}", flush=True)
+            if debug:
+                print(f"DEBUG: Full response JSON:\n{json.dumps(data, indent=2)}", flush=True)
 
             # Check combined state first (top-level "state" field)
             combined_state = data.get("state", "").lower()
-            print(f"DEBUG: Combined state: '{combined_state}'", flush=True)
+            if debug:
+                print(f"DEBUG: Combined state: '{combined_state}'", flush=True)
 
             statuses = data.get("statuses", [])
-            print(f"DEBUG: statuses array length: {len(statuses)}", flush=True)
+            if debug:
+                print(f"DEBUG: statuses array length: {len(statuses)}", flush=True)
 
             # Look for publish status in the statuses array
             publish_status = None
             for status in statuses:
                 context = status.get("context", "")
-                print(f"DEBUG: Checking status with context: '{context}'", flush=True)
+                if debug:
+                    print(f"DEBUG: Checking status with context: '{context}'", flush=True)
                 if "publish" in context.lower():
                     publish_status = status
-                    print(f"DEBUG: Found publish status: {json.dumps(status, indent=2)}", flush=True)
+                    if debug:
+                        print(f"DEBUG: Found publish status: {json.dumps(status, indent=2)}", flush=True)
                     break
 
             # Use combined state if available, otherwise check publish status
@@ -91,7 +99,8 @@ def main() -> int:
             else:
                 state_to_check = None
 
-            print(f"DEBUG: Final state to check: '{state_to_check}'", flush=True)
+            if debug:
+                print(f"DEBUG: Final state to check: '{state_to_check}'", flush=True)
 
             if state_to_check == "success":
                 if publish_status:
@@ -106,7 +115,8 @@ def main() -> int:
                     print("[FAILURE] Workflow failed", flush=True)
                 return 2
             else:
-                print("DEBUG: Status not yet available or still pending, waiting...", flush=True)
+                if debug:
+                    print("DEBUG: Status not yet available or still pending, waiting...", flush=True)
             # else: still pending (empty array)
         except urllib.error.HTTPError as e:
             # 404 while GH wires things up; keep waiting

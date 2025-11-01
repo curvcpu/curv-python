@@ -1,8 +1,12 @@
 #!/usr/bin/env bash
-# Publish a package: bump version, create tag, update dependencies, push
+# Publish a package with dependencies: bump version, create tag, push, verify
 # Usage: scripts/publish.sh <package> <level>
 #   package: curvpyutils, curv, or curvtools
 #   level: patch or minor (major not allowed)
+#
+# Dependencies:
+#   - curv depends on curvpyutils
+#   - curvtools depends on curvpyutils and curv
 
 set -euo pipefail
 
@@ -21,15 +25,55 @@ fi
 
 REMOTE="${REMOTE:-origin}"
 
-# Map package to tag prefix
-case "$PACKAGE" in
-  curvpyutils) TAG_PFX="curvpyutils-v" ;;
-  curv) TAG_PFX="curv-v" ;;
-  curvtools) TAG_PFX="curvtools-v" ;;
-  *) echo "Error: unknown package '$PACKAGE'" >&2; exit 1 ;;
-esac
+# Helper: get last tag version for a package
+get_last_tag_ver() {
+  local pfx="$1"
+  git tag --list "${pfx}*" | sed -E "s/^${pfx}//" \
+    | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1
+}
 
-# Bump version function
+# Helper: get commit hash of last tag for a package
+get_last_tag_commit() {
+  local pfx="$1"
+  local ver
+  ver=$(get_last_tag_ver "$pfx")
+  if [[ -n "$ver" ]]; then
+    git rev-parse "${pfx}${ver}" 2>/dev/null || echo ""
+  else
+    echo ""
+  fi
+}
+
+# Helper: check if package needs publishing
+needs_publish() {
+  local pkg="$1"
+  local pfx
+  case "$pkg" in
+    curvpyutils) pfx="curvpyutils-v" ;;
+    curv) pfx="curv-v" ;;
+    curvtools) pfx="curvtools-v" ;;
+    *) return 1 ;;
+  esac
+
+  local last_tag_commit
+  last_tag_commit=$(get_last_tag_commit "$pfx")
+  local head_commit
+  head_commit=$(git rev-parse HEAD)
+
+  # Need to publish if no tag exists or tag commit != HEAD
+  [[ -z "$last_tag_commit" ]] || [[ "$last_tag_commit" != "$head_commit" ]]
+}
+
+# Helper: cleanup tag (delete local and remote)
+cleanup_tag() {
+  local tag="$1"
+  echo "Cleaning up failed tag: $tag" >&2
+  git tag -d "$tag" 2>/dev/null || true
+  git push --delete "$REMOTE" "$tag" 2>/dev/null || true
+  git push "$REMOTE" 2>/dev/null || true
+}
+
+# Helper: bump version
 bump() {
   local v="${1:-0.0.0}"
   local lvl="${2:-patch}"
@@ -48,15 +92,13 @@ bump() {
   printf '%s.%s.%s\n' "$MA" "$MI" "$PA"
 }
 
-# Get next tag
+# Helper: get next tag
 next_tag() {
   local pfx="$1"
   local lvl="$2"
   local last
 
-  last=$(git tag --list "${pfx}*" | sed -E "s/^${pfx}//" \
-    | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1)
-
+  last=$(get_last_tag_ver "$pfx")
   if [[ -z "$last" ]]; then
     last="0.0.0"
   fi
@@ -66,18 +108,91 @@ next_tag() {
   printf '%s%s\n' "$pfx" "$ver"
 }
 
-# Calculate next tag
-NEW_TAG=$(next_tag "$TAG_PFX" "$LEVEL")
+# Helper: publish a single package
+publish_one() {
+  local pkg="$1"
+  local lvl="$2"
+  local pfx
 
-# Informational message goes to stderr (so Makefile can capture just the tag from stdout)
-echo "Tagging $PACKAGE → $NEW_TAG" >&2
+  case "$pkg" in
+    curvpyutils) pfx="curvpyutils-v" ;;
+    curv) pfx="curv-v" ;;
+    curvtools) pfx="curvtools-v" ;;
+    *) echo "Error: unknown package '$pkg'" >&2; return 1 ;;
+  esac
 
-# Create the tag
-git tag "$NEW_TAG"
+  # Check if already published
+  if ! needs_publish "$pkg"; then
+    echo "$pkg already published at HEAD (no new commits)" >&2
+    return 0
+  fi
 
-# Push HEAD and tags
-git push "$REMOTE" HEAD
-git push "$REMOTE" --tags
+  echo "Publishing $pkg..." >&2
 
-# Output only the tag name to stdout (used by Makefile)
-echo "$NEW_TAG"
+  # Calculate and create tag
+  local new_tag
+  new_tag=$(next_tag "$pfx" "$lvl")
+  echo "Tagging $pkg → $new_tag" >&2
+  git tag "$new_tag"
+
+  # Push HEAD and tags
+  git push "$REMOTE" HEAD
+  git push "$REMOTE" --tags
+
+  # Wait for GitHub publish result
+  echo "Waiting for GitHub publish result..." >&2
+  if ! scripts/wait-github-publish-result.py "$new_tag"; then
+    echo "Error: GitHub publish failed for $new_tag" >&2
+    cleanup_tag "$new_tag"
+    return 1
+  fi
+
+  # Verify PyPI publication
+  echo "Verifying PyPI publication..." >&2
+  local pypi_ver
+  pypi_ver=$(scripts/chk-pypi-latest-ver.py -L "$pkg")
+  local expected_ver
+  expected_ver=$(echo "$new_tag" | sed -E "s/^${pfx}//")
+
+  if [[ "$pypi_ver" != "$expected_ver" ]]; then
+    echo "Error: PyPI version mismatch. Expected $expected_ver, got $pypi_ver" >&2
+    cleanup_tag "$new_tag"
+    return 1
+  fi
+
+  echo "$pkg published successfully as $new_tag ($expected_ver)" >&2
+  return 0
+}
+
+# Main publish logic with dependencies
+case "$PACKAGE" in
+  curvpyutils)
+    publish_one "curvpyutils" "$LEVEL" || exit 1
+    ;;
+  curv)
+    # First publish curvpyutils if needed
+    if needs_publish "curvpyutils"; then
+      publish_one "curvpyutils" "$LEVEL" || exit 1
+    fi
+    # Then publish curv
+    publish_one "curv" "$LEVEL" || exit 1
+    ;;
+  curvtools)
+    # First publish curvpyutils if needed
+    if needs_publish "curvpyutils"; then
+      publish_one "curvpyutils" "$LEVEL" || exit 1
+    fi
+    # Then publish curv if needed
+    if needs_publish "curv"; then
+      publish_one "curv" "$LEVEL" || exit 1
+    fi
+    # Finally publish curvtools
+    publish_one "curvtools" "$LEVEL" || exit 1
+    ;;
+  *)
+    echo "Error: unknown package '$PACKAGE'" >&2
+    exit 1
+    ;;
+esac
+
+echo "Publish complete for $PACKAGE" >&2
