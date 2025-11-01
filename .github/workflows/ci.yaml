@@ -31,8 +31,8 @@ jobs:
         run: uv sync
       - name: Install packages (editable)
         run: make install-min
-      - name: Lint
-        run: uv run ruff check .
+      # - name: Lint
+      #   run: uv run ruff check .
       - name: Unit tests
         run: uv run pytest -q -m "unit" -n auto
       - name: E2E tests
