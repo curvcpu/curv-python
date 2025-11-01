@@ -131,7 +131,18 @@ publish_one() {
 
   # Calculate and create tag
   local new_tag
+  local last_ver
+  last_ver=$(get_last_tag_ver "$pfx")
+  echo "DEBUG: last version for $pkg: $last_ver, level: $lvl" >&2
   new_tag=$(next_tag "$pfx" "$lvl")
+  echo "DEBUG: calculated next tag: $new_tag" >&2
+
+  # Verify the tag doesn't already exist (should never happen if logic is correct)
+  if git rev-parse "$new_tag" >/dev/null 2>&1; then
+    echo "Error: Tag $new_tag already exists! This should not happen." >&2
+    return 1
+  fi
+
   echo "Tagging $pkg → $new_tag" >&2
   git tag "$new_tag"
 
