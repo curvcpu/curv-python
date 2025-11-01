@@ -62,38 +62,53 @@ check-clean:
 #
 .PHONY: publish
 publish: check-clean
-	set -e; \
+	@set -e; \
 	LEVEL=$${LEVEL:-patch}; \
 	PKG=$${PKG:-all}; \
+	DEPENDENT_LEVEL=$${DEPENDENT_LEVEL:-patch}; \
 	case "$$PKG" in \
-	  all|"") ORDER="curv curvpyutils curvtools" ;; \
+	  all|"") ORDER="curv curvtools" ;; \
 	  curv)   ORDER="curv" ;; \
-	  curvpyutils) ORDER="curvpyutils" ;; \
 	  curvtools) ORDER="curvtools" ;; \
-	  *) echo "Unknown PKG=$$PKG (expected curv|curvpyutils|curvtools|all)"; exit 1 ;; \
+	  *) echo "Unknown PKG=$$PKG (expected curv|curvtools|all)"; exit 1 ;; \
 	esac; \
+	\
+	bump() { \
+	  v="$${1:-0.0.0}"; lvl="$${2:-patch}"; \
+	  set -- $$(printf '%s' "$$v" | tr '.' ' '); \
+	  MA=$${1:-0}; MI=$${2:-0}; PA=$${3:-0}; \
+	  case "$$lvl" in \
+	    major) MA=$$((MA+1)); MI=0; PA=0 ;; \
+	    minor) MI=$$((MI+1)); PA=0 ;; \
+	    patch|*) PA=$$((PA+1)) ;; \
+	  esac; \
+	  printf '%s.%s.%s\n' "$$MA" "$$MI" "$$PA"; \
+	}; \
+	\
+	next_tag() { \
+	  pfx="$$1"; lvl="$$2"; \
+	  last=$$(git tag --list "$${pfx}*" | sed -E "s/^$${pfx}//" \
+	    | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1); \
+	  [ -z "$$last" ] && last="0.0.0"; \
+	  ver=$$(bump "$$last" "$$lvl"); \
+	  printf '%s%s\n' "$$pfx" "$$ver"; \
+	}; \
+	\
 	for name in $$ORDER; do \
-		if [ "$$name" = "curv" ]; then \
-			dir="$(PKG_CURV)"; prefix="curv-v"; this_level="$$LEVEL"; \
-		elif [ "$$name" = "curvpyutils" ]; then \
-			dir="$(PKG_CURVPYUTILS)"; prefix="curvpyutils-v"; this_level="$$LEVEL"; \
-		elif [ "$$name" = "curvtools" ]; then \
-			dir="$(PKG_CURVTOOLS)"; prefix="curvtools-v"; this_level="$$LEVEL"; \
-		else \
-			echo "Unknown package: $$name"; exit 1; \
-		fi; \
-		cd $$dir; \
-		$(UV) run hatch version $$this_level >/dev/null; \
-		V=$$(uv run hatch version); \
-		cd ../..; \
-		git add $$dir/pyproject.toml; \
-		git commit -m "$$name: bump version to $$V"; \
-		git tag $$prefix$$V; \
+	  if [ "$$name" = "curv" ]; then \
+	    pfx="curv-v"; lvl="$$LEVEL"; \
+	  else \
+	    pfx="curvtools-v"; \
+	    if [ "$$PKG" = "curv" ]; then lvl="$$DEPENDENT_LEVEL"; else lvl="$$LEVEL"; fi; \
+	  fi; \
+	  tag=$$(next_tag "$$pfx" "$$lvl"); \
+	  echo "Tagging $$name → $$tag"; \
+	  git tag "$$tag"; \
 	done; \
+	\
 	git push $(REMOTE) HEAD; \
 	git push $(REMOTE) --tags; \
-	echo "Published PKG=$$PKG (level=$$LEVEL). When PKG=curv, curvtools auto-bumped at $(DEPENDENT_LEVEL)."
-
+	echo "Published PKG=$$PKG (level=$$LEVEL). When PKG=curv, curvtools auto-bumped at $$DEPENDENT_LEVEL)."
 
 .PHONY: show-pypi-versions
 show-pypi-versions:
