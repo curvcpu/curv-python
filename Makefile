@@ -81,39 +81,9 @@ check-clean:
 
 LEVEL ?= patch
 
-# Update commit time stamps - set mtime to last commit time for package directory
-build/.last-commit.curvpyutils.stamp:
-	@mkdir -p build
-	@pkg="packages/curvpyutils"; \
-	commit_time=$$(git log -1 --format=%ct -- "$$pkg" 2>/dev/null || echo ""); \
-	if [ -n "$$commit_time" ]; then \
-	  touch -t "$$(date -u -d "@$$commit_time" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$$commit_time" +%Y%m%d%H%M.%S 2>/dev/null || echo "")" "$@" 2>/dev/null || touch "$@"; \
-	else \
-	  touch "$@"; \
-	fi
-
-build/.last-commit.curv.stamp:
-	@mkdir -p build
-	@pkg="packages/curv"; \
-	commit_time=$$(git log -1 --format=%ct -- "$$pkg" 2>/dev/null || echo ""); \
-	if [ -n "$$commit_time" ]; then \
-	  touch -t "$$(date -u -d "@$$commit_time" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$$commit_time" +%Y%m%d%H%M.%S 2>/dev/null || echo "")" "$@" 2>/dev/null || touch "$@"; \
-	else \
-	  touch "$@"; \
-	fi
-
-build/.last-commit.curvtools.stamp:
-	@mkdir -p build
-	@pkg="packages/curvtools"; \
-	commit_time=$$(git log -1 --format=%ct -- "$$pkg" 2>/dev/null || echo ""); \
-	if [ -n "$$commit_time" ]; then \
-	  touch -t "$$(date -u -d "@$$commit_time" +%Y%m%d%H%M.%S 2>/dev/null || date -u -r "$$commit_time" +%Y%m%d%H%M.%S 2>/dev/null || echo "")" "$@" 2>/dev/null || touch "$@"; \
-	else \
-	  touch "$@"; \
-	fi
-
 # Publish stamp for curvpyutils
-build/.publish.curvpyutils.stamp: build/.last-commit.curvpyutils.stamp
+build/.publish.curvpyutils.stamp:
+	@mkdir -p build
 	@set -e; \
 	LEVEL="$${LEVEL:-patch}"; \
 	get_last_tag_ver() { \
@@ -162,7 +132,8 @@ build/.publish.curvpyutils.stamp: build/.last-commit.curvpyutils.stamp
 	fi
 
 # Publish stamp for curv (depends on curvpyutils)
-build/.publish.curv.stamp: build/.last-commit.curv.stamp build/.publish.curvpyutils.stamp
+build/.publish.curv.stamp: build/.publish.curvpyutils.stamp
+	@mkdir -p build
 	@set -e; \
 	LEVEL="$${LEVEL:-patch}"; \
 	get_last_tag_ver() { \
@@ -211,7 +182,8 @@ build/.publish.curv.stamp: build/.last-commit.curv.stamp build/.publish.curvpyut
 	fi
 
 # Publish stamp for curvtools (depends on curvpyutils and curv)
-build/.publish.curvtools.stamp: build/.last-commit.curvtools.stamp build/.publish.curvpyutils.stamp build/.publish.curv.stamp
+build/.publish.curvtools.stamp: build/.publish.curvpyutils.stamp build/.publish.curv.stamp
+	@mkdir -p build
 	@set -e; \
 	LEVEL="$${LEVEL:-patch}"; \
 	get_last_tag_ver() { \
