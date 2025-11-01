@@ -7,16 +7,11 @@ PACKAGES = packages/curv packages/curvtools packages/curvpyutils
 REMOTE ?= origin
 PKG_CURV = packages/curv
 PKG_CURVTOOLS = packages/curvtools
-PKG_CURVPYUTILS = packages/curvpyutils
 DEPENDENT_LEVEL ?= patch
 
 .PHONY: setup
 setup:
 	$(UV) sync
-
-.PHONY: pre-commit
-pre-commit:
-	$(UV) run pre-commit run --all-files
 
 .PHONY: venv
 venv: $(VENVDIR)/bin/python
@@ -27,18 +22,9 @@ $(VENVDIR)/bin/python:
 install-min: venv
 	$(UV) pip install -e $(PKG_CURV)
 	$(UV) pip install -e $(PKG_CURVTOOLS)
-	$(UV) pip install -e $(PKG_CURVPYUTILS)
 
 .PHONY: install-dev
 install-dev: install-min
-
-.PHONY: fmt
-fmt:
-	$(UV) run ruff format .
-
-.PHONY: lint
-lint:
-	$(UV) run ruff check .
 
 .PHONY: test
 test: install-min test-unit test-e2e
@@ -69,24 +55,50 @@ clean:
 check-clean:
 	@test -z "$$(git status --porcelain)" || (echo "Error: git working tree is not clean. Commit/stash first."; exit 1)
 
-# -------- Version bump + publish (via tags only) --------
-# Usage:
-#   make publish PKG=curvpyutils LEVEL=patch
-#   make publish PKG=curv LEVEL=minor
-#   make publish PKG=curvtools LEVEL=patch
-# Notes:
-#   - With hatch-vcs, version is derived from tags; we never edit pyproject.toml.
-#   - Dependencies: curv depends on curvpyutils, curvtools depends on both.
-#   - LEVEL must be 'patch' or 'minor' (major not allowed).
-#   - All dependency logic is handled by scripts/publish.sh
-
-LEVEL ?= patch
-PKG ?=
-
+#
+# make publish [PKG=curv|curvpyutils|curvtools|all] [LEVEL=patch|minor|major]
+# example: make publish PKG=curvpyutils LEVEL=minor
+# - defaults: PKG=all, LEVEL=patch
+#
 .PHONY: publish
 publish: check-clean
-	@if [ -z "$(PKG)" ]; then \
-	  echo "Error: PKG must be set (curvpyutils, curv, or curvtools)" >&2; \
-	  exit 1; \
-	fi
-	@scripts/publish.sh "$(PKG)" "$(LEVEL)"
+	set -e; \
+	LEVEL=$${LEVEL:-patch}; \
+	PKG=$${PKG:-all}; \
+	case "$$PKG" in \
+	  all|"") ORDER="curv curvpyutils curvtools" ;; \
+	  curv)   ORDER="curv" ;; \
+	  curvpyutils) ORDER="curvpyutils" ;; \
+	  curvtools) ORDER="curvtools" ;; \
+	  *) echo "Unknown PKG=$$PKG (expected curv|curvpyutils|curvtools|all)"; exit 1 ;; \
+	esac; \
+	for name in $$ORDER; do \
+		if [ "$$name" = "curv" ]; then \
+			dir="$(PKG_CURV)"; prefix="curv-v"; this_level="$$LEVEL"; \
+		elif [ "$$name" = "curvpyutils" ]; then \
+			dir="$(PKG_CURVPYUTILS)"; prefix="curvpyutils-v"; this_level="$$LEVEL"; \
+		elif [ "$$name" = "curvtools" ]; then \
+			dir="$(PKG_CURVTOOLS)"; prefix="curvtools-v"; this_level="$$LEVEL"; \
+		else \
+			echo "Unknown package: $$name"; exit 1; \
+		fi; \
+		cd $$dir; \
+		$(UV) run hatch version $$this_level >/dev/null; \
+		V=$$(uv run hatch version); \
+		cd ../..; \
+		git add $$dir/pyproject.toml; \
+		git commit -m "$$name: bump version to $$V"; \
+		git tag $$prefix$$V; \
+	done; \
+	git push $(REMOTE) HEAD; \
+	git push $(REMOTE) --tags; \
+	echo "Published PKG=$$PKG (level=$$LEVEL). When PKG=curv, curvtools auto-bumped at $(DEPENDENT_LEVEL)."
+
+
+.PHONY: show-pypi-versions
+show-pypi-versions:
+	@for p in curv curvpyutils curvtools; do \
+		echo "$$p:"; \
+		scripts/chk-pypi-latest-ver.py -L "$$p"; \
+		echo ""; \
+	done
