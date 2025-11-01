@@ -141,7 +141,7 @@ publish_one() {
 
   # Wait for GitHub publish result
   echo "Waiting for GitHub publish result..." >&2
-  if ! scripts/wait-github-publish-result.py "$new_tag"; then
+  if ! scripts/wait-github-publish-result.py --debug "$new_tag"; then
     echo "Error: GitHub publish failed for $new_tag" >&2
     cleanup_tag "$new_tag"
     return 1
