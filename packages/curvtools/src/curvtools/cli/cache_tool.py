@@ -1,6 +1,4 @@
 import click
-from curvpyutils.adder.add import sum
-
 
 @click.command(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option(
@@ -9,4 +7,4 @@ from curvpyutils.adder.add import sum
 def main(plus_one: int | None) -> None:
     """Curv cache tool."""
     if plus_one is not None:
-        click.echo(str(sum(plus_one, 1)))
+        click.echo(str(plus_one + 1))
