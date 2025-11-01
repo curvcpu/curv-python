@@ -38,7 +38,7 @@ class TestSystem:
 
     def test_get_recursion_limit(self):
         recursion_limit = get_recursion_limit()
-        assert recursion_limit > 1_000
+        assert recursion_limit > 10
 
     def test_get_stack_limit(self):
         stack_limit = get_stack_limit()

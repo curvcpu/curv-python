@@ -9,5 +9,4 @@ from curvpyutils.adder.add import sum
 def main(plus_one: int | None) -> None:
     """Curv cache tool."""
     if plus_one is not None:
-        result = sum(plus_one, 1)
-        click.echo(str(result))
+        click.echo(str(sum(plus_one, 1)))
