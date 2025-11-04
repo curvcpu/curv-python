@@ -3,6 +3,7 @@
 __all__ = [
     "colors",
     "file_utils",
+    "multi_progress",
     "shellutils",
     "system",
 ]

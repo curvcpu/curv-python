@@ -1,25 +1,42 @@
 # curv-python
 
-## Dev/test loop
+This is a monorepo for the Curv Python packages, `curv` and `curvtools` and the shared utilities package, `curvpyutils` on which they both depend.
 
-### create venv + install packages in editable mode
+## Development/testing
+
+- Create venv + install packages in editable mode:
+
+```shell
 make install-dev
+```
 
-### run tests
-make test-unit
-make test-e2e    # exercises installed CLIs
+- Run tests:
+
+```shell
+make test        # run both unit and CLI e2e tests
+make test-unit   # just the unit tests
+make test-e2e    # just the CLI e2e tests (exercises installed CLIs)
+```
 
 ## Publishing
 
-### show PyPI versions if you're curious
-make show-pypi-versions
+### Publish a package
 
-### publish a package
+Publishing packages is done manually, so be careful about dependencies:  They all depend on `curvpyutils`, and `curvtools` depends on `curv` as well as `curvpyutils`.
 
-Publishing packages is done manually, so be careful about dependencies.  They all depend on `curvpyutils`, and `curvtools` depends on `curv` as well as `curvpyutils`.
+- `curvtools` depends on `curv` which depends on `curvpyutils`
+- `curv` depends on `curvpyutils`
+
+Publishing a package automatically bumps the version based on the `LEVEL` argument:
 
 ```shell
 $ make publish PKG=curv LEVEL=minor
 $ make publish PKG=curvtools LEVEL=minor
 $ make publish PKG=curvpyutils LEVEL=minor
+```
+
+### What is published on PyPI right now?
+
+```shell
+$ make show-pypi-versions
 ```
