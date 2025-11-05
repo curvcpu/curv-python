@@ -107,11 +107,10 @@ publish: check-clean build test
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
 	  echo "Tagging $$name → $$tag"; \
 	  git tag -a "$$tag" -m "Release $$name ($$tag)"; \
-	done; \
-	\
-	git push $(REMOTE) HEAD; \
-	git push $(REMOTE) --tags; \
-	echo "Published PKG=$$PKG (level=$$LEVEL)."
+	  git push $(REMOTE) HEAD; \
+	  git push $(REMOTE) --tags; \
+	  echo "📣 Published PKG=$$name (level=$$LEVEL)."; \
+	done; 
 
 #
 # make untag PKG=curvtools [VER=0.0.6]
