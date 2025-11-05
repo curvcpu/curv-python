@@ -7,7 +7,6 @@ PACKAGES = packages/curv packages/curvtools packages/curvpyutils
 REMOTE ?= origin
 PKG_CURV = packages/curv
 PKG_CURVTOOLS = packages/curvtools
-DEPENDENT_LEVEL ?= patch
 
 .PHONY: setup
 setup:
@@ -65,9 +64,8 @@ publish: check-clean build test
 	@set -e; \
 	LEVEL=$${LEVEL:-patch}; \
 	PKG=$${PKG:-all}; \
-	DEPENDENT_LEVEL=$${DEPENDENT_LEVEL:-patch}; \
 	case "$$PKG" in \
-	  all|"") ORDER="curv curvtools curvpyutils" ;; \
+	  all|"") ORDER="curvpyutils curv curvtools" ;; \
 	  curv)   ORDER="curv" ;; \
 	  curvtools) ORDER="curvtools" ;; \
 	  curvpyutils) ORDER="curvpyutils" ;; \
@@ -103,19 +101,15 @@ publish: check-clean build test
 	  elif [ "$$name" = "curvpyutils" ]; then \
 	    pfx="curvpyutils-v"; \
 	  fi; \
-	  if [ "$$PKG" = "curv" ] && [ "$$name" != "curv" ]; then \
-	    lvl="$$DEPENDENT_LEVEL"; \
-	  else \
-	    lvl="$$LEVEL"; \
-	  fi; \
+	  lvl="$$LEVEL"; \
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
 	  echo "Tagging $$name → $$tag"; \
-	  git tag "$$tag"; \
+	  git tag -a "$$tag" -m "Release $$name ($$tag)"; \
 	done; \
 	\
 	git push $(REMOTE) HEAD; \
 	git push $(REMOTE) --tags; \
-	echo "Published PKG=$$PKG (level=$$LEVEL). When PKG=curv, curvtools auto-bumped at $$DEPENDENT_LEVEL)."
+	echo "Published PKG=$$PKG (level=$$LEVEL)."
 
 #
 # make untag PKG=curvtools [VER=0.0.6]
