@@ -12,9 +12,9 @@ def get_curvpyutils_version_str() -> str:
     """Get the Curv Python utilities version string."""
     return __version__
 
-def get_curvpyutils_version_tuple() -> Tuple[Union[int, str], ...]:
+def get_curvpyutils_version_tuple() -> Tuple[int,int,int]:
     """Get the Curv Python utilities version tuple."""
-    return __version_tuple__
+    return __version_tuple__[:3]
 
 __all__ = [
     "get_curvpyutils_version_str",

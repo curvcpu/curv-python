@@ -17,7 +17,7 @@ class TestVersion:
             ver_tuple = get_curvpyutils_version_tuple()
             assert isinstance(ver_str, str)
             assert isinstance(ver_tuple, tuple)
-            assert len(ver_tuple) == 5
+            assert len(ver_tuple) == 3
         except AssertionError as e:
             # Create a nicely formatted error message with rich
             error_text = Text()
