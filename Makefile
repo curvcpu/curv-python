@@ -61,7 +61,7 @@ check-clean:
 # - defaults: PKG=all, LEVEL=patch
 #
 .PHONY: publish
-publish: check-clean
+publish: check-clean build test
 	@set -e; \
 	LEVEL=$${LEVEL:-patch}; \
 	PKG=$${PKG:-all}; \
