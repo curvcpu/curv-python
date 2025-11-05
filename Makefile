@@ -117,6 +117,62 @@ publish: check-clean build test
 	git push $(REMOTE) --tags; \
 	echo "Published PKG=$$PKG (level=$$LEVEL). When PKG=curv, curvtools auto-bumped at $$DEPENDENT_LEVEL)."
 
+#
+# make untag PKG=curvtools [VER=0.0.6]
+# Delete tags for PKG that are newer than VER.
+# If VER not specified, use latest published version from PyPI.
+# PKG is required.
+#
+.PHONY: untag
+untag: check-clean
+	@set -e; \
+	PKG=$${PKG:-}; \
+	if [ -z "$$PKG" ]; then \
+		echo "Error: PKG= must be specified (curv|curvtools|curvpyutils)"; \
+		exit 1; \
+	fi; \
+	VER=$${VER:-}; \
+	if [ -z "$$VER" ]; then \
+		echo "Getting latest published version for $$PKG..."; \
+		LATEST=$$(scripts/chk-pypi-latest-ver.py -L "$$PKG"); \
+		echo "Latest published: $$LATEST"; \
+	else \
+		LATEST="$$VER"; \
+		echo "Using specified version: $$LATEST"; \
+	fi; \
+	\
+	# Get package prefix (curv-v, curvtools-v, or curvpyutils-v) \
+	case "$$PKG" in \
+	  curv) PREFIX="curv-v" ;; \
+	  curvtools) PREFIX="curvtools-v" ;; \
+	  curvpyutils) PREFIX="curvpyutils-v" ;; \
+	  *) echo "Error: Unknown PKG=$$PKG"; exit 1 ;; \
+	esac; \
+	\
+	# Find all tags for this package that are newer than LATEST \
+	TAGS_TO_DELETE=$$(git tag --list "$${PREFIX}*" | while read tag; do \
+		tag_ver=$$(echo "$$tag" | sed "s/$${PREFIX}//"); \
+		if [ "$$(printf '%s\n%s' "$$LATEST" "$$tag_ver" | sort -V | tail -n1)" = "$$tag_ver" ] && [ "$$tag_ver" != "$$LATEST" ]; then \
+			echo "$$tag"; \
+		fi; \
+	done); \
+	\
+	if [ -z "$$TAGS_TO_DELETE" ]; then \
+		echo "No tags found for $$PKG newer than $$LATEST"; \
+		exit 0; \
+	fi; \
+	\
+	echo "Tags to delete: $$TAGS_TO_DELETE"; \
+	echo "Deleting local tags..."; \
+	git tag -d $$TAGS_TO_DELETE; \
+	echo "Deleting remote tags..."; \
+	if git push --delete $(REMOTE) $$TAGS_TO_DELETE 2>/dev/null; then \
+		echo "Successfully deleted remote tags"; \
+	else \
+		echo "Warning: Some remote tags may not exist or deletion failed"; \
+	fi; \
+	echo "Successfully deleted tags newer than $$LATEST for $$PKG"
+
 .PHONY: show-pypi-versions
 show-pypi-versions:
 	@for p in curv curvtools curvpyutils; do \
