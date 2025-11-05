@@ -184,10 +184,14 @@ untag: check-clean
 	fi; \
 	echo "Successfully deleted tags newer than $$LATEST for $$PKG"
 
-.PHONY: show-pypi-versions
-show-pypi-versions:
-	@for p in curv curvtools curvpyutils; do \
-		echo "$$p:"; \
-		scripts/chk-pypi-latest-ver.py -L "$$p"; \
+.PHONY: show
+show:
+	@set -e; \
+	echo "Fetching all remote tags to make sure we're up to date..."; \
+	git fetch origin --tags; \
+	echo "Showing all versions for each package..."; \
+	echo ""; \
+	for p in curv curvtools curvpyutils; do \
+		scripts/chk-pypi-latest-ver.py "$$p"; \
 		echo ""; \
-	done
+	done; \

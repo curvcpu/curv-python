@@ -37,8 +37,10 @@ $ make publish PKG=curvpyutils LEVEL=patch
 
 ### What is published on PyPI right now?
 
+This will show the latest published version for each package and its local tags.
+
 ```shell
-$ make show-pypi-versions
+$ make show
 ```
 
 ### Undo a tag (git tag) if the publish failed
@@ -55,7 +57,17 @@ $ make untag PKG=curvtools VER=0.0.6
 make untag PKG=curvpyutils  
 ```
 
+You must specify a package name:
+
 ```shell
 # Error case - PKG always required on command line
 make untag  # → Error: PKG= must be specified
+```
+
+And you cannot delete tags older than the latest published version on PyPI:
+
+```shell
+# ❌ ERROR: Cannot delete tags older than published version
+$ make untag PKG=curvtools VER=0.0.1
+# Output: "Error: Cannot delete tags older than or equal to published version 0.0.6"
 ```
