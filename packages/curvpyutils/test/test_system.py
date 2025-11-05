@@ -32,9 +32,19 @@ class TestSystem:
         assert recursion_limit > 1_000
 
     def test_raise_stack_limit(self):
+        # Get initial limits
+        initial_soft, initial_hard = get_stack_limit()
+
+        # Try to raise the limit (may not succeed on all platforms like macOS)
         stack_limit: Tuple[Num, Num] = raise_stack_limit(512 * 1024 * 1024)
+
+        # The function should return valid limits
         assert stack_limit[0] > 0
-        assert stack_limit[1] > stack_limit[0]
+        assert stack_limit[1] >= stack_limit[0]
+
+        # The soft limit should be at least as high as it was initially
+        # (it might be higher if the raise succeeded, or same if it didn't)
+        assert stack_limit[0] >= initial_soft
 
     def test_get_recursion_limit(self):
         recursion_limit = get_recursion_limit()
