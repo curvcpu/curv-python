@@ -190,3 +190,20 @@ show:
 		scripts/chk-pypi-latest-ver.py "$$p"; \
 		echo ""; \
 	done; \
+
+#
+# make show-publish
+# Show the CI status of the latest tag for each package
+#
+.PHONY: show-publish
+show-publish:
+	@echo "Checking CI status for latest tags..."; \
+	for pkg in curv curvtools curvpyutils; do \
+		latest_tag=$$(git tag --list "$${pkg}-v*" | sort -V | tail -n1); \
+		if [ -n "$$latest_tag" ]; then \
+			status=$$(curl -fsSL "https://api.github.com/repos/curvcpu/curv-python/commits/$${latest_tag}/status" 2>/dev/null | jq -r '.state' 2>/dev/null || echo "unknown"); \
+			echo "$${latest_tag}: $${status}"; \
+		else \
+			echo "$${pkg}: no tags found"; \
+		fi; \
+	done; \
