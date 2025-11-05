@@ -97,10 +97,16 @@ publish: check-clean build test
 	\
 	for name in $$ORDER; do \
 	  if [ "$$name" = "curv" ]; then \
-	    pfx="curv-v"; lvl="$$LEVEL"; \
-	  else \
+	    pfx="curv-v"; \
+	  elif [ "$$name" = "curvtools" ]; then \
 	    pfx="curvtools-v"; \
-	    if [ "$$PKG" = "curv" ]; then lvl="$$DEPENDENT_LEVEL"; else lvl="$$LEVEL"; fi; \
+	  elif [ "$$name" = "curvpyutils" ]; then \
+	    pfx="curvpyutils-v"; \
+	  fi; \
+	  if [ "$$PKG" = "curv" ] && [ "$$name" != "curv" ]; then \
+	    lvl="$$DEPENDENT_LEVEL"; \
+	  else \
+	    lvl="$$LEVEL"; \
 	  fi; \
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
 	  echo "Tagging $$name → $$tag"; \
