@@ -121,6 +121,7 @@ publish: check-clean build test
 # make untag PKG=curvtools [VER=0.0.6]
 # Delete tags for PKG that are newer than VER.
 # If VER not specified, use latest published version from PyPI.
+# VER must not be older than the latest published version.
 # PKG is required.
 #
 .PHONY: untag
@@ -131,12 +132,22 @@ untag: check-clean
 		echo "Error: PKG= must be specified (curv|curvtools|curvpyutils)"; \
 		exit 1; \
 	fi; \
+	# Always get the latest published version for safety \
+	echo "Getting latest published version for $$PKG..."; \
+	PUBLISHED=$$(scripts/chk-pypi-latest-ver.py -L "$$PKG"); \
+	echo "Latest published: $$PUBLISHED"; \
+	\
 	VER=$${VER:-}; \
 	if [ -z "$$VER" ]; then \
-		echo "Getting latest published version for $$PKG..."; \
-		LATEST=$$(scripts/chk-pypi-latest-ver.py -L "$$PKG"); \
-		echo "Latest published: $$LATEST"; \
+		LATEST="$$PUBLISHED"; \
+		echo "Using published version as baseline: $$LATEST"; \
 	else \
+		# Validate that VER is not older than published version \
+		if [ "$$(printf '%s\n%s' "$$PUBLISHED" "$$VER" | sort -V | head -n1)" = "$$VER" ] && [ "$$VER" != "$$PUBLISHED" ]; then \
+			echo "Error: Cannot delete tags older than or equal to published version $$PUBLISHED"; \
+			echo "Specified VER=$$VER is older than published version"; \
+			exit 1; \
+		fi; \
 		LATEST="$$VER"; \
 		echo "Using specified version: $$LATEST"; \
 	fi; \
