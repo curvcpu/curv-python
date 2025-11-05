@@ -67,10 +67,11 @@ publish: check-clean
 	PKG=$${PKG:-all}; \
 	DEPENDENT_LEVEL=$${DEPENDENT_LEVEL:-patch}; \
 	case "$$PKG" in \
-	  all|"") ORDER="curv curvtools" ;; \
+	  all|"") ORDER="curv curvtools curvpyutils" ;; \
 	  curv)   ORDER="curv" ;; \
 	  curvtools) ORDER="curvtools" ;; \
-	  *) echo "Unknown PKG=$$PKG (expected curv|curvtools|all)"; exit 1 ;; \
+	  curvpyutils) ORDER="curvpyutils" ;; \
+	  *) echo "Unknown PKG=$$PKG (expected curv|curvtools|curvpyutils|all)"; exit 1 ;; \
 	esac; \
 	\
 	bump() { \
@@ -112,7 +113,7 @@ publish: check-clean
 
 .PHONY: show-pypi-versions
 show-pypi-versions:
-	@for p in curv curvpyutils curvtools; do \
+	@for p in curv curvtools curvpyutils; do \
 		echo "$$p:"; \
 		scripts/chk-pypi-latest-ver.py -L "$$p"; \
 		echo ""; \
