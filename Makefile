@@ -121,7 +121,7 @@ publish: check-clean build test
 # make untag PKG=curvtools [VER=0.0.6]
 # Delete tags for PKG that are newer than VER.
 # If VER not specified, use latest published version from PyPI.
-# VER must not be older than the latest published version.
+# VER must not be older than the latest published version on PyPI; otherwise we die with error.
 # PKG is required.
 #
 .PHONY: untag
