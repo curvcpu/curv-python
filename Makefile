@@ -179,6 +179,10 @@ untag: check-clean
 	fi; \
 	echo "Successfully deleted tags newer than $$LATEST for $$PKG"
 
+#
+# make show
+# Show all PyPI published versions and local tags for each package which may or may not have succeeded in publishing
+#
 .PHONY: show
 show:
 	@set -e; \
@@ -192,18 +196,49 @@ show:
 	done; \
 
 #
-# make show-publish
+# make show-publish-status
 # Show the CI status of the latest tag for each package
 #
-.PHONY: show-publish
-show-publish:
-	@echo "Checking CI status for latest tags..."; \
+.PHONY: show-publish-status
+show-publish-status:
+	@echo "Checking publish status for latest tags..."; \
 	for pkg in curv curvtools curvpyutils; do \
 		latest_tag=$$(git tag --list "$${pkg}-v*" | sort -V | tail -n1); \
 		if [ -n "$$latest_tag" ]; then \
 			status=$$(curl -fsSL "https://api.github.com/repos/curvcpu/curv-python/commits/$${latest_tag}/status" 2>/dev/null | jq -r '.state' 2>/dev/null || echo "unknown"); \
-			echo "$${latest_tag}: $${status}"; \
+			echo "  👉 $${latest_tag}: $${status}"; \
 		else \
-			echo "$${pkg}: no tags found"; \
+			echo "  ❌ $${pkg}: no tags found"; \
 		fi; \
 	done; \
+
+
+#
+# make help to remind what the targets are
+#
+.PHONY: help
+help:
+	@echo "Run these once before you get started:"
+	@echo "  make setup               - Setup the project"
+	@echo "  make install-dev         - Install the development packages"
+	@echo ""
+	@echo "Building and running tests:"
+	@echo "  make build               - Build the packages"
+	@echo "  make test                - Run the tests"
+	@echo "  make test-unit           - Run the unit tests"
+	@echo "  make test-e2e            - Run the CLI e2e tests"
+	@echo "  make clean               - Clean the project"
+	@echo ""
+	@echo "Publishing to PyPI:"
+	@echo "  make publish             - Publish the packages"
+	@echo "  make untag               - Undo a tag"
+	@echo "  make show                - Show the PyPI published versions and local tags"
+	@echo "  make show-publish-status - Show the CI status of the latest tag for each package"
+	@echo ""
+	@echo "Informational commands:"
+	@echo "  make show                - Show the PyPI published versions and local tags"
+	@echo "  make show-publish-status - Show the CI status of the latest tag for each package"
+	@echo "  make help                - Show this help message"
+	@echo ""
+	@echo "For more details, see the contributing guide:"
+	@echo "  https://github.com/curvcpu/curv-python/blob/main/.github/CONTRIBUTING.md"
