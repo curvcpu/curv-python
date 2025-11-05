@@ -40,3 +40,22 @@ $ make publish PKG=curvpyutils LEVEL=patch
 ```shell
 $ make show-pypi-versions
 ```
+
+### Undo a tag (git tag) if the publish failed
+
+You can delete any tag (both local and remote) if it's newer than some version number for a given package.
+
+```shell
+# delete failed publish tags by deleting any tag newer than VER for PKG=curvtools
+$ make untag PKG=curvtools VER=0.0.6
+```
+
+```shell
+# Clean up any tags newer than what's published
+make untag PKG=curvpyutils  
+```
+
+```shell
+# Error case - PKG always required on command line
+make untag  # → Error: PKG= must be specified
+```
