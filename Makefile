@@ -62,7 +62,7 @@ check-clean:
 .PHONY: publish
 publish: check-clean build test
 	@set -e; \
-	@echo "Fetching latest tags from remote..."; \
+	echo "Fetching latest tags from remote '$(REMOTE)'..."; \
 	git fetch $(REMOTE) --tags; \
 	LEVEL=$${LEVEL:-patch}; \
 	PKG=$${PKG:-all}; \
