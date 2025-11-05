@@ -30,9 +30,9 @@ Publishing packages is done manually, so be careful about dependencies:  They al
 Publishing a package automatically bumps the version based on the `LEVEL` argument:
 
 ```shell
-$ make publish PKG=curv LEVEL=minor
-$ make publish PKG=curvtools LEVEL=minor
-$ make publish PKG=curvpyutils LEVEL=minor
+$ make publish PKG=curv LEVEL=patch
+$ make publish PKG=curvtools LEVEL=patch
+$ make publish PKG=curvpyutils LEVEL=patch
 ```
 
 ### What is published on PyPI right now?
