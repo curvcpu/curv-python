@@ -12,6 +12,7 @@ from rich.console import Console
 from rich.table import Table
 from rich.text import Text
 import subprocess
+from datetime import datetime, timezone
 
 SEMVER_RE = re.compile(
     r"""
@@ -78,6 +79,67 @@ class SemVer:
         return f"{self.major}.{self.minor}.{self.patch}"
 
 def fetch_pypi_json(pkg: str) -> dict:
+    """
+    Fetch the JSON metadata for the latest version of the package from PyPI.
+
+    Args:
+        pkg: the package name.
+
+    Returns:
+        A dictionary containing the JSON metadata for the latest version of the package.
+
+    Notes:
+        Format of the returned JSON is:
+            {
+            "info": {
+                "author": "Mike Goelzer",
+                "author_email": null,
+                "bugtrack_url": null,
+                "classifiers": [
+                "Programming Language :: Python :: 3 :: Only"
+                ],
+                ...more info...
+            "releases": {
+                "0.0.1": [
+                {
+                    "comment_text": null,
+                    ...more info...
+                    "requires_python": ">=3.10",
+                    "size": 1451,
+                    "upload_time": "2025-10-31T20:22:42",
+                    "upload_time_iso_8601": "2025-10-31T20:22:42.115058Z",
+                    "url": "https://files.pythonhosted.org/packages/68/4f/52fceb19c379d9e397a201cde2fb8f0e1a1c3b9fd1c9e5c14accdf6218f1/curv-0.0.1-py3-none-any.whl",
+                    "yanked": false,
+                    "yanked_reason": null
+                },
+                {
+                    ...more objects...
+                }
+                ]
+                "0.1.3": [
+                {
+                    "comment_text": null,
+                    ...more info...
+                    "downloads": -1,
+                    "filename": "curv-0.1.3-py3-none-any.whl",
+                    "has_sig": false,
+                    "md5_digest": "2a8cfa8af5ae84c4c68b97b0d81b6b37",
+                    "packagetype": "bdist_wheel",
+                    "python_version": "py3",
+                    "requires_python": ">=3.10",
+                    "size": 1451,
+                    "upload_time": "2025-10-31T20:22:42",
+                    "upload_time_iso_8601": "2025-10-31T20:22:42.115058Z",
+                    "url": "https://files.pythonhosted.org/packages/68/4f/52fceb19c379d9e397a201cde2fb8f0e1a1c3b9fd1c9e5c14accdf6218f1/curv-0.0.1-py3-none-any.whl",
+                    "yanked": false,
+                    "yanked_reason": null
+                },
+                {
+                    ...more objects...
+                }
+                ]
+                ...more versions...
+    """
     url = f"https://pypi.org/pypi/{pkg}/json"
     with urllib.request.urlopen(url, timeout=20) as resp:
         if resp.status != 200:
@@ -93,9 +155,7 @@ def get_local_tags(pkg: str) -> list[tuple[SemVer, str]]:
 
     Returns:
         A list of all local tagged versions for the package arranged as a tuple of (SemVer, tag).
-        Example:  "0.0.1" -> "curv-v0.0.1"
-                  "0.0.2" -> "curv-v0.0.2"
-                  ...
+        Example:  [(SemVer("0.0.1"), "curv-v0.0.1"), (SemVer("0.0.2"), "curv-v0.0.2"), ...]
     """
     local_tags = subprocess.run(["git", "tag", "--list"], capture_output=True, text=True).stdout.splitlines()
     local_tags = [x for x in local_tags if f"{pkg}-v" in x]
@@ -107,7 +167,7 @@ def get_local_tags(pkg: str) -> list[tuple[SemVer, str]]:
         # print(f"{ver} -> {pkg}-v{ver}")
     return ret
 
-def combine_iterators(pypi_versions: list[str], local_tags: list[tuple[SemVer, str]]) -> Iterator[Dict[str, Union[str, Optional[str], Optional[Tuple[SemVer, str]]]]]:
+def combine_iterators(pypi_semvers: List[tuple[SemVer, str, datetime]], local_tags: list[tuple[SemVer, str]]) -> Iterator[Dict[str, Union[str, Optional[str], Optional[Tuple[SemVer, str]], Optional[datetime]]]]:
     """
     Combine PyPI versions and local tag versions into a single sorted iterator.
 
@@ -116,13 +176,14 @@ def combine_iterators(pypi_versions: list[str], local_tags: list[tuple[SemVer, s
     - 'semver': the version string
     - 'pypi': version string if it exists in PyPI, None otherwise
     - 'local_tags': (SemVer, tag_string) tuple if it exists in local tags, None otherwise
+    - 'pypi_datetime': datetime when version was uploaded to PyPI, None if not available
     """
     # Create mappings for quick lookup
-    pypi_set = set(pypi_versions)
+    pypi_map = {ver_str: dt for semver, ver_str, dt in pypi_semvers}
     local_map = {str(semver): (semver, tag) for semver, tag in local_tags}
 
     # Get all unique version strings
-    all_versions = pypi_set | set(local_map.keys())
+    all_versions = set(pypi_map.keys()) | set(local_map.keys())
 
     # Convert to SemVer objects for proper sorting
     semver_objects = []
@@ -141,8 +202,9 @@ def combine_iterators(pypi_versions: list[str], local_tags: list[tuple[SemVer, s
         ver_str = str(semver)
         yield {
             'semver': ver_str,
-            'pypi': ver_str if ver_str in pypi_set else None,
-            'local_tags': local_map.get(ver_str)
+            'pypi': ver_str if ver_str in pypi_map else None,
+            'local_tags': local_map.get(ver_str),
+            'pypi_datetime': pypi_map.get(ver_str)
         }
 
 def main() -> None:
@@ -156,7 +218,7 @@ def main() -> None:
     data = fetch_pypi_json(pkg)
     releases = data.get("releases", {})
 
-    semvers: List[tuple[SemVer, str]] = []
+    semvers: List[tuple[SemVer, str, datetime]] = []
     for ver_str, files in releases.items():
         if not files:
             continue
@@ -165,7 +227,11 @@ def main() -> None:
         if not SEMVER_RE.match(ver_str):
             continue
         try:
-            semvers.append((SemVer.parse(ver_str), ver_str))
+            try:
+                dt = datetime.fromisoformat(files[0].get("upload_time"))
+            except:
+                dt = None
+            semvers.append((SemVer.parse(ver_str), ver_str, dt))
         except ValueError:
             continue
 
@@ -174,36 +240,51 @@ def main() -> None:
         sys.exit(2)
 
     semvers.sort()
-    ordered: list[str] = [v for _, v in semvers]
-    latest_pypi: str = ordered[-1]
+    latest_pypi: str = semvers[-1][1]
+
+    def format_datetime(dt: Optional[datetime]) -> str:
+        if dt is not None:
+            # Assume PyPI datetime is UTC if naive, convert to local timezone
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            local_dt = dt.astimezone()
+            tz_name = local_dt.tzname()
+            return local_dt.strftime(f"%Y-%m-%d %I:%M%p").lower() + " " + local_dt.strftime(f"{tz_name}")
+        else:
+            return ""
 
     if args.latest_only:
         print(latest_pypi)
     else:
         table = Table(title=f"Versions for {pkg}", title_style="bold green")
-        table.add_column("Version", justify="right")
-        table.add_column("PyPI Published", justify="left")
-        table.add_column("Local Tag", justify="left")
+        table.add_column("Version Number", justify="left", no_wrap=False)
+        table.add_column("PyPI Published", justify="left", no_wrap=False)
+        table.add_column("PyPI Timestamp", justify="left", no_wrap=False)
+        table.add_column("Local Tag", justify="left", no_wrap=False)
         local_tags: list[tuple[SemVer, str]] = get_local_tags(pkg)
-        for version_info in combine_iterators(ordered, local_tags):
+        for version_info in combine_iterators(semvers, local_tags):
             semver: str = version_info['semver']
             pypi: Optional[str] = version_info['pypi'] if version_info['pypi'] else ""
             local: Optional[Tuple[SemVer, str]] = version_info['local_tags'][1] if version_info['local_tags'] else ""
+            pypi_datetime = format_datetime(version_info['pypi_datetime'])
+
+            # coloration if there's a mismatch between local and PyPI tags
+            pypi_style = "white"; local_style = "white"
             if version_info['local_tags'] is not None and version_info['pypi'] is not None:
-                pypi_style = "bold green"
-                local_style = "bold green"
+                pass
             elif version_info['local_tags'] is not None and version_info['pypi'] is None:
-                pypi_style = "bold green"
                 local_style = "bold red"
             elif version_info['local_tags'] is None and version_info['pypi'] is not None:
                 pypi_style = "bold red"
-                local_style = "bold green"
             else:
                 pypi_style = "bold red"
                 local_style = "bold red"
+            
+            # apply styles and add row
             pypi_text = Text(pypi, style=pypi_style)
+            pypi_datetime_text = Text(pypi_datetime, style=pypi_style)
             local_text = Text(local, style=local_style)
-            table.add_row(semver, pypi_text, local_text)
+            table.add_row(semver, pypi_text, pypi_datetime_text, local_text)
         console = Console()
         console.print(table)
 
