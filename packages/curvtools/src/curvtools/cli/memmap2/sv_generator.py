@@ -4,7 +4,7 @@ SystemVerilog generator for memory maps
 """
 import re
 import os
-import tomli
+from curvpyutils.toml_utils import read_toml_file
 from typing import List, Dict, Any, Tuple, Optional
 from pathlib import Path
 from .collect_all_ranges import collect_all_ranges
@@ -333,7 +333,7 @@ def generate_sv_from_toml(toml_file: str, output_file: str, skip_validation: boo
     else:
         # Load and calculate highest cacheable without full validation
         try:
-            memory_map = tomli.load(open(toml_file, 'rb'))
+            memory_map = read_toml_file(toml_file)
             from .validator import MemoryMapValidator
             validator = MemoryMapValidator()
             highest_cacheable = validator.get_highest_cacheable_address(memory_map, xlen)
@@ -341,7 +341,7 @@ def generate_sv_from_toml(toml_file: str, output_file: str, skip_validation: boo
             print(f"ERROR: Failed to parse TOML file: {e}")
             return False
 
-    memory_map = tomli.load(open(toml_file, 'rb'))
+    memory_map = read_toml_file(toml_file)
     sv_code = generate_sv_package_file(memory_map, highest_cacheable, xlen, template_file, use_inside_range_condition)
 
     if output_file == '-':

@@ -8,7 +8,7 @@ This uses the TOML as the source of truth and emits assertions covering:
 """
 from __future__ import annotations
 
-import tomli
+from curvpyutils.toml_utils import read_toml_file
 from typing import Dict, List, Tuple
 
 
@@ -121,8 +121,7 @@ def _boundary_addrs(start: int, end: int) -> List[int]:
 
 
 def generate_static_asserts_from_toml(toml_file: str, output_file: str, xlen: int = 32) -> None:
-    with open(toml_file, 'rb') as f:
-        memory_map = tomli.load(f)
+    memory_map = read_toml_file(toml_file)
 
     top_ranges = _collect_top_ranges(memory_map)
     access_ranges = _collect_accessible_ranges(memory_map, xlen)

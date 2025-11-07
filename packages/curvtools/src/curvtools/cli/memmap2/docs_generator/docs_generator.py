@@ -2,7 +2,7 @@
 """
 Documentation generator for memory maps using rich tables
 """
-import tomli
+from curvpyutils.toml_utils import read_toml_file
 from typing import Dict, List, Tuple, Any
 from rich.table import Table
 from rich.console import Console
@@ -119,8 +119,7 @@ def create_markdown_slave_tables(detailed_ranges: Dict[str, List[Dict]]) -> str:
 def generate_memory_map_markdown(toml_file: str, output_file: str, xlen: int):
     """Generate MEMORY_MAP.md from TOML file"""
     # Load memory map
-    with open(toml_file, 'rb') as f:
-        memory_map = tomli.load(f)
+    memory_map = read_toml_file(toml_file)
 
     # Collect data
     # ranges = collect_memory_ranges(memory_map, xlen)

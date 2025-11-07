@@ -4,14 +4,13 @@ Unit tests for the memory map validator regarding the access field
 import pytest
 from curvtools.cli.memmap2.validator import MemoryMapValidator, ValidationSeverity
 pytestmark = [pytest.mark.unit]
-import tomli
+from curvpyutils.toml_utils import read_toml_file
 from pathlib import Path
 from typing import Any
 
 def load_memory_map(file_path: str) -> dict[str, Any]:
     """Load a memory map from a file"""
-    with open(file_path, 'rb') as file:
-        return tomli.load(file)
+    return read_toml_file(file_path)
 
 def test_cacheable_may_only_be_on_ranges_1():
     """

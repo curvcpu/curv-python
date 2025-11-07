@@ -4,6 +4,7 @@ Unit tests for the memory map validator
 """
 import pytest
 from curvtools.cli.memmap2.validator import MemoryMapValidator, ValidationSeverity
+
 pytestmark = [pytest.mark.unit]
 
 def test_valid_memory_map():

@@ -2,7 +2,7 @@
 """
 Memory map TOML validator - checks for common errors and constraints
 """
-import tomli
+from curvpyutils.toml_utils import read_toml_file
 from typing import List, Dict, Any, Tuple
 from dataclasses import dataclass
 from enum import Enum
@@ -933,7 +933,7 @@ class MemoryMapValidator:
 def validate_toml_file(toml_file: str, xlen: int, quiet: bool = False) -> tuple[bool, int]:
     """Validate a TOML file and return (success, highest_cacheable_addr)"""
     try:
-        memory_map = tomli.load(open(toml_file, 'rb'))
+        memory_map = read_toml_file(toml_file)
     except Exception as e:
         print(f"ERROR: Failed to parse TOML file: {e}")
         return False, 0
