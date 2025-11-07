@@ -19,32 +19,8 @@ venv: $(VENVDIR)/bin/python
 $(VENVDIR)/bin/python:
 	$(UV) venv --seed --allow-existing --refresh
 
-# was used by CI, but now `uv sync` handles this
-# .PHONY: setup-editable-installs
-# setup-editable-installs: venv
-# 	@# Ensure editable installs of all workspace packages in dependency order
-# 	@# This is used by both `make setup` for developers, and `make test` for CI.
-# 	@if $(UV) pip show -q $(notdir $(PKG_CURVPYUTILS)) >/dev/null 2>&1; then \
-# 		echo "✅ $(notdir $(PKG_CURVPYUTILS)) already installed (editable)"; \
-# 	else \
-# 		$(UV) pip install -e $(PKG_CURVPYUTILS); \
-# 		echo "✅ Installed $(notdir $(PKG_CURVPYUTILS)) (editable)"; \
-# 	fi
-# 	@if $(UV) pip show -q $(notdir $(PKG_CURV)) >/dev/null 2>&1; then \
-# 		echo "✅ $(notdir $(PKG_CURV)) already installed (editable)"; \
-# 	else \
-# 		$(UV) pip install -e $(PKG_CURV); \
-# 		echo "✅ Installed $(notdir $(PKG_CURV)) (editable)"; \
-# 	fi
-# 	@if $(UV) pip show -q $(notdir $(PKG_CURVTOOLS)) >/dev/null 2>&1; then \
-# 		echo "✅ $(notdir $(PKG_CURVTOOLS)) already installed (editable)"; \
-# 	else \
-# 		$(UV) pip install -e $(PKG_CURVTOOLS); \
-# 		echo "✅ Installed $(notdir $(PKG_CURVTOOLS)) (editable)"; \
-# 	fi
-
 .PHONY: setup
-setup: setup-sync #setup-editable-installs # disabled for now because `uv sync` handles this
+setup: setup-sync
 	@$(UV) tool install --editable $(PKG_CURVTOOLS)
 	@echo "✅ All CLI tools (editable) available on PATH"
 	@# Edit shell's rc file to keep the PATH update persistent
@@ -54,11 +30,11 @@ setup: setup-sync #setup-editable-installs # disabled for now because `uv sync` 
 test: test-unit test-e2e
 
 .PHONY: test-unit
-test-unit: setup-sync #setup-editable-installs # disabled for now because `uv sync` handles this
+test-unit: setup-sync
 	$(PYTEST) $(PYTEST_OPTS) -m "unit"
 
 .PHONY: test-e2e
-test-e2e: setup-sync #setup-editable-installs
+test-e2e: setup-sync
 	$(PYTEST) $(PYTEST_OPTS) -m "e2e"
 
 .PHONY: unsetup-editable-installs
@@ -159,10 +135,11 @@ publish: check-git-clean build test
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
 	  echo "Tagging $$name → $$tag"; \
 	  git tag -a "$$tag" -m "Release $$name ($$tag)"; \
-	  git push $(REMOTE) HEAD; \
-	  git push $(REMOTE) --tags; \
+	  git push --atomic $(REMOTE) HEAD "$tag" \
 	  echo "📣 Published PKG=$$name (level=$$LEVEL)."; \
 	done; 
+# git push $(REMOTE) HEAD;
+# git push $(REMOTE) --tags;
 
 #
 # make untag PKG=curvtools [VER=0.0.6]
