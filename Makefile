@@ -120,7 +120,7 @@ check-git-clean:
 publish: check-git-clean test
 	@set -euo pipefail; \
 	echo "🤔 Fetching latest tags from remote '$$REMOTE'..."; \
-	git fetch $$REMOTE --tags; \
+	git fetch $(REMOTE) --tags; \
 	LEVEL=$${LEVEL:-patch}; \
 	PKG=$${PKG:-all}; \
 	case "$$PKG" in \
@@ -163,7 +163,7 @@ publish: check-git-clean test
 	  git tag -a "$$tag" -m "Release ($$name): $$tag"; \
 	  echo "📣 Published PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
 	done; \
-	git push $$REMOTE --tags
+	git push $(REMOTE) --tags
 
 #
 # make untag PKG=curvtools [VER=0.0.6]
