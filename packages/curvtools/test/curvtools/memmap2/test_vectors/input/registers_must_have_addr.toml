@@ -1,0 +1,12 @@
+# This should fail validation because the register uses start=<address> instead of addr=<address>
+
+[slaves.bram]
+name = "BRAM"
+ranges = [
+  { name = "BRAM", start = 0x0300_0000, end = 0x0341_DFFF, cacheable = true }
+]
+
+[slaves.bram.buffers]
+reg1 = { name = "OLED 1 Command Reg", start = 0x0300_0000 }
+
+

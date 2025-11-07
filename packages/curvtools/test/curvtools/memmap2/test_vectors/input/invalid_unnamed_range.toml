@@ -1,0 +1,11 @@
+# Should fail validation because a range is unnamed
+
+[slaves.flash]
+name = "Flash"
+ranges = [
+    { name = "Flash ROM", start = 0x0000_0000, end = 0x00FF_FFFF, access = "ro", cacheable = true },
+    { name = "", start = 0x0600_0000, end = 0x0600_0003, cacheable = false },
+]
+
+[slaves.flash.registers]
+cmd_reg = { name = "Command Register", addr = 0x0600_0000, access = "wo" }

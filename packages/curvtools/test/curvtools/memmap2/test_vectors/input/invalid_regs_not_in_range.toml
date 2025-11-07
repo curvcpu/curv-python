@@ -1,0 +1,11 @@
+# Should fail validation because Flash Control range is not large enough to fully contain all of those registers.
+
+[slaves.flash]
+name = "Flash"
+ranges = [
+  { name = "Flash Control", start = 0x0600_0000, end = 0x0600_0003, cacheable = false },
+]
+
+[slaves.flash.registers]
+cmd_reg = { name = "Command Register", addr = 0x0600_0000, access = "wo" }
+cmd_addr = { name = "Command Address", addr = 0x0600_0004, access = "rw" }

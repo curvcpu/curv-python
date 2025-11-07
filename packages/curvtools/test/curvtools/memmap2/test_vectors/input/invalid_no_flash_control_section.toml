@@ -1,0 +1,7 @@
+# Should fail validation because the flash slave has registers but no ranges defined.
+
+[slaves.flash]
+name = "Flash"
+
+[slaves.flash.registers]
+cmd_reg = { name = "Command Register", addr = 0x0600_0000, access = "wo" }

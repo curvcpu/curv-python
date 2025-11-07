@@ -1,0 +1,99 @@
+# This should pass validation because it obeys the rules of access and cacheable:
+#
+# - Cacheable applies to ranges, not regions or registers, and cacheable addresses must be contiguous from zero.
+#   - Rule 1:  cacheable must be set on all ranges
+#   - Rule 2: cacheable cannot be set on regions or registers
+#   - Rule 3: only low addresses are cacheable; once the first cacheable=false address is hit, not address above it may set cacheable to true
+# - Access is set at the most granular level:
+#   - access must be set to rw/ro/wo on ranges with no children (no register or buffers within them)
+#   - if a range has any children, access must not be set on the range itself.
+#   - access must always be set on all registers and buffers
+
+[slaves.sdram]
+name = "SDRAM"
+ranges = [
+  # this is an example of a range that does not have any registers or buffers within it
+  { name = "RAM", start = 0x0000_0000, end = 0x01FF_FFFF, access = "rw", cacheable = true }
+]
+
+[slaves.flash]
+name = "Flash"
+ranges = [
+  # this is an example of a range that does not have any registers or buffers within it
+  { name = "Flash ROM", start = 0x0200_0000, end = 0x02FF_FFFF, access = "ro", cacheable = true },
+  # this is an example of a range that has registers within it.  The name field is lowercased and s/ /-/g applied
+  # to generate the toml path name used below:  [slaves.flash.flash_control.*]
+  { name = "Flash Control", start = 0x0600_0000, end = 0x0600_001f, cacheable = false },
+  # This sholows how the "Flash Control"/flash_control range can continue at a discontiguous address
+  # by being declared more than once up here in the slaves.flash section.
+  { name = "Flash Control", start = 0x0600_1000, end = 0x0600_10FF, cacheable = false },
+]
+
+# This is the registers section of slaves.flash.  When we validate, all these registers must
+# be fully contained within some range of the Flash slave.
+[slaves.flash.registers]
+cmd_reg = { name = "Flash Command Register", addr = 0x0600_0000, access = "wo" }
+cmd_addr = { name = "Flash Command Address", addr = 0x0600_0004, access = "rw" }
+tag_hi = { name = "Flash Command Tag High", addr = 0x0600_0008, access = "rw" }
+tag_lo = { name = "Flash Command Tag Low", addr = 0x0600_000c, access = "rw" }
+status = { name = "Flash Command Status", addr = 0x0600_0010, access = "ro" }
+
+# This is the buffers section of slaves.flash.  When we validate, all these buffers must
+# be fully contained within some range of the Flash slave.
+[slaves.flash.buffers]
+page_buffer = { name = "Flash Page Buffer", start = 0x0600_1000, end = 0x0600_10FF, access = "rw" }
+
+[slaves.bram]
+name = "BRAM"
+ranges = [
+  { name = "BRAM", start = 0x0300_0000, end = 0x0341_DFFF, cacheable = true }
+]
+
+# This is the buffers section of slaves.bram.  When we validate, all these buffers must
+# be fully contained within some range of the BRAM slave.
+[slaves.bram.buffers]
+oled1 = { name = "OLED 1 Buffer", start = 0x0300_0000, end = 0x0300_5FFF, access = "rw" }
+oled2 = { name = "OLED 2 Buffer", start = 0x0300_6000, end = 0x0300_BFFF, access = "rw" }
+oled3 = { name = "OLED 3 Buffer", start = 0x0300_C000, end = 0x0301_1FFF, access = "rw" }
+oled4 = { name = "OLED 4 Buffer", start = 0x0301_2000, end = 0x0301_7FFF, access = "rw" }
+oled5 = { name = "OLED 5 Buffer", start = 0x0301_8000, end = 0x0301_DFFF, access = "rw" }
+vga = { name = "VGA Buffer", start = 0x0301_E000, end = 0x0341_DFFF, access = "rw" }
+
+[slaves.peripherals]
+name = "Peripherals"
+# The ranges section below defines a single MMIO range that contains all the registers and buffers
+# for the peripherals slave.
+ranges = [
+  { name = "MMIO", start = 0x0500_0000, end = 0x0500_0073, cacheable = false },
+]
+
+# This is the registers section of slaves.peripherals.  When we validate, all these registers must
+# be fully contained within some range of the Peripherals slave.
+[slaves.peripherals.registers.uart]
+rx_status = { name = "UART RX Status", addr = 0x0500_0000, access = "ro" }
+tx_status = { name = "UART TX Status", addr = 0x0500_0004, access = "ro" }
+rx_read_addr = { name = "UART RX Read Address", addr = 0x0500_0008, access = "ro" }
+tx_write_addr = { name = "UART TX Write Address", addr = 0x0500_000c, access = "wo" }
+
+[slaves.peripherals.registers.spi]
+rx_status = { name = "SPI RX Status", addr = 0x0500_0010, access = "ro" }
+tx_status = { name = "SPI TX Status", addr = 0x0500_0014, access = "ro" }
+rx_read_addr = { name = "SPI RX Read Address", addr = 0x0500_0018, access = "ro" }
+tx_write_addr = { name = "SPI TX Write Address", addr = 0x0500_001c, access = "wo" }
+
+[slaves.peripherals.registers.i2c]
+rx_status = { name = "I2C RX Status", addr = 0x0500_0020, access = "ro" }
+tx_status = { name = "I2C TX Status", addr = 0x0500_0024, access = "ro" }
+rx_read_addr = { name = "I2C RX Read Address", addr = 0x0500_0028, access = "ro" }
+tx_write_addr = { name = "I2C TX Write Address", addr = 0x0500_002c, access = "wo" }
+
+[slaves.peripherals.registers.gpio]
+dir = { name = "GPIO Direction", addr = 0x0500_0040, access = "rw" }
+inputs = { name = "Input GPIOs", addr = 0x0500_0044, access = "ro" }
+outputs = { name = "Output GPIOs", addr = 0x0500_004c, access = "wo" }
+
+[slaves.peripherals.registers.leds]
+outputs = { name = "LEDs", addr = 0x0500_0060, access = "wo" }
+
+[slaves.peripherals.registers.switches]
+inputs = { name = "Switches Inputs Read", addr = 0x0500_0070, access = "ro" }

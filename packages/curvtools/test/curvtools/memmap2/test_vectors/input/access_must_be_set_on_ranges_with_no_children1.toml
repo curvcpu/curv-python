@@ -1,0 +1,8 @@
+# Parsing should fail because access MUST be set to rw/ro/wo on ranges with no children.
+
+[slaves.bram]
+name = "BRAM"
+ranges = [
+  # access not set below but there are no child registers or buffers => ERROR
+  { name = "Framebuffers", start = 0x0300_0000, end = 0x0341_DFFF, cacheable = true }
+]

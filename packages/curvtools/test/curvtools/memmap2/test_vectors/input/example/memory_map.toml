@@ -1,0 +1,114 @@
+# Example memory map configuration for RISC-V SoC
+
+
+# Memory is organized into a set of named bus slaves containing one or more named ranges, e.g.,
+#   [slaves.sdram]
+#   name = "SDRAM"
+#   ranges = [
+#     { name = "SDRAM", start = 0x0000_0000, end = 0x01FF_FFFF, access = "rw", cacheable = true }
+#   ]
+#
+# Note: 
+#   - Every range must set `cacheable` to true or false, and the cacheable region must be 
+#     contiguous, meaning that the first non-cacheable address prevents any higher addresses from 
+#     being marked as cacheable.
+#
+# Each slave can have zero or more registers or buffers within it. A register is a single 32-bit word
+# located at some address, while a buffer is just a register that spans a contiguous block. All
+# registers and buffers must be contained within some named range of the slave.
+#   [slaves.sdram.registers]
+#   register1 = { name = "Register 1", start = 0x0000_0000, access = "rw" }
+#   register2 = { name = "Register 2", start = 0x0000_0004, access = "rw" }
+#   [slaves.sdram.buffers]
+#   buffer1 = { name = "SDRAM Buffer 1", start = 0x0000_0000, end = 0x0000_0FFF, access = "rw" }
+#   buffer2 = { name = "SDRAM Buffer 2", start = 0x0000_1000, end = 0x0000_1FFF, access = "rw" }
+#
+# Notes on the `access` key:
+#   - `access` can be set on a range or on a register or buffer.
+#   - `access` must be set at the most granular level.  If a range has no children, it must be 
+#     set on the range itself.  If a range has children, `access` must not be set on the range
+#     and instead set on each register or buffer individually.
+
+[slaves.sdram]
+name = "SDRAM"
+ranges = [
+  # this is an example of a range that does not have any registers or buffers within it,
+  # so it has both `access` and `cacheable` set.
+  { name = "SDRAM", start = 0x0000_0000, end = 0x01FF_FFFF, access = "rw", cacheable = true }
+]
+
+[slaves.flash]
+name = "Flash"
+ranges = [
+  # another example of a range that does not have any registers or buffers within it
+  { name = "Flash ROM", start = 0x0200_0000, end = 0x02FF_FFFF, access = "ro", cacheable = true },
+  # this range has registers and bufferswithin it, so it has no `access` key. 
+  # `cacheable` is still set because it applies to ranges, not regions or registers.
+  { name = "Flash Control", start = 0x0600_0000, end = 0x0600_10FF, cacheable = false },
+]
+
+# These are the registers of the Flash slave.  They must be contained within some range of
+# of the Flash slave. They must have `access` set because access is always set at the
+# lowest / most granular level, while their parent range must not have `access` set.
+[slaves.flash.registers]
+cmd_reg = { name = "Flash Command Register", addr = 0x0600_0000, access = "wo" }
+cmd_addr = { name = "Flash Command Address", addr = 0x0600_0004, access = "rw" }
+tag_hi = { name = "Flash Command Tag High", addr = 0x0600_0008, access = "rw" }
+tag_lo = { name = "Flash Command Tag Low", addr = 0x0600_000c, access = "rw" }
+status = { name = "Flash Command Status", addr = 0x0600_0010, access = "ro" }
+
+# These are the buffers of the Flash slave.  They must be contained within some range of
+# of the Flash slave. Again, they must have `access` set, while their parent range must 
+# not have `access` set.
+[slaves.flash.buffers]
+page_buffer = { name = "Flash Page Buffer", start = 0x0600_1000, end = 0x0600_10FF, access = "rw" }
+
+[slaves.bram]
+name = "BRAM"
+ranges = [
+  { name = "BRAM", start = 0x0300_0000, end = 0x0341_DFFF, cacheable = true }
+]
+
+[slaves.bram.buffers]
+oled1 = { name = "OLED 1 Buffer", start = 0x0300_0000, end = 0x0300_5FFF, access = "rw" }
+oled2 = { name = "OLED 2 Buffer", start = 0x0300_6000, end = 0x0300_BFFF, access = "rw" }
+oled3 = { name = "OLED 3 Buffer", start = 0x0300_C000, end = 0x0301_1FFF, access = "rw" }
+oled4 = { name = "OLED 4 Buffer", start = 0x0301_2000, end = 0x0301_7FFF, access = "rw" }
+oled5 = { name = "OLED 5 Buffer", start = 0x0301_8000, end = 0x0301_DFFF, access = "rw" }
+vga = { name = "VGA Buffer", start = 0x0301_E000, end = 0x0341_DFFF, access = "rw" }
+
+[slaves.peripherals]
+name = "Peripherals"
+ranges = [
+  { name = "Peripherals", start = 0x0500_0000, end = 0x0500_0073, cacheable = false },
+]
+
+# This illustrates how registers and buffers can have dotted names, e.g, `uart.rx_status`.
+[slaves.peripherals.registers.uart]
+rx_status = { name = "UART RX Status", addr = 0x0500_0000, access = "ro" }
+tx_status = { name = "UART TX Status", addr = 0x0500_0004, access = "ro" }
+rx_read_addr = { name = "UART RX Read Address", addr = 0x0500_0008, access = "ro" }
+tx_write_addr = { name = "UART TX Write Address", addr = 0x0500_000c, access = "wo" }
+
+[slaves.peripherals.registers.spi]
+rx_status = { name = "SPI RX Status", addr = 0x0500_0010, access = "ro" }
+tx_status = { name = "SPI TX Status", addr = 0x0500_0014, access = "ro" }
+rx_read_addr = { name = "SPI RX Read Address", addr = 0x0500_0018, access = "ro" }
+tx_write_addr = { name = "SPI TX Write Address", addr = 0x0500_001c, access = "wo" }
+
+[slaves.peripherals.registers.i2c]
+rx_status = { name = "I2C RX Status", addr = 0x0500_0020, access = "ro" }
+tx_status = { name = "I2C TX Status", addr = 0x0500_0024, access = "ro" }
+rx_read_addr = { name = "I2C RX Read Address", addr = 0x0500_0028, access = "ro" }
+tx_write_addr = { name = "I2C TX Write Address", addr = 0x0500_002c, access = "wo" }
+
+[slaves.peripherals.registers.gpio]
+dir = { name = "GPIO Direction", addr = 0x0500_0040, access = "rw" }
+inputs = { name = "Input GPIOs", addr = 0x0500_0044, access = "ro" }
+outputs = { name = "Output GPIOs", addr = 0x0500_004c, access = "wo" }
+
+[slaves.peripherals.registers.leds]
+outputs = { name = "LEDs", addr = 0x0500_0060, access = "wo" }
+
+[slaves.peripherals.registers.switches]
+inputs = { name = "Switches Inputs Read", addr = 0x0500_0070, access = "ro" }

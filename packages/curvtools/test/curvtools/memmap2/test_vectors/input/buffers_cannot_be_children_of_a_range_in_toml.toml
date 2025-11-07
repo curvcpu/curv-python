@@ -1,0 +1,10 @@
+# Should fail validation because Flash Control is a range and buffers cannot be children of a range.
+
+[slaves.flash]
+name = "Flash"
+ranges = [
+  { name = "Flash Control", start = 0x0600_0000, end = 0x0600_001f, cacheable = true, access = "rw" },
+]
+
+[slaves.flash.flash_control.buffers]
+buffer = { name = "Buffer", start = 0x0600_0000, end = 0x0600_0007, access = "rw" }

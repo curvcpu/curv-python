@@ -30,11 +30,14 @@ dependencies = [
   "curv>=0",      # will resolve to workspace in dev/CI; to PyPI when published
   "curvpyutils>=0",  # will resolve to workspace in dev/CI; to PyPI when published
   "click>=8",
+  "jinja2>=3",
+  "tomli>=2; python_version < '3.11'",
 ]
 
 [project.scripts]
-# Legacy alias preserved
-curvcfg = "curvtools.cli.cfg:main"
-# Preferred names
 curv-cfg = "curvtools.cli.cfg:main"
 curv-cache-tool = "curvtools.cli.cache_tool:main"
+curv-memmap2 = "curvtools.cli.memmap2:main"
+
+# Legacy alias preserved
+curvcfg = "curvtools.cli.cfg:main"

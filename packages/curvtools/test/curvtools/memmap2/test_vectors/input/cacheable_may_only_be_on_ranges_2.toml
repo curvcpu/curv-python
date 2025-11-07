@@ -1,0 +1,22 @@
+# Parsing should fail because cacheable may only be set on entire ranges, not on registers.
+
+[slaves.sdram]
+name = "SDRAM"
+ranges = [
+  { name = "RAM", start = 0x0000_0000, end = 0x01FF_FFFF, access = "rw", cacheable = true }
+]
+
+[slaves.flash]
+name = "Flash"
+ranges = [
+  { name = "Flash ROM", start = 0x0200_0000, end = 0x02FF_FFFF, access = "ro", cacheable = true },
+  { name = "Flash Control", start = 0x0600_0000, end = 0x0600_001f, cacheable = false },
+  { name = "Flash Control", start = 0x0600_1000, end = 0x0600_10FF, cacheable = false },
+]
+
+[slaves.flash.registers]
+cmd_reg = { name = "Flash Command Register", addr = 0x0600_0000, access = "wo" }
+cmd_addr = { name = "Flash Command Address", addr = 0x0600_0004, access = "rw" }
+tag_hi = { name = "Flash Command Tag High", addr = 0x0600_0008, access = "rw" }
+tag_lo = { name = "Flash Command Tag Low", addr = 0x0600_000c, access = "rw", cacheable = false }
+status = { name = "Flash Command Status", addr = 0x0600_0010, access = "ro" }

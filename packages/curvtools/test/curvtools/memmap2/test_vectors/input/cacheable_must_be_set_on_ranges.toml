@@ -1,0 +1,15 @@
+# Parsing should fail because cacheable must be set on all ranges.
+
+[slaves.bram]
+name = "BRAM"
+ranges = [
+  { name = "Framebuffers", start = 0x0300_0000, end = 0x0341_DFFF }
+]
+
+[slaves.bram.buffers]
+oled1 = { name = "OLED 1 Buffer", start = 0x0300_0000, end = 0x0300_5FFF, access = "rw" }
+oled2 = { name = "OLED 2 Buffer", start = 0x0300_6000, end = 0x0300_BFFF, access = "rw" }
+oled3 = { name = "OLED 3 Buffer", start = 0x0300_C000, end = 0x0301_1FFF, access = "rw" }
+oled4 = { name = "OLED 4 Buffer", start = 0x0301_2000, end = 0x0301_7FFF, access = "rw" }
+oled5 = { name = "OLED 5 Buffer", start = 0x0301_8000, end = 0x0301_DFFF, access = "rw" }
+vga = { name = "VGA Buffer", start = 0x0301_E000, end = 0x0341_DFFF, access = "rw" }
