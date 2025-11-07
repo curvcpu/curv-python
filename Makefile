@@ -119,7 +119,7 @@ check-git-clean:
 .PHONY: publish
 publish: check-git-clean test
 	@set -euo pipefail; \
-	echo "🤔 Fetching latest tags from remote '$$REMOTE'..."; \
+	echo "🤔 Fetching latest tags from remote '$(REMOTE)'..."; \
 	git fetch $(REMOTE) --tags; \
 	LEVEL=$${LEVEL:-patch}; \
 	PKG=$${PKG:-all}; \
