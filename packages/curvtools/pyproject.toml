@@ -29,9 +29,14 @@ classifiers = ["Programming Language :: Python :: 3 :: Only"]
 dependencies = [
   "curv>=0",      # will resolve to workspace in dev/CI; to PyPI when published
   "curvpyutils>=0",  # will resolve to workspace in dev/CI; to PyPI when published
-  "click>=8",
+  "click>=8.1.0",
   "jinja2>=3",
-  "tomli>=2; python_version < '3.11'",
+  "tomli>=2; python_version<'3.11'", # only needed for Python 3.10
+  "tomli-w",  # For writing TOML files (tomli/tomllib are read-only)
+  "shtab",
+  "rich",
+  "python-dotenv>=1.1.0",
+  "importlib-metadata>=6.0.0",
 ]
 
 [project.scripts]

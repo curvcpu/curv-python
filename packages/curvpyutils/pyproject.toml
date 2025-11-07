@@ -28,7 +28,9 @@ license = {text = "MIT"}
 authors = [{name="Mike Goelzer"}]
 classifiers = ["Programming Language :: Python :: 3 :: Only"]
 dependencies = [
-  "python-dotenv",
+  "tomli; python_version<'3.11'",  # only needed for Python 3.10
+  "tomli-w",                       # for writing TOML files (tomli/tomllib are read-only)
+  "python-dotenv>=1.1.0",
   "rich",
 ]
 

@@ -12,11 +12,14 @@ dependencies = [
   "curv>=0",         # so CLI e2e tests resolve curv in the root dev env
   "curvpyutils>=0",  # so CLI e2e tests resolve curvpyutils in the root dev env
   "curvtools>=0",    # so CLI e2e tests resolve curvtools in the root dev env
-  "click>=8",
+  "click>=8.1.0",
   "jinja2>=3",
-  "tomli>=2; python_version < '3.11'",
-  "python-dotenv",
+  "tomli>=2; python_version<'3.11'", # only needed for Python 3.10
+  "python-dotenv>=1.1.0",
   "rich",
+  "tomli-w",  # For writing TOML files (tomli/tomllib are read-only)
+  "shtab",
+  "importlib-metadata>=6.0.0",
 ]
 
 [tool.uv.workspace]

@@ -12,4 +12,5 @@ __all__ = [
     "str_utils",
     "get_curvpyutils_version_str",
     "get_curvpyutils_version_tuple",
+    "toml_utils",
 ]
