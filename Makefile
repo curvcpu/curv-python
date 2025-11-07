@@ -1,4 +1,7 @@
 # <repo-root>/Makefile
+SHELL := /usr/bin/env bash
+.SHELLFLAGS := -euo pipefail -c
+
 UV ?= uv
 VENVDIR ?= .venv
 PYTEST = uv run pytest
