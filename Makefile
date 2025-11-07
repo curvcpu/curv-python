@@ -135,7 +135,7 @@ publish: check-git-clean build test
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
 	  echo "Tagging $$name → $$tag"; \
 	  git tag -a "$$tag" -m "Release $$name ($$tag)"; \
-	  git push --atomic $(REMOTE) HEAD "$tag" \
+	  git push --atomic $(REMOTE) HEAD "$$tag"; \
 	  echo "📣 Published PKG=$$name (level=$$LEVEL)."; \
 	done; 
 # git push $(REMOTE) HEAD;
