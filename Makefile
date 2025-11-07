@@ -83,9 +83,12 @@ unsetup: unsetup-editable-installs clean-venv clean
 
 .PHONY: build
 build:
+# for p in $(PACKAGES); do \
+# 	pbasename=$$(basename $$p); \
+# 	( cd $$p && SETUPTOOLS_SCM_PRETEND_VERSION=$$(../../scripts/chk-pypi-latest-ver.py $$pbasename -Gb) $(UV) run -m build --sdist --wheel ) \
+# done
 	for p in $(PACKAGES); do \
-		pbasename=$$(basename $$p); \
-		( cd $$p && SETUPTOOLS_SCM_PRETEND_VERSION=$$(../../scripts/chk-pypi-latest-ver.py $$pbasename -Gb) $(UV) run -m build --sdist --wheel ) \
+		$(UV) run -m build --sdist --wheel $$p; \
 	done
 
 .PHONY: clean
@@ -111,20 +114,17 @@ check-git-clean:
 # - defaults: PKG=all, LEVEL=patch
 #
 .PHONY: publish
-publish: check-git-clean build test
-	@set -e; \
-	echo "Fetching latest tags from remote '$(REMOTE)'..."; \
-	git fetch $(REMOTE) --tags; \
+publish: check-git-clean test
+	@set -euo pipefail; \
+	echo "🤔 Fetching latest tags from remote '$$REMOTE'..."; \
+	git fetch $$REMOTE --tags; \
 	LEVEL=$${LEVEL:-patch}; \
 	PKG=$${PKG:-all}; \
 	case "$$PKG" in \
 	  all|"") ORDER="curvpyutils curv curvtools" ;; \
-	  curv)   ORDER="curv" ;; \
-	  curvtools) ORDER="curvtools" ;; \
-	  curvpyutils) ORDER="curvpyutils" ;; \
-	  *) echo "Unknown PKG=$$PKG (expected curv|curvtools|curvpyutils|all)"; exit 1 ;; \
+	  curv|curvtools|curvpyutils) ORDER="$$PKG" ;; \
+	  *) echo "Unknown PKG=$$PKG"; exit 1 ;; \
 	esac; \
-	\
 	bump() { \
 	  v="$${1:-0.0.0}"; lvl="$${2:-patch}"; \
 	  set -- $$(printf '%s' "$$v" | tr '.' ' '); \
@@ -157,13 +157,10 @@ publish: check-git-clean build test
 	  lvl="$$LEVEL"; \
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
 	  echo "🔥 Tagging $$name → $$tag"; \
-	  git tag -a "$$tag" -m "Release $$name ($$tag)"; \
-	  $(MAKE) -B build --no-print-directory; \
-	  git commit --allow-empty -m "Release $$name ($$tag)"; \
-	  echo "📣 Published PKG=$$name (level=$$LEVEL)."; \
-	done; 
-	@git push $(REMOTE) HEAD;
-	@git push $(REMOTE) --tags;
+	  git tag -a "$$tag" -m "Release ($$name): $$tag"; \
+	  echo "📣 Published PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
+	done; \
+	git push $$REMOTE --tags
 
 #
 # make untag PKG=curvtools [VER=0.0.6]

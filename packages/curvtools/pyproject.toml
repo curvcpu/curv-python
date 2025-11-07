@@ -12,6 +12,7 @@ tag-pattern = "^curvtools-v(?P<version>.+)$"
 [tool.hatch.version.raw-options]
 root = "../.."
 relative_to = "pyproject.toml"
+git_describe_command = "git describe --dirty --tags --long --match curvtools-v*"
 
 # write a version file on build
 [tool.hatch.build.hooks.vcs]

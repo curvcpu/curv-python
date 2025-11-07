@@ -5,16 +5,16 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from curvpyutils.version import get_version_str, get_full_version_str
+from curvpyutils.version_utils import get_version_str
 
 pytestmark = [pytest.mark.unit]
 
 class TestVersion:
-    def test_get_curvpyutils_version(self) -> None:
+    def test_get_version(self) -> None:
         console = Console()
         try:
-            ver_short = get_version_str()
-            ver_full = get_full_version_str()
+            ver_short = get_version_str(short_version=True)
+            ver_full = get_version_str(short_version=False)
             assert isinstance(ver_short, str)
             assert isinstance(ver_full, str)
             assert ver_short.split('.')[:3] == ver_full.split('.')[:3]
