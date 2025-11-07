@@ -6,8 +6,11 @@ import unittest
 from pathlib import Path
 import sys
 from typing import Callable
-
 from curvpyutils.toml_utils import MergedTomlDict  # type: ignore
+from curvpyutils.file_utils import DirWalker
+
+import pytest
+pytestmark = [pytest.mark.unit]
 
 def make_simple_match_overlay_tomls() -> Callable[[str], bool]:
     """
@@ -38,7 +41,6 @@ def find_overlay_tomls_abs_paths(root_dir: str, sub_dir: str, f_match_overlay_to
     Returns:
         A list of overlay.toml file absolute paths.
     """
-    from curvpyutils.file_utils import DirWalker
 
     dirwalker = DirWalker(root_dir, sub_dir, f_match_overlay_tomls)
     rel_paths_list: list[str] = dirwalker.get_matching_files()
