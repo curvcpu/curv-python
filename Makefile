@@ -247,7 +247,7 @@ show:
 	echo "Showing all versions for each package..."; \
 	echo ""; \
 	for p in curv curvtools curvpyutils; do \
-		scripts/chk-pypi-latest-ver.py "$$p"; \
+		scripts/chk-pypi-latest-ver.py "$$p" -pb; \
 		echo ""; \
 	done; \
 
