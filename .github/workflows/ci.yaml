@@ -29,8 +29,8 @@ jobs:
           key: uv-${{ runner.os }}-${{ matrix.python }}-${{ hashFiles('**/pyproject.toml', 'uv.lock') }}
       - name: Sync deps
         run: uv sync
-      - name: Install packages (editable)
-        run: make install-min
+      # - name: Install packages (editable)
+      #   run: make setup-editable-installs
       # - name: Lint
       #   run: uv run ruff check .
       - name: Unit tests

@@ -6,13 +6,15 @@ To tweak the code and contribute to `curv-python`, you'll want to follow the ste
 
  1. Install [`uv`](https://docs.astral.sh/uv/getting-started/installation/).  
 
- 2. Clone this repo and install the packages in editable mode:
+ 2. Clone this repo and set up the developer environment (packages installed editable and CLIs on PATH):
 
     ```shell
     git clone https://github.com/curvcpu/curv-python.git
-    cd curv-python/packages/curvpyutils
-    uv tool install --editable .
+    cd curv-python
+    make dev-setup
     ```
+
+    This also installs the CLI tools (`curv-cfg`, `curv-memmap2`, etc.) into your shell via `uv`.
 
     If `curvcfg` is not immediately available in your PATH, run this:
 
@@ -20,7 +22,7 @@ To tweak the code and contribute to `curv-python`, you'll want to follow the ste
     uv tool update-shell
     ```
 
-    And try restarting your shell or opening a new terminal window to see the changes.
+    And try restarting your shell or opening a new terminal window to see the changes. The PATH change persists for new shells.
 
 ## Dev/Test Cycle
 

@@ -9,13 +9,21 @@ dependencies = [
   "ruff>=0.6",
   "build>=1",
   "pre-commit>=3.7",
-  "click>=8",            # so CLI e2e tests resolve click in the root dev env
+  "curv>=0",         # so CLI e2e tests resolve curv in the root dev env
+  "curvpyutils>=0",  # so CLI e2e tests resolve curvpyutils in the root dev env
+  "curvtools>=0",    # so CLI e2e tests resolve curvtools in the root dev env
+  "click>=8",
+  "jinja2>=3",
+  "tomli>=2; python_version < '3.11'",
+  "python-dotenv",
+  "rich",
 ]
 
 [tool.uv.workspace]
 members = ["packages/*"]
 
-# Make sure local 'curv' and 'curvpyutils' are used during dev/CI
+# Make sure local 'curv', 'curvpyutils', and 'curvtools' are used during dev/CI
 [tool.uv.sources]
 curv = { workspace = true }
 curvpyutils = { workspace = true }
+curvtools = { workspace = true }

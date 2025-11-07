@@ -7,34 +7,81 @@ PACKAGES = packages/curv packages/curvtools packages/curvpyutils
 REMOTE ?= origin
 PKG_CURV = packages/curv
 PKG_CURVTOOLS = packages/curvtools
+PKG_CURVPYUTILS = packages/curvpyutils
 
-.PHONY: setup
-setup:
-	$(UV) sync
+.PHONY: setup-sync
+setup-sync: venv
+	@echo "🔄 Syncing root dev deps (pytest, ruff, + editable installs of workspace packages)..."
+	@$(UV) sync
 
 .PHONY: venv
 venv: $(VENVDIR)/bin/python
 $(VENVDIR)/bin/python:
-	$(UV) venv --seed
+	$(UV) venv --seed --allow-existing --refresh
 
-.PHONY: install-min
-install-min: venv
-	$(UV) pip install -e $(PKG_CURV)
-	$(UV) pip install -e $(PKG_CURVTOOLS)
+# was used by CI, but now `uv sync` handles this
+# .PHONY: setup-editable-installs
+# setup-editable-installs: venv
+# 	@# Ensure editable installs of all workspace packages in dependency order
+# 	@# This is used by both `make setup` for developers, and `make test` for CI.
+# 	@if $(UV) pip show -q $(notdir $(PKG_CURVPYUTILS)) >/dev/null 2>&1; then \
+# 		echo "✅ $(notdir $(PKG_CURVPYUTILS)) already installed (editable)"; \
+# 	else \
+# 		$(UV) pip install -e $(PKG_CURVPYUTILS); \
+# 		echo "✅ Installed $(notdir $(PKG_CURVPYUTILS)) (editable)"; \
+# 	fi
+# 	@if $(UV) pip show -q $(notdir $(PKG_CURV)) >/dev/null 2>&1; then \
+# 		echo "✅ $(notdir $(PKG_CURV)) already installed (editable)"; \
+# 	else \
+# 		$(UV) pip install -e $(PKG_CURV); \
+# 		echo "✅ Installed $(notdir $(PKG_CURV)) (editable)"; \
+# 	fi
+# 	@if $(UV) pip show -q $(notdir $(PKG_CURVTOOLS)) >/dev/null 2>&1; then \
+# 		echo "✅ $(notdir $(PKG_CURVTOOLS)) already installed (editable)"; \
+# 	else \
+# 		$(UV) pip install -e $(PKG_CURVTOOLS); \
+# 		echo "✅ Installed $(notdir $(PKG_CURVTOOLS)) (editable)"; \
+# 	fi
 
-.PHONY: install-dev
-install-dev: install-min
+.PHONY: setup
+setup: setup-sync #setup-editable-installs # disabled for now because `uv sync` handles this
+	@$(UV) tool install --editable $(PKG_CURVTOOLS)
+	@echo "✅ All CLI tools (editable) available on PATH"
+	@# Edit shell's rc file to keep the PATH update persistent
+	@$(UV) tool update-shell -q || true
 
 .PHONY: test
-test: install-min test-unit test-e2e
+test: test-unit test-e2e
 
 .PHONY: test-unit
-test-unit:
+test-unit: setup-sync #setup-editable-installs # disabled for now because `uv sync` handles this
 	$(PYTEST) $(PYTEST_OPTS) -m "unit"
 
 .PHONY: test-e2e
-test-e2e:
+test-e2e: setup-sync #setup-editable-installs
 	$(PYTEST) $(PYTEST_OPTS) -m "e2e"
+
+.PHONY: unsetup-editable-installs
+unsetup-editable-installs:
+	@# Only uninstall if installed; stay quiet otherwise
+	@if $(UV) pip show -q $(notdir $(PKG_CURVPYUTILS)) >/dev/null 2>&1; then \
+		$(UV) pip uninstall -q $(notdir $(PKG_CURVPYUTILS)) >/dev/null; \
+		echo "✅ Removed $(notdir $(PKG_CURVPYUTILS))"; \
+	fi
+	@if $(UV) pip show -q $(notdir $(PKG_CURV)) >/dev/null 2>&1; then \
+		$(UV) pip uninstall -q $(notdir $(PKG_CURV)) >/dev/null; \
+		echo "✅ Removed $(notdir $(PKG_CURV))"; \
+	fi
+	@if $(UV) pip show -q $(notdir $(PKG_CURVTOOLS)) >/dev/null 2>&1; then \
+		$(UV) pip uninstall -q $(notdir $(PKG_CURVTOOLS)) >/dev/null; \
+		echo "✅ Removed $(notdir $(PKG_CURVTOOLS))"; \
+	fi
+
+.PHONY: unsetup
+unsetup: unsetup-editable-installs clean-venv clean
+	@$(UV) tool uninstall --all -q
+	@echo "✅ Removed CLI tools from uv tool environment"
+
 
 .PHONY: build
 build:
@@ -44,14 +91,19 @@ build:
 
 .PHONY: clean
 clean:
-	find . -type d -name __pycache__ -prune -exec rm -rf {} +
-	rm -rf build dist .pytest_cache .ruff_cache $(VENVDIR)
-	for p in $(PACKAGES); do \
+	@find . -type d -name __pycache__ -prune -exec rm -rf {} +
+	@rm -rf build dist .pytest_cache .ruff_cache $(VENVDIR)
+	@for p in $(PACKAGES); do \
 		rm -rf $$p/dist $$p/build $$p/*.egg-info $$p/src/*.egg-info ; \
 	done
 
-.PHONY: check-clean
-check-clean:
+.PHONY: clean-venv
+clean-venv: clean
+	@$(RM) -rf $(VENVDIR)/bin/python
+	@echo "✅ Removed $(VENVDIR)/bin/python"
+
+.PHONY: check-git-clean
+check-git-clean:
 	@test -z "$$(git status --porcelain)" || (echo "Error: git working tree is not clean. Commit/stash first."; exit 1)
 
 #
@@ -60,7 +112,7 @@ check-clean:
 # - defaults: PKG=all, LEVEL=patch
 #
 .PHONY: publish
-publish: check-clean build test
+publish: check-git-clean build test
 	@set -e; \
 	echo "Fetching latest tags from remote '$(REMOTE)'..."; \
 	git fetch $(REMOTE) --tags; \
@@ -120,7 +172,7 @@ publish: check-clean build test
 # PKG is required.
 #
 .PHONY: untag
-untag: check-clean
+untag: check-git-clean
 	@set -e; \
 	PKG=$${PKG:-}; \
 	if [ -z "$$PKG" ]; then \
@@ -219,8 +271,8 @@ show-publish-status:
 .PHONY: help
 help:
 	@echo "Run these once before you get started:"
-	@echo "  make setup               - Setup the project"
-	@echo "  make install-dev         - Install the development packages"
+	@echo "  make setup               - Setup dev env, install packages (editable), and"
+	@echo "                             install CLI tools into your shell via uv"
 	@echo ""
 	@echo "Building and running tests:"
 	@echo "  make build               - Build the packages"
