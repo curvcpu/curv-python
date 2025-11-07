@@ -46,6 +46,8 @@ install-min: venv
 
 .PHONY: setup
 setup: install-min
+	@echo "🤔 Fetching latest tags from remote '$(REMOTE)'..."
+	@git fetch $(REMOTE) --tags
 	@SETUPTOOLS_SCM_PRETEND_VERSION=$$(scripts/chk-pypi-latest-ver.py curvtools -Gb) $(UV) tool install --editable $(PKG_CURVTOOLS)
 	@echo "✓ All CLI tools (editable) available on PATH"
 	@# Edit shell's rc file to keep the PATH update persistent
