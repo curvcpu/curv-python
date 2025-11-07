@@ -29,6 +29,25 @@ jobs:
           key: uv-${{ runner.os }}-${{ matrix.python }}-${{ hashFiles('**/pyproject.toml', 'uv.lock') }}
       - name: Sync deps
         run: uv sync
+      - name: Install verilator (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y verilator
+      - name: Attempt install delta (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git-delta || true
+      - name: Install verilator (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew update
+          brew install verilator
+      - name: Attempt install delta (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install git-delta || true
       # - name: Install packages (editable)
       #   run: make setup-editable-installs
       # - name: Lint

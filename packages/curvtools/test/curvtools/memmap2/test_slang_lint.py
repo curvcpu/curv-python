@@ -8,7 +8,7 @@ import subprocess
 import pytest
 import sys
 
-pytestmark = [pytest.mark.e2e]
+pytestmark = [pytest.mark.e2e, pytest.mark.tool_required("slang")]
 
 from curvpyutils.shellutils import Which
 
