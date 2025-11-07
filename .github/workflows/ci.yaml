@@ -48,8 +48,8 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           brew install git-delta || true
-      # - name: Install packages (editable)
-      #   run: make setup-editable-installs
+      - name: Install packages (editable)
+        run: make install-min
       # - name: Lint
       #   run: uv run ruff check .
       - name: Unit tests

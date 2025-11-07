@@ -10,19 +10,41 @@ PKG_CURVTOOLS = packages/curvtools
 PKG_CURVPYUTILS = packages/curvpyutils
 
 .PHONY: setup-sync
-setup-sync: venv
-	@echo "🔄 Syncing root dev deps (pytest, ruff, + editable installs of workspace packages)..."
+setup-sync:
+	@echo "🔄 Syncing root dev deps (pytest, ruff, etc.)..."
 	@$(UV) sync
 
 .PHONY: venv
 venv: $(VENVDIR)/bin/python
 $(VENVDIR)/bin/python:
-	$(UV) venv --seed --allow-existing --refresh
+	$(UV) venv --seed
+
+.PHONY: install-min
+install-min: venv
+	@echo "🔄 Installing editable installs of workspace packages..."
+	@if $(UV) pip show -q $(notdir $(PKG_CURVPYUTILS)) >/dev/null 2>&1; then \
+		echo "✓ $(notdir $(PKG_CURVPYUTILS)) already installed"; \
+	else \
+		SETUPTOOLS_SCM_PRETEND_VERSION=$$(scripts/chk-pypi-latest-ver.py curvpyutils -Gb) $(UV) pip install -e $(PKG_CURVPYUTILS); \
+		echo "✓ Installed $(notdir $(PKG_CURVPYUTILS))..."; \
+	fi;
+	@if $(UV) pip show -q $(notdir $(PKG_CURV)) >/dev/null 2>&1; then \
+		echo "✓ $(notdir $(PKG_CURV)) already installed"; \
+	else \
+		SETUPTOOLS_SCM_PRETEND_VERSION=$$(scripts/chk-pypi-latest-ver.py curv -Gb) $(UV) pip install -e $(PKG_CURV); \
+		echo "✓ Installed $(notdir $(PKG_CURV))..."; \
+	fi;
+	@if $(UV) pip show -q $(notdir $(PKG_CURVTOOLS)) >/dev/null 2>&1; then \
+		echo "✓ $(notdir $(PKG_CURVTOOLS)) already installed"; \
+	else \
+		SETUPTOOLS_SCM_PRETEND_VERSION=$$(scripts/chk-pypi-latest-ver.py curvtools -Gb) $(UV) pip install -e $(PKG_CURVTOOLS); \
+		echo "✓ Installed $(notdir $(PKG_CURVTOOLS))..."; \
+	fi;
 
 .PHONY: setup
-setup: setup-sync
-	@$(UV) tool install --editable $(PKG_CURVTOOLS)
-	@echo "✅ All CLI tools (editable) available on PATH"
+setup: install-min
+	@SETUPTOOLS_SCM_PRETEND_VERSION=$$(scripts/chk-pypi-latest-ver.py curvtools -Gb) $(UV) tool install --editable $(PKG_CURVTOOLS)
+	@echo "✓ All CLI tools (editable) available on PATH"
 	@# Edit shell's rc file to keep the PATH update persistent
 	@$(UV) tool update-shell -q || true
 
@@ -30,11 +52,11 @@ setup: setup-sync
 test: test-unit test-e2e
 
 .PHONY: test-unit
-test-unit: setup-sync
+test-unit: install-min
 	$(PYTEST) $(PYTEST_OPTS) -m "unit"
 
 .PHONY: test-e2e
-test-e2e: setup-sync
+test-e2e: install-min
 	$(PYTEST) $(PYTEST_OPTS) -m "e2e"
 
 .PHONY: unsetup-editable-installs
@@ -62,7 +84,8 @@ unsetup: unsetup-editable-installs clean-venv clean
 .PHONY: build
 build:
 	for p in $(PACKAGES); do \
-		( cd $$p && $(UV) run -m build --sdist --wheel ) \
+		pbasename=$$(basename $$p); \
+		( cd $$p && SETUPTOOLS_SCM_PRETEND_VERSION=$$(../../scripts/chk-pypi-latest-ver.py $$pbasename -Gb) $(UV) run -m build --sdist --wheel ) \
 	done
 
 .PHONY: clean
@@ -134,12 +157,12 @@ publish: check-git-clean build test
 	  lvl="$$LEVEL"; \
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
 	  echo "Tagging $$name → $$tag"; \
+	  git commit --allow-empty -m "Release $$name ($$tag)"; \
 	  git tag -a "$$tag" -m "Release $$name ($$tag)"; \
-	  git push --atomic $(REMOTE) HEAD "$$tag"; \
 	  echo "📣 Published PKG=$$name (level=$$LEVEL)."; \
 	done; 
-# git push $(REMOTE) HEAD;
-# git push $(REMOTE) --tags;
+	@git push $(REMOTE) HEAD;
+	@git push $(REMOTE) --tags;
 
 #
 # make untag PKG=curvtools [VER=0.0.6]

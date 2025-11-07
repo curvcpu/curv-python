@@ -5,7 +5,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
 
-from curvpyutils import get_curvpyutils_version_str, get_curvpyutils_version_tuple
+from curvpyutils.version import get_version_str, get_full_version_str
 
 pytestmark = [pytest.mark.unit]
 
@@ -13,11 +13,11 @@ class TestVersion:
     def test_get_curvpyutils_version(self) -> None:
         console = Console()
         try:
-            ver_str = get_curvpyutils_version_str()
-            ver_tuple = get_curvpyutils_version_tuple()
-            assert isinstance(ver_str, str)
-            assert isinstance(ver_tuple, tuple)
-            assert len(ver_tuple) == 3
+            ver_short = get_version_str()
+            ver_full = get_full_version_str()
+            assert isinstance(ver_short, str)
+            assert isinstance(ver_full, str)
+            assert ver_short.split('.')[:3] == ver_full.split('.')[:3]
         except AssertionError as e:
             # Create a nicely formatted error message with rich
             error_text = Text()
