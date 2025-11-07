@@ -16,6 +16,7 @@ class Which:
         WARNING = "warning"
         RAISE = "raise"
         ERROR_AND_RAISE = "error_and_raise"
+        WARNING_AND_RAISE = "warning_and_raise"
 
     def __init__(
         self,
@@ -48,6 +49,10 @@ class Which:
             self._print_warning(f"warning: {target} not found or not executable\n")
             self._print_install_instructions(self.tool_name)
         elif self.on_missing_action == self.OnMissingAction.RAISE:
+            raise FileNotFoundError(f"{target} not found or not executable")
+        elif self.on_missing_action == self.OnMissingAction.WARNING_AND_RAISE:
+            self._print_warning(f"warning: {target} not found or not executable\n")
+            self._print_install_instructions(self.tool_name)
             raise FileNotFoundError(f"{target} not found or not executable")
         return None
 
