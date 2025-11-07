@@ -156,9 +156,10 @@ publish: check-git-clean build test
 	  fi; \
 	  lvl="$$LEVEL"; \
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
-	  echo "Tagging $$name → $$tag"; \
-	  git commit --allow-empty -m "Release $$name ($$tag)"; \
+	  echo "🔥 Tagging $$name → $$tag"; \
 	  git tag -a "$$tag" -m "Release $$name ($$tag)"; \
+	  $(MAKE) -B build --no-print-directory; \
+	  git commit --allow-empty -m "Release $$name ($$tag)"; \
 	  echo "📣 Published PKG=$$name (level=$$LEVEL)."; \
 	done; 
 	@git push $(REMOTE) HEAD;
