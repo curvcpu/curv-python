@@ -1,0 +1,4 @@
+[comparison_different]
+var1 = different_value1
+var2 = value2
+var3 = value3

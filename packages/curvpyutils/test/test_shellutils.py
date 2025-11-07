@@ -48,7 +48,7 @@ class TestWhich:
         assert result is None
 
     def test_which_raises_on_missing_when_configured(self):
-        which = Which("nonexistent_tool_12345", on_missing_action=Which.OnMissingAction.ERROR_AND_RAISE)
+        which = Which("nonexistent_tool_12345", on_missing_action=Which.OnMissingAction.RAISE)
         with pytest.raises(FileNotFoundError):
             which()
 

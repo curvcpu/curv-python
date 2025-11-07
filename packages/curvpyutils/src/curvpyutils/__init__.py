@@ -3,6 +3,7 @@
 from .version import get_curvpyutils_version_str, get_curvpyutils_version_tuple
 
 __all__ = [
+    "test_helpers",
     "colors",
     "file_utils",
     "multi_progress",
