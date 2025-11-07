@@ -160,11 +160,10 @@ publish: check-git-clean test
 	    pfx="curvpyutils-v"; \
 	  fi; \
 	  lvl="$$LEVEL"; \
-	  git commit --allow-empty -m "Release ($$name): $$tag"; \
-	  git push $(REMOTE) HEAD; \
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
+	  git commit --allow-empty -m "Release ($$name): $$tag" && git push $(REMOTE) HEAD; \
 	  echo "🔥 Tagging $$name → $$tag"; \
-	  git tag -a "$$tag" -m "Release ($$name): $$tag"; \
+	  git tag -a "$$tag" -m "Release ($$name): $$tag" && git push $(REMOTE) "$$tag"; \
 	  echo "📣 Published PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
 	done; \
 	git push $(REMOTE) --tags
