@@ -1,0 +1,105 @@
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_TYPE]
+toml_path     = "cache.hex_files.src.type"
+var_name      = "CFG_CACHE_HEX_FILES_SRC_TYPE"
+type          = "enum"
+enum_values   = ["asm"]
+default       = "count1234"
+makefile_type = "string"
+locations     = ["makefiles", "json"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_NAME]
+toml_path     = "cache.hex_files.src.name"
+var_name      = "CFG_CACHE_HEX_FILES_SRC_NAME"
+type          = "enum"
+enum_values   = ["count1234", "example_prog"]
+default       = "count1234"
+makefile_type = "string"
+locations     = ["makefiles", "json"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_BASE_ADDR]
+toml_path     = "cache.hex_files.base_addr"
+var_name      = "CFG_CACHE_HEX_FILES_BASE_ADDR"
+type          = "int"
+min           = 0x0
+max           = 0xffc
+sv_type       = "logic [31:0]"
+makefile_type = "hex32"
+locations     = ["makefiles", "cfgpkg", "json"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_ICACHE]
+toml_path     = "cache.hex_files.subdirs.icache"
+var_name      = "CFG_CACHE_HEX_FILES_SUBDIRS_ICACHE"
+type          = "string"
+makefile_type = "string"
+locations     = ["makefiles", "json"]
+
+[_schema.vars.CFG_CACHE_TAGS_IN_LUTRAM]
+toml_path     = "cache.tags_in_lutram"
+var_name      = "CFG_CACHE_TAGS_IN_LUTRAM"
+type          = "enum"
+enum_values   = [0, 1]
+sv_type       = "int"
+makefile_type = "decimal"
+locations     = ["makefiles", "cfgpkg", "json"]
+
+[_schema.vars.CFG_CACHE_SETS]
+toml_path     = "cache.sets"
+var_name      = "CFG_CACHE_SETS"
+type          = "enum"
+enum_values   = [4, 8, 16, 32, 64, 128]
+sv_type       = "int"
+makefile_type = "decimal"
+locations     = ["makefiles", "cfgpkg", "json"]
+
+[_schema.vars.CFG_CACHE_TAGS_HAVE_VALID_BITS]
+toml_path     = "cache.tags_have_valid_bits"
+var_name      = "CFG_CACHE_TAGS_HAVE_VALID_BITS"
+type          = "enum"
+enum_values   = [0, 1]
+sv_type       = "int"
+makefile_type = "decimal"
+locations     = ["makefiles", "cfgpkg", "json"]
+
+[_schema.vars.CFG_CACHE_TAGS_HAVE_DIRTY_BITS]
+toml_path     = "cache.tags_have_dirty_bits"
+var_name      = "CFG_CACHE_TAGS_HAVE_DIRTY_BITS"
+type          = "enum"
+enum_values   = [0, 1]
+sv_type       = "int"
+makefile_type = "decimal"
+locations     = ["makefiles", "cfgpkg", "json"]
+
+[_schema.vars.CFG_CPU_RESET_VECTOR]
+toml_path     = "cpu.reset_vector"
+var_name      = "CFG_CPU_RESET_VECTOR"
+type          = "int"
+min           = 0x000
+max           = 0xffc
+sv_type       = "logic [31:0]"
+makefile_type = "hex32"
+locations     = ["makefiles", "cfgpkg", "json"]
+
+[_schema.vars.CFG_CPU_MTVEC_BASE]
+toml_path     = "cpu.mtvec_base"
+var_name      = "CFG_CPU_MTVEC_BASE"
+type          = "int"
+min           = 0x0
+max           = 0xfffffffc
+sv_type       = "logic [31:0]"
+makefile_type = "hex32"
+locations     = ["cfgpkg", "json"]
+default       = 0x1234_5678
+
+[_schema.vars.CFG_TB_CACHE_ICACHE_SIMULATE_MULTICYCLE_MEMORY_LATENCY]
+toml_path     = "tb.cache.icache.simulate_multicycle_memory_latency"
+var_name      = "CFG_TB_CACHE_ICACHE_SIMULATE_MULTICYCLE_MEMORY_LATENCY"
+type          = "enum"
+enum_values   = [0, 1]
+sv_type       = "int"
+makefile_type = "decimal"
+locations     = ["cfgpkg", "makefiles", "json"]
+
+# Optional cross-field constraints (string expressions evaluated in code; keep simple).
+# For now we’ll leave it empty; add later if you want coupling checks.
+[_schema.constraints]
+rules = []

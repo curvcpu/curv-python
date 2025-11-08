@@ -1,0 +1,245 @@
+# ----------------------------------------------------------------------------
+#
+# Schema for the Curv RISCV SoC configuration variables
+#
+# ----------------------------------------------------------------------------
+
+#
+# This is the schema that governs how a given toml path above, e.g., "cpu.xlen", 
+# is mapped onto a configuration variable (e.g., "CFG_CPU_XLEN") including its 
+# legal values which build artifacts it is incorporated into.
+#
+
+#
+# ~~~ BRIEF SCHEMA DOCUMENTATION ~~~
+#
+# Types: "int", "string", "enum"
+#
+# Enums: 
+#   - may be string or int valued. Use "enum_values = [..., ...]" with quoted strings 
+#   or plain ints
+#   - For "int" and int-valued "enum", you can specify sv_type for the SV package (e.g., 
+#   "logic [31:0]") and makefile_type for the Makefile value (string, hex, hex8, hex16, 
+#   hex32, or decimal)
+#
+# Locations: "makefiles", "cfgpkg", "defines", "json", "env", or "all"
+#   - controls which artifacts receive a given variable:
+#     makefiles:   goes into makefile include fragment as a make variable
+#     cfgpkg:      goes into curvcfg package file as a localparam
+#     defines:     goes into global SV `define macro file
+#     json:        goes into json file k/v pair
+#     env:         goes into .curv.env file as an environment variable
+#     all:         (all of the above)
+#
+# Each schema entry:
+#   toml_path:     dotted path inside the config TOML
+#   var_name:      public symbol name used in outputs (Makefile var, SV localparam/`define, JSON key)
+#   type:          "int" | "string" | "enum"
+#   enum_values:   (for type == "enum") allowable values (can be strings or ints)
+#   min/max:       (for type == "int") inclusive integer bounds; hex allowed in config but stored as int
+#   sv_type:       (optional) SV type for cfgpkg (ints & int-enums), e.g., "logic [31:0]" or "mytype_t"
+#   makefile_type: (optional) type for Makefile value (string, hex, hex8, hex16, hex32, or decimal)
+#                  For ints and int-enums, decimal is the default. For strings, string is the default.
+#   locations:     array of locations (see above) OR the string "all"
+#   default:       (optional) default value for the variable (see below)
+#   comment:       (optional) comment for the variable (displayed in the generated files)
+#
+# Default values:
+# - If the variable is not specified in the config TOML, then:
+#   - if "default" is specified here, that value is used.
+#   - otherwise, enums default to their first value, 
+#   - ints default to 0 (or min)
+#   - strings default to empty string
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_TYPE]
+toml_path = "cache.hex_files.src.type"
+var_name = "CFG_CACHE_HEX_FILES_SRC_TYPE"
+type = "enum"
+enum_values = ["asm", "c"]
+default = "asm"
+makefile_type = "string"
+locations = ["makefiles", "env"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_NAME]
+toml_path = "cache.hex_files.src.name"
+var_name = "CFG_CACHE_HEX_FILES_SRC_NAME"
+type = "enum"
+enum_values = ["count1234", "jumps", "jumps-small", "pic", "auipc-bypass", "jal-jalr", "branches", "brcomp-haz", "load-store"]
+default = "count1234"
+makefile_type = "string"
+locations = ["makefiles", "env"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_BASE_ADDR]
+toml_path = "cache.hex_files.base_addr"
+var_name = "CFG_CACHE_HEX_FILES_BASE_ADDR"
+type = "int"
+min = 0x0000_0000
+max = 0xffff_fffc
+sv_type = "logic [31:0]"
+makefile_type = "hex32"
+locations = ["makefiles", "cfgpkg", "env"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_ICACHE]
+toml_path = "cache.hex_files.subdirs.icache"
+var_name = "CFG_CACHE_HEX_FILES_SUBDIRS_ICACHE"
+type = "string"
+makefile_type = "string"
+locations = ["makefiles", "env"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_DCACHE]
+toml_path = "cache.hex_files.subdirs.dcache"
+var_name = "CFG_CACHE_HEX_FILES_SUBDIRS_DCACHE"
+type = "string"
+makefile_type = "string"
+locations = ["makefiles", "env"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_CACHELINES]
+toml_path = "cache.hex_files.subdirs.cachelines"
+var_name = "CFG_CACHE_HEX_FILES_SUBDIRS_CACHELINES"
+type = "string"
+makefile_type = "string"
+locations = ["makefiles", "env"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_TAGRAM]
+toml_path = "cache.hex_files.subdirs.tagram"
+var_name = "CFG_CACHE_HEX_FILES_SUBDIRS_TAGRAM"
+type = "string"
+makefile_type = "string"
+locations = ["makefiles", "env"]
+
+[_schema.vars.CFG_CACHE_TAGS_IN_LUTRAM]
+toml_path = "cache.tags_in_lutram"
+var_name = "CFG_CACHE_TAGS_IN_LUTRAM"
+type = "enum"
+enum_values = [0, 1]
+sv_type = "int"
+makefile_type = "decimal"
+locations = ["makefiles", "cfgpkg", "env", "defines"]
+
+[_schema.vars.CFG_CACHE_SETS]
+toml_path = "cache.sets"
+var_name = "CFG_CACHE_SETS"
+type = "enum"
+enum_values = [4, 8, 16, 32, 64, 128]
+sv_type = "int"
+makefile_type = "decimal"
+locations = ["makefiles", "cfgpkg", "env"]
+
+[_schema.vars.CFG_CACHE_WAYS]
+toml_path = "cache.ways"
+var_name = "CFG_CACHE_WAYS"
+type = "enum"
+enum_values = [2]
+sv_type = "int"
+makefile_type = "decimal"
+locations = ["makefiles", "cfgpkg", "env"]
+
+[_schema.vars.CFG_CACHE_CACHELINES_NUM_WORDS]
+toml_path = "cache.cachelines.num_words"
+var_name = "CFG_CACHE_CACHELINES_NUM_WORDS"
+type = "enum"
+enum_values = [16]
+sv_type = "int"
+makefile_type = "decimal"
+locations = ["makefiles", "cfgpkg", "env"]
+
+[_schema.vars.CFG_CACHE_TAGS_HAVE_VALID_DIRTY_BITS]
+toml_path = "cache.tags_have_valid_dirty_bits"
+var_name = "CFG_CACHE_TAGS_HAVE_VALID_DIRTY_BITS"
+type = "enum"
+enum_values = [0, 1]
+sv_type = "int"
+makefile_type = "decimal"
+locations = ["makefiles", "cfgpkg", "env"]
+
+[_schema.vars.CFG_CACHE_CACHELINES_INITIALLY_VALID]
+toml_path = "cache.cachelines.initially_valid"
+var_name = "CFG_CACHE_CACHELINES_INITIALLY_VALID"
+type = "enum"
+enum_values = [0, 1]
+sv_type = "int"
+makefile_type = "decimal"
+locations = ["makefiles", "cfgpkg", "env"]
+
+[_schema.vars.CFG_CACHE_CACHEABLE_ADDRESSES_WIDTH]
+toml_path = "cache.cacheable_addresses.width"
+var_name = "CFG_CACHE_CACHEABLE_ADDRESSES_WIDTH"
+type = "int"
+min = 10
+max = 32
+sv_type = "int"
+makefile_type = "decimal"
+locations = ["makefiles", "cfgpkg", "env"]
+
+[_schema.vars.CFG_CPU_XLEN]
+toml_path = "cpu.xlen"
+var_name = "CFG_CPU_XLEN"
+type = "enum"
+enum_values = [32, 64]
+default = 32
+sv_type = "int"
+makefile_type = "decimal"
+locations = ["makefiles", "cfgpkg", "env"]
+
+[_schema.vars.CFG_REGFILE_USE_LUTRAM]
+toml_path = "cpu.regfile.use_lutram"
+var_name = "CFG_REGFILE_USE_LUTRAM"
+type = "enum"
+enum_values = [0, 1]
+default = 1
+sv_type = "int"
+makefile_type = "decimal"
+locations = ["cfgpkg"]
+
+[_schema.vars.CFG_CPU_RESET_VECTOR]
+toml_path = "cpu.reset_vector"
+var_name = "CFG_CPU_RESET_VECTOR"
+type = "int"
+min = 0x0000_0000
+max = 0xffff_fffc
+sv_type = "logic [31:0]"
+makefile_type = "hex32"
+locations = ["makefiles", "cfgpkg", "env"]
+
+[_schema.vars.CFG_CPU_MTVEC_BASE]
+toml_path = "cpu.mtvec_base"
+var_name = "CFG_CPU_MTVEC_BASE"
+type = "int"
+min = 0x0000_0000
+max = 0xffff_fffc
+sv_type = "logic [31:0]"
+makefile_type = "hex32"
+locations = ["cfgpkg", "env"]
+
+[_schema.vars.CFG_TB_CACHE_ICACHE_SIMULATE_LATENCY]
+toml_path = "tb.cache.icache.simulate_latency"
+var_name = "CFG_TB_CACHE_ICACHE_SIMULATE_LATENCY"
+type = "enum"
+enum_values = [0, 1]
+sv_type = "int"
+makefile_type = "decimal"
+locations = ["cfgpkg", "makefiles", "env"]
+
+[_schema.vars.CFG_TB_CACHE_DCACHE_SIMULATE_LATENCY]
+toml_path = "tb.cache.dcache.simulate_latency"
+var_name = "CFG_TB_CACHE_DCACHE_SIMULATE_LATENCY"
+type = "enum"
+enum_values = [0, 1]
+sv_type = "int"
+makefile_type = "decimal"
+locations = ["cfgpkg", "makefiles", "env"]
+
+[_schema.vars.CFG_CACHE_CACHELINES_LATENCY]
+toml_path = "cache.cachelines.latency"
+var_name = "CFG_CACHE_CACHELINES_LATENCY"
+type = "enum"
+enum_values = [0, 1, 2]
+sv_type = "int"
+makefile_type = "decimal"
+locations = ["cfgpkg", "makefiles", "env", "defines"]
+
+# Optional cross-field constraints (string expressions evaluated in code; keep simple).
+# For now we’ll leave it empty; add later if you want coupling checks.
+[_schema.constraints]
+rules = []
+

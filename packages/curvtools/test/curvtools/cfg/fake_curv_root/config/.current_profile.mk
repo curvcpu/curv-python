@@ -1,0 +1,1 @@
+CURV_CONFIG ?= default

@@ -1,0 +1,17 @@
+#
+# Default configuration
+#
+# Instead of editing this file:
+#  1. copy it to a new file in this dir (e.g., `profiles/my-config.toml`) and use `make CONFIG=my-config`
+#  2. for per-directory overrides, e.g., in testbench dirs, create a `profiles/overrides.toml` 
+#      in that dir. These overrides will apply regardless of the currently selected config.
+#
+# See docs/config.md for more details about how this infegrates into the build process.
+#
+
+description = """
+Default configuration for the Curv RISCV SoC
+"""
+
+[cache]
+sets = 4
