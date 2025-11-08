@@ -19,30 +19,6 @@ class FsPathType(_SystemPath):
     (begins with a separator) in which case we only do variable expansion.
     """
     _flavour = _SystemPath._flavour
-    # def __new__(cls, path: str, ctx: click.Context):
-    #     if not isinstance(path, (str, os.PathLike)):
-    #         raise TypeError(
-    #             f"path is not a string or os.PathLike: {type(path).__name__}; expected str for input {path!r}"
-    #         )
-    #     s1:str = expand_curv_root_dir_vars(path, ctx)
-    #     if not isinstance(s1, (str, os.PathLike)):
-    #         raise TypeError(
-    #             f"expand_curv_root_dir_vars returned {type(s1).__name__}; expected str for input {path!r}"
-    #         )
-    #     s2:str = expand_build_dir_vars(s1, ctx)
-    #     if not isinstance(s2, (str, os.PathLike)):
-    #         raise TypeError(
-    #             f"expand_build_dir_vars returned {type(s2).__name__}; expected str for input {path!r}"
-    #         )
-    #     resolved = str(Path(s2).expanduser().absolute())
-    #     return super().__new__(cls, resolved)
-
-    # # prevent pathlib.__init__ from seeing `ctx`
-    # def __init__(self, path: str, ctx: click.Context):
-    #     # optionally stash ctx if you want it later
-    #     self._ctx = ctx
-    #     # do NOT call super().__init__(...)
-
     def __new__(cls, path: str):
         resolved = str(Path(path).expanduser().absolute())
         return super().__new__(cls, resolved)
@@ -81,9 +57,6 @@ def make_fs_path_param_type_class(must_be_dir: bool = False, must_be_file: bool 
         )
 
         def convert(self, value: str|None, param: click.Parameter, ctx: click.Context) -> "FsPathType":
-            print(f"😀😀😀 convert: type of value is {type(value).__name__}", file=sys.stderr)
-            print(f"😀😀😀 convert: type of default_value is {type(default_value).__name__}", file=sys.stderr)
-
             # None must return None
             if value is None:
                 return None
