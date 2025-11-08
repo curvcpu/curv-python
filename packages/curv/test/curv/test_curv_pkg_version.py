@@ -1,27 +1,24 @@
-"""Unit tests for curvpyutils.version functions"""
-
-import pytest
 from rich.console import Console
 from rich.panel import Panel
 from rich.text import Text
+from curv import get_curv_version_str
 
-from curvpyutils.version_utils import get_version_str as get_curvpyutils_version_str
-
+import pytest
 pytestmark = [pytest.mark.unit]
 
-class TestCurvpyutilsVersion:
-    def test_get_curvpyutils_version_str(self) -> None:
+class TestCurvVersion:
+    def test_get_version_str(self) -> None:
         console = Console()
         try:
-            ver_short = get_curvpyutils_version_str(short_version=True)
-            ver_full = get_curvpyutils_version_str(short_version=False)
+            ver_short = get_curv_version_str(short_version=True)
+            ver_full = get_curv_version_str(short_version=False)
             assert isinstance(ver_short, str)
             assert isinstance(ver_full, str)
             assert ver_short.split('.')[:3] == ver_full.split('.')[:3]
         except AssertionError as e:
             # Create a nicely formatted error message with rich
             error_text = Text()
-            error_text.append("TestCurvpyutilsVersion failed!\n\n", style="bold red")
+            error_text.append("TestCurvVersion failed!\n\n", style="bold red")
             error_text.append(f"File: {e.__traceback__.tb_frame.f_code.co_filename}, line {e.__traceback__.tb_lineno}\n", style="cyan")
             error_text.append(f"Function: {e.__traceback__.tb_frame.f_code.co_name}\n\n", style="cyan")
 
@@ -30,7 +27,7 @@ class TestCurvpyutilsVersion:
             raise e
 
         # print success message
-        success_text = Text("TestCurvpyutilsVersion passed!", style="bold green")
+        success_text = Text("TestCurvVersion passed!", style="bold green")
         panel = Panel(success_text, title="[bold green]Success[/bold green]", border_style="green")
         console.print(panel)
 
