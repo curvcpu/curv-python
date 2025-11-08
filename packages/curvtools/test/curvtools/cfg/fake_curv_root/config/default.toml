@@ -1,0 +1,61 @@
+#
+# Default configuration and schema for the Curv RISCV SoC
+#
+# Instead of editing this file: create a `overlay.toml` file in the directory from which you run `make`.
+# Any settings you include in the overlay will override the default settings in this file.
+#
+# See docs/config.md for more information.
+#
+
+# ----------------------------------------------------------------------------
+#
+# Default configuration values
+#
+# ----------------------------------------------------------------------------
+
+description = """
+Default configuration for the Curv RISCV SoC
+"""
+
+[cpu]
+xlen = 32
+reset_vector = "0x0000_0100"
+mtvec_base = "0x0100_0000"
+
+[cpu.regfile]
+use_lutram = 1
+
+[cache]
+tags_in_lutram = 1
+sets = 4
+ways = 2
+tags_have_valid_dirty_bits = 0
+
+[cache.cachelines]
+num_words = 16
+initially_valid = 1
+latency = 0
+
+[cache.cacheable_addresses]
+width = 27
+
+[cache.tags]
+have_valid_dirty_bits = 0
+
+[cache.hex_files]
+base_addr = "0x00000100"
+
+[cache.hex_files.src]
+type = "asm"
+name = "count1234"
+
+[cache.hex_files.subdirs]
+icache = "icache"
+dcache = "dcache"
+cachelines = "cachelines"
+tagram = "tagram"
+
+[tb.cache]
+dcache.simulate_latency = 0
+icache.simulate_latency = 0
+

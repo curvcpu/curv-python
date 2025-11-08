@@ -1,0 +1,38 @@
+#
+# Default configuration
+#
+# Instead of editing this file:
+#  1. copy it to a new file in this dir (e.g., `profiles/my-config.toml`) and use `make CONFIG=my-config`
+#  2. for per-directory overrides, e.g., in testbench dirs, create a `profiles/overrides.toml` 
+#      in that dir. These overrides will apply regardless of the currently selected config.
+#
+# See docs/config.md for more details about how this infegrates into the build process.
+#
+
+description = """
+Default configuration for the Curv RISCV SoC
+"""
+
+[cache]
+tags_in_lutram = 1
+sets = 4
+tags_have_valid_bits = 0
+tags_have_dirty_bits = 0
+
+[cache.hex_files]
+base_addr = "0x00000100"
+
+[cache.hex_files.src]
+type = "asm"
+name = "not_example_prog"
+
+[cache.hex_files.subdirs]
+icache = "icache"
+
+[cpu]
+reset_vector = 0x0
+mtvec_base = 0x1234_5678
+
+[tb.cache]
+icache.simulate_multicycle_memory_latency = 0
+dcache.simulate_multicycle_memory_latency = 0

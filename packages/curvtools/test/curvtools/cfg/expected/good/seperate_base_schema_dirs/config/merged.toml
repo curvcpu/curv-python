@@ -1,0 +1,25 @@
+# Machine-generated file; do not edit
+
+[cache]
+tags_in_lutram = 1
+sets = 4
+
+[cache.hex_files]
+base_addr = "0x0000_0100"
+
+[cache.hex_files.src]
+type = "asm"
+name = "count1234"
+
+[cache.hex_files.subdirs]
+icache = "icache"
+
+[cpu]
+reset_vector = 0
+mtvec_base = 305419896
+
+[tb.cache.icache]
+simulate_multicycle_memory_latency = 0
+
+[tb.cache.dcache]
+simulate_multicycle_memory_latency = 0

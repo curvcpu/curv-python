@@ -1,10 +1,13 @@
-import click
+#! /usr/bin/env python3
+
+import sys
+
+from .cli import main as _main
 
 
-@click.command(context_settings={"help_option_names": ["-h", "--help"]})
-@click.option(
-    "--profile", default="default", show_default=True, help="Config profile to use."
-)
-def main(profile: str) -> None:
-    """Curv config tool."""
-    click.echo(f"[curv-cfg] Using profile: {profile}")
+def main() -> None:
+    sys.exit(_main())
+
+
+if __name__ == "__main__":
+    main()

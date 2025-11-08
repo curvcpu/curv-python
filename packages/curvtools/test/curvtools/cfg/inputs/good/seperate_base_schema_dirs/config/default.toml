@@ -1,0 +1,25 @@
+description = """
+Default configuration for the Curv RISCV SoC
+"""
+
+[cache]
+tags_in_lutram = 1
+sets = 4
+
+[cache.hex_files]
+base_addr = "0x0000_0100"
+
+[cache.hex_files.src]
+type = "asm"
+name = "count1234"
+
+[cache.hex_files.subdirs]
+icache = "icache"
+
+[cpu]
+reset_vector = 0x0
+mtvec_base = 0x1234_5678
+
+[tb.cache]
+icache.simulate_multicycle_memory_latency = 0
+dcache.simulate_multicycle_memory_latency = 0

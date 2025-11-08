@@ -1,6 +1,7 @@
 from typing import Dict, Any, Tuple, Mapping
 import sys
 from . import read_toml_file, dump_dict_to_toml_str
+from pathlib import Path
 
 ################################################################################
 #
@@ -131,7 +132,7 @@ class MergedTomlDict(Dict[str, Any]):
         self[section_name] = section_dict
         self.update(items)           # append the old items
     
-    def write_to_file(self, path: str, write_only_if_changed: bool = True) -> bool:
+    def write_to_file(self, path: str, write_only_if_changed: bool = True, append_contents_of_file: str | Path = None) -> bool:
         """
         Write the merged TOML dict to a file, with optional header comment.
 
@@ -160,6 +161,13 @@ class MergedTomlDict(Dict[str, Any]):
             if self.header_comment and self.header_comment.strip() != "":
                 f.write(self.header_comment.strip("\n") + "\n\n")
             f.write(dump_dict_to_toml_str(self))
+
+        # If we were asked to append the contents of a file, then add it now.
+        if append_contents_of_file:
+            with open(path_to_write, "a") as f_out:
+                f_out.write("\n\n")
+                with open(append_contents_of_file, "r") as f_in:
+                    f_out.write(f_in.read())
         
         # Compare the temporary file to the original file
         if use_temp_file:
