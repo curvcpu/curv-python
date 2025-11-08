@@ -45,7 +45,8 @@ dependencies = [
 
 [project.scripts]
 curv-cfg = "curvtools.cli.cfg:main"
-curv-cache-tool = "curvtools.cli.cache_tool:main"
+curv-cache-tool = "curvtools.cli.cache_tool.cache_tool4:main"
+curv-tag-ram-way-interleaver = "curvtools.cli.cache_tool.tag_ram_way_interleaver:main"
 curv-memmap2 = "curvtools.cli.memmap2:main"
 
 # Legacy alias preserved
