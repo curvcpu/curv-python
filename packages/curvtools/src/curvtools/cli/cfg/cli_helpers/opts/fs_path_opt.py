@@ -36,6 +36,13 @@ class FsPathType(_SystemPath):
             )
         resolved = str(Path(s2).expanduser().absolute())
         return super().__new__(cls, resolved)
+
+    # prevent pathlib.__init__ from seeing `ctx`
+    def __init__(self, path: str, ctx: click.Context):
+        # optionally stash ctx if you want it later
+        self._ctx = ctx
+        # do NOT call super().__init__(...)
+
     def __str__(self) -> str:
         return super().__str__()
 
