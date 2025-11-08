@@ -34,7 +34,9 @@ dependencies = [
   "tomli; python_version<'3.11'",  # only needed for Python 3.10
   "tomli-w",                       # for writing TOML files (tomli/tomllib are read-only)
   "python-dotenv>=1.1.0",
-  "rich",
+  "rich>=13",
+  "click>=8.1.0",
+  "importlib-metadata>=6.0.0",
 ]
 
 [project.optional-dependencies]
