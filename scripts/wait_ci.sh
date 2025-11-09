@@ -13,7 +13,8 @@ LAST_COMMIT_SHA=$(git rev-parse HEAD)
 
 # get the github action id for the last commit
 while true; do
-    GH_ACTION_ID=$(gh run list --json createdAt,headSha,name,status,conclusion,databaseId -L10 --jq '.[] | select(.headSha=="'"$LAST_COMMIT_SHA"'") | .databaseId');
+    #GH_ACTION_ID=$(gh run list --json createdAt,headSha,name,status,conclusion,databaseId -L10 --jq '.[] | select(.headSha=="'"$LAST_COMMIT_SHA"'") | .databaseId');
+    GH_ACTION_ID=$(gh run list --json createdAt,headSha,name,status,conclusion,databaseId -L10 --jq 'map(select(.headSha=="'"$LAST_COMMIT_SHA"'")) | max_by(.createdAt)? | .databaseId? // empty');
 	if [ -n "$GH_ACTION_ID" ]; then
 	  echo "found github action id: $GH_ACTION_ID for commit ${LAST_COMMIT_SHA:0:8}" > $OUTPUT_DESTINATION 2>&1;
 	  break;
