@@ -6,7 +6,11 @@
 #
 
 # set to '/dev/null' to suppress output; set to '/dev/stdout' to show output
+# default: suppress output; pass -v to enable verbose output
+OUTPUT_DESTINATION=/dev/null
+if [ "$1" = "-v" ]; then
 OUTPUT_DESTINATION=/dev/stdout
+fi
 
 # get the last commit sha
 LAST_COMMIT_SHA=$(git rev-parse HEAD)
