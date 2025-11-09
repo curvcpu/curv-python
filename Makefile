@@ -11,6 +11,7 @@ REMOTE ?= origin
 PKG_CURV = packages/curv
 PKG_CURVTOOLS = packages/curvtools
 PKG_CURVPYUTILS = packages/curvpyutils
+SCRIPT_WAIT_CI = scripts/wait_ci.sh
 
 .PHONY: setup-sync
 setup-sync:
@@ -117,11 +118,11 @@ publish: check-git-clean test
 	echo "🤔 Fetching latest tags from remote '$(REMOTE)'..."; \
 	git fetch $(REMOTE) --tags; \
 	LEVEL=$${LEVEL:-patch}; \
-	PKG=$${PKG:-all}; \
+	: "$${PKG:?Set PKG to one of: curvpyutils|curv|curvtools|all}"; \
 	case "$$PKG" in \
-	  all|"") ORDER="curvpyutils curv curvtools" ;; \
+	  all) ORDER="curvpyutils curv curvtools" ;; \
 	  curv|curvtools|curvpyutils) ORDER="$$PKG" ;; \
-	  *) echo "Unknown PKG=$$PKG"; exit 1 ;; \
+	  *) echo "Unknown PKG='$$PKG'"; exit 1 ;; \
 	esac; \
 	bump() { \
 	  v="$${1:-0.0.0}"; lvl="$${2:-patch}"; \
@@ -155,6 +156,8 @@ publish: check-git-clean test
 	  lvl="$$LEVEL"; \
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
 	  git commit --allow-empty -m "chore(release): prepare $$name for $$tag release" && git push $(REMOTE) HEAD; \
+	  echo "🔄 Waiting for CI to pass on 'chore(release): prepare $$name for $$tag release'..."; \
+	  $(SCRIPT_WAIT_CI) || { echo "Error: CI failed on 'chore(release): prepare $$name for $$tag release'"; exit 1; }; \
 	  echo "🔥 Tagging $$name → $$tag"; \
 	  git tag -a "$$tag" -m "Release ($$name): $$tag" && git push $(REMOTE) "$$tag"; \
 	  echo "📣 Published PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
