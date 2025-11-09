@@ -5,7 +5,7 @@ SHELL := /usr/bin/env bash
 UV ?= uv
 VENVDIR ?= .venv
 PYTEST = uv run pytest
-PYTEST_OPTS = -q -n auto
+PYTEST_OPTS = -q --numprocesses auto
 PACKAGES = packages/curv packages/curvtools packages/curvpyutils
 REMOTE ?= origin
 PKG_CURV = packages/curv
@@ -54,15 +54,8 @@ setup: install-min
 	@$(UV) tool update-shell -q || true
 
 .PHONY: test
-test: test-unit test-e2e
-
-.PHONY: test-unit
-test-unit: install-min
-	$(PYTEST) $(PYTEST_OPTS) -m "unit"
-
-.PHONY: test-e2e
-test-e2e: install-min
-	$(PYTEST) $(PYTEST_OPTS) -m "e2e"
+test: 
+	$(PYTEST) $(PYTEST_OPTS)
 
 .PHONY: unsetup-editable-installs
 unsetup-editable-installs:
