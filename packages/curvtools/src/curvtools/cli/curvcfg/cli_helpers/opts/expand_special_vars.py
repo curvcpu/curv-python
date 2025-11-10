@@ -35,7 +35,7 @@ def make_all_legal_expansion_patterns(s: str) -> list[str]:
     return final
 
 def expand_build_dir_vars(s: str, ctx: click.Context) -> str:
-    from curvtools.cli.cfg.lib.globals.curvpaths import get_curv_paths
+    from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
     BUILD_DIR_VAR_PATTERNS = make_all_legal_expansion_patterns("build-dir")
     build_dir = ctx.obj.get("build_dir", "build")
     for var in BUILD_DIR_VAR_PATTERNS:
@@ -44,7 +44,7 @@ def expand_build_dir_vars(s: str, ctx: click.Context) -> str:
     return s
 
 def expand_curv_root_dir_vars(s: str, ctx: click.Context) -> str:
-    from curvtools.cli.cfg.lib.globals.curvpaths import get_curv_paths
+    from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
     CURV_ROOT_DIR_VAR_PATTERNS = make_all_legal_expansion_patterns("CURV_ROOT_DIR")
     curv_root_dir = str(get_curv_paths(ctx).get_curv_root_dir())
     for var in CURV_ROOT_DIR_VAR_PATTERNS:

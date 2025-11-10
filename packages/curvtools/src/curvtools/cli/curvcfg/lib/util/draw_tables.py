@@ -1,5 +1,5 @@
 from typing import Union, Optional, Dict, List
-from curvtools.cli.cfg.lib.util.cfgvalue import CfgValues
+from curvtools.cli.curvcfg.lib.util.cfgvalue import CfgValues
 from rich.padding import Padding, PaddingDimensions
 from rich.panel import Panel
 from rich.box import Box, ASCII_DOUBLE_HEAD, ROUNDED, ASCII2, SIMPLE, MINIMAL_DOUBLE_HEAD, MINIMAL, MINIMAL_HEAVY_HEAD
@@ -7,10 +7,10 @@ from rich.style import Style
 from rich.table import Table
 from rich.markup import escape
 from rich.tree import Tree
-from curvtools.cli.cfg.lib.globals.curvpaths import get_curv_paths
+from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
 from pathlib import Path
-from curvtools.cli.cfg.lib.globals.console import console
-from curvtools.cli.cfg.lib.globals.types import CurvCliArgs
+from curvtools.cli.curvcfg.lib.globals.console import console
+from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
 import click
 
 def get_box(use_ascii_box: bool = False) -> Box:

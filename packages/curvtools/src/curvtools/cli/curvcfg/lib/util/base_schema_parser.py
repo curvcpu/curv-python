@@ -6,9 +6,9 @@ import os
 import sys
 from typing import Any, Dict, Tuple
 from curvpyutils.toml_utils import MergedTomlDict  # type: ignore
-from curvtools.cli.cfg.lib.util.cfgvalue import CfgValue, CfgValues, MissingVars
+from curvtools.cli.curvcfg.lib.util.cfgvalue import CfgValue, CfgValues, MissingVars
 from curvpyutils.file_utils.repo_utils import get_git_repo_root
-from curvtools.cli.cfg.lib.util import FileEmitter, ConfigFileTypes, ConfigFileTypesForWriting
+from curvtools.cli.curvcfg.lib.util import FileEmitter, ConfigFileTypes, ConfigFileTypesForWriting
 
 MAX_INT = 2**32 - 1
 

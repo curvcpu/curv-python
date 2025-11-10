@@ -9,7 +9,7 @@ from typing import Callable
 import pytest
 
 from curvpyutils.toml_utils import MergedTomlDict  # type: ignore
-from curvtools.cli.cfg.merge import find_overlay_tomls_abs_paths  # type: ignore
+from curvtools.cli.curvcfg.merge import find_overlay_tomls_abs_paths  # type: ignore
 
 pytestmark = pytest.mark.unit
 

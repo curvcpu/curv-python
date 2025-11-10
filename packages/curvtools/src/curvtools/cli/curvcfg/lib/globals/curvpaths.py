@@ -3,9 +3,9 @@ from pathlib import Path
 from typing import Dict, Union, Optional
 from rich import get_console
 from curvpyutils.file_utils.repo_utils import get_git_repo_root
-from curvtools.cli.cfg.lib.globals.curvpaths_temporary import get_curv_root_dir_from_repo_root
+from curvtools.cli.curvcfg.lib.globals.curvpaths_temporary import get_curv_root_dir_from_repo_root
 from dotenv import dotenv_values
-from curvtools.cli.cfg.lib.globals.types import CurvCliArgs
+from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
 from click import Context
 from click.core import ParameterSource
 
