@@ -1,14 +1,29 @@
 # curv-python
 
 <p align="center">
-[![release](https://img.shields.io/github/v/tag/curvcpu/curv-python?label=release)](https://github.com/curvcpu/curv-python/releases)
-[![build](https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml)
-[![license](https://img.shields.io/github/license/curvcpu/curv-python)](LICENSE)
-[![last commit](https://img.shields.io/github/last-commit/curvcpu/curv-python)](https://github.com/curvcpu/curv-python/commits)
+  <!-- @subst[`printf '<a href="https://github.com/curvcpu/curv-python/releases/tag/curv-v$CURV_VER_MAJMINPTCH"><img src="https://img.shields.io/badge/v$CURV_VER_MAJMINPTCH-blue?label=curv" alt="curv version $CURV_VER_MAJMINPTCH"></a>\n'`] -->
+  <a href="https://github.com/curvcpu/curv-python/releases/tag/curv-v0.1.12"><img src="https://img.shields.io/badge/v0.1.12-blue?label=curv" alt="curv version 0.1.12"></a>
+  <!-- @endsubst -->
+  <!-- @subst[`printf '<a href="https://github.com/curvcpu/curv-python/releases/tag/curvtools-v$CURVTOOLS_VER_MAJMINPTCH"><img src="https://img.shields.io/badge/v$CURVTOOLS_VER_MAJMINPTCH-blue?label=curvtools" alt="curvtools version $CURVTOOLS_VER_MAJMINPTCH"></a>\n'`] -->
+  <a href="https://github.com/curvcpu/curv-python/releases/tag/curvtools-v0.0.10"><img src="https://img.shields.io/badge/v0.0.10-blue?label=curvtools" alt="curvtools version 0.0.10"></a>
+  <!-- @endsubst -->
+  <!-- @subst[`printf '<a href="https://github.com/curvcpu/curv-python/releases/tag/curvpyutils-v$CURVPYUTILS_VER_MAJMINPTCH"><img src="https://img.shields.io/badge/v$CURVPYUTILS_VER_MAJMINPTCH-blue?label=curvpyutils" alt="curvpyutils version $CURVPYUTILS_VER_MAJMINPTCH"></a>\n'`] -->
+  <a href="https://github.com/curvcpu/curv-python/releases/tag/curvpyutils-v0.0.29"><img src="https://img.shields.io/badge/v0.0.29-blue?label=curvpyutils" alt="curvpyutils version 0.0.29"></a>
+  <!-- @endsubst -->
 </p>
 
-<!-- curvpyutils Version -->
-[![version](https://img.shields.io/badge/v0.0.16-blue?label=curvpyutils)](https://github.com/curvcpu/curv-python/releases/tag/curvpyutils-v0.0.16)
+<p align="center">
+  <a href="https://github.com/curvcpu/curv-python/releases/tag/curv-v0.1.9"><img src="https://img.shields.io/badge/v0.1.9-blue?label=curv" alt="curv version 0.1.9"></a>
+  <a href="https://github.com/curvcpu/curv-python/releases/tag/curvtools-v0.0.9"><img src="https://img.shields.io/badge/v0.0.9-blue?label=curvtools" alt="curvtools version 0.0.9"></a>
+  <a href="https://github.com/curvcpu/curv-python/releases/tag/curvpyutils-v0.0.20"><img src="https://img.shields.io/badge/v0.0.29-blue?label=curvpyutils" alt="curvpyutils version 0.0.29"></a>
+</p>
+<p align="center">
+  <!-- <a href="https://github.com/curvcpu/curv-python/releases"><img src="https://img.shields.io/github/v/tag/curvcpu/curv-python?label=release" alt="Latest Release"></a> -->
+  <a href="https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml"><img src="https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml/badge.svg?branch=main" alt="CI"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/curvcpu/curv-python" alt="LICENSE"></a>
+  <a href="https://github.com/curvcpu/curv-python/commits"><img src="https://img.shields.io/github/last-commit/curvcpu/curv-python" alt="Last Commit"></a>
+  <a href="https://github.com/pre-commit/pre-commit"><img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit" alt="pre-commit" style="max-width:100%;"></a>
+</p>
 
 This is a monorepo for the Curv Python packages, `curv` and `curvtools` and the shared utilities package, `curvpyutils` on which they both depend.
 

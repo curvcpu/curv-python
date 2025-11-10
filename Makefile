@@ -13,6 +13,9 @@ PKG_CURVTOOLS = packages/curvtools
 PKG_CURVPYUTILS = packages/curvpyutils
 SCRIPT_GH_RUN_ID = scripts/last_commit_gh_run_id.sh
 SCRIPT_WAIT_CI = scripts/wait_ci.sh
+SCRIPT_SUBST = /home/mwg/ecp5-first-steps/my-designs/util/build_helpers/subst/subst.py
+SCRIPT_SUBST_OPTS = -f
+SCRIPT_CHK_LATEST_VER = scripts/chk-pypi-latest-ver.py
 
 .PHONY: setup-sync
 setup-sync:
@@ -30,19 +33,19 @@ install-min: venv
 	@if $(UV) pip show -q $(notdir $(PKG_CURVPYUTILS)) >/dev/null 2>&1; then \
 		echo "✓ $(notdir $(PKG_CURVPYUTILS)) already installed"; \
 	else \
-		SETUPTOOLS_SCM_PRETEND_VERSION=$$(scripts/chk-pypi-latest-ver.py curvpyutils -Gb) $(UV) pip install -e $(PKG_CURVPYUTILS); \
+		SETUPTOOLS_SCM_PRETEND_VERSION=$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -Gb) $(UV) pip install -e $(PKG_CURVPYUTILS); \
 		echo "✓ Installed $(notdir $(PKG_CURVPYUTILS))..."; \
 	fi;
 	@if $(UV) pip show -q $(notdir $(PKG_CURV)) >/dev/null 2>&1; then \
 		echo "✓ $(notdir $(PKG_CURV)) already installed"; \
 	else \
-		SETUPTOOLS_SCM_PRETEND_VERSION=$$(scripts/chk-pypi-latest-ver.py curv -Gb) $(UV) pip install -e $(PKG_CURV); \
+		SETUPTOOLS_SCM_PRETEND_VERSION=$$($(SCRIPT_CHK_LATEST_VER) curv -Gb) $(UV) pip install -e $(PKG_CURV); \
 		echo "✓ Installed $(notdir $(PKG_CURV))..."; \
 	fi;
 	@if $(UV) pip show -q $(notdir $(PKG_CURVTOOLS)) >/dev/null 2>&1; then \
 		echo "✓ $(notdir $(PKG_CURVTOOLS)) already installed"; \
 	else \
-		SETUPTOOLS_SCM_PRETEND_VERSION=$$(scripts/chk-pypi-latest-ver.py curvtools -Gb) $(UV) pip install -e $(PKG_CURVTOOLS); \
+		SETUPTOOLS_SCM_PRETEND_VERSION=$$($(SCRIPT_CHK_LATEST_VER) curvtools -Gb) $(UV) pip install -e $(PKG_CURVTOOLS); \
 		echo "✓ Installed $(notdir $(PKG_CURVTOOLS))..."; \
 	fi;
 
@@ -50,7 +53,7 @@ install-min: venv
 setup: install-min
 	@echo "🤔 Fetching latest tags from remote '$(REMOTE)'..."
 	@git fetch $(REMOTE) --tags
-	@SETUPTOOLS_SCM_PRETEND_VERSION=$$(scripts/chk-pypi-latest-ver.py curvtools -Gb) $(UV) tool install --editable $(PKG_CURVTOOLS)
+	@SETUPTOOLS_SCM_PRETEND_VERSION=$$($(SCRIPT_CHK_LATEST_VER) curvtools -Gb) $(UV) tool install --editable $(PKG_CURVTOOLS)
 	@echo "✓ All CLI tools (editable) available on PATH"
 	@# Edit shell's rc file to keep the PATH update persistent
 	@$(UV) tool update-shell -q || true
@@ -107,6 +110,10 @@ clean-venv: clean
 .PHONY: check-git-clean
 check-git-clean:
 	@test -z "$$(git status --porcelain)" || (echo "Error: git working tree is not clean. Commit/stash first."; exit 1)
+
+.PHONY: update-readme-versions
+update-readme-versions:
+	@CURV_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curv -L) CURVTOOLS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvtools -L) CURVPYUTILS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L) $(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) readme.md
 
 #
 # make publish [PKG=curv|curvpyutils|curvtools|all] [LEVEL=patch|minor|major]
@@ -188,7 +195,7 @@ untag: check-git-clean
 	fi; \
 	# Always get the latest published version for safety \
 	echo "Getting latest published version for $$PKG..."; \
-	PUBLISHED=$$(scripts/chk-pypi-latest-ver.py -L "$$PKG"); \
+	PUBLISHED=$$($(SCRIPT_CHK_LATEST_VER) -L "$$PKG"); \
 	echo "Latest published: $$PUBLISHED"; \
 	\
 	VER=$${VER:-}; \
@@ -250,7 +257,7 @@ show:
 	echo "Showing all versions for each package..."; \
 	echo ""; \
 	for p in curv curvtools curvpyutils; do \
-		scripts/chk-pypi-latest-ver.py "$$p" -pb; \
+		$(SCRIPT_CHK_LATEST_VER) "$$p" -pb; \
 		echo ""; \
 	done; \
 
