@@ -7,7 +7,11 @@
 [![version](https://img.shields.io/badge/v2.1.1-blue)](https://github.com/OWNER/REPO/releases/tag/v2.1.1)
 
 <!-- Build (GitHub Actions workflow) -->
-[![build](https://github.com/curvcpu/curv-python/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/curvcpu/curv-python/actions/workflows/ci.yml)
+[![build](https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml)
+
+[![license](https://img.shields.io/github/license/curvcpu/curv-python)](LICENSE)
+[![issues](https://img.shields.io/github/issues/curvcpu/curv-python)](https://github.com/curvcpu/curv-python/issues)
+[![last commit](https://img.shields.io/github/last-commit/curvcpu/curv-python)](https://github.com/curvcpu/curv-python/commits)
 
 This is a monorepo for the Curv Python packages, `curv` and `curvtools` and the shared utilities package, `curvpyutils` on which they both depend.
 
