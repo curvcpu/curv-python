@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
 #
-# ./last_commit_gh_run_id.sh
+# ./last_commit_gh_run_id.sh - print the Github Actions CI run id for the last commit
 #
 # Use `gh` to get the github action id for the last commit.
 # Prints just the id to stdout, followed by a newline and exits with status 0.

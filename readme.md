@@ -17,7 +17,7 @@
   <a href="https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml"><img src="https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml/badge.svg?branch=main" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/curvcpu/curv-python" alt="LICENSE"></a>
   <a href="https://github.com/curvcpu/curv-python/commits"><img src="https://img.shields.io/github/last-commit/curvcpu/curv-python" alt="Last Commit"></a>
-  <a href="https://github.com/pre-commit/pre-commit"><img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit" alt="pre-commit" style="max-width:100%;"></a>
+  <!-- <a href="https://github.com/pre-commit/pre-commit"><img src="https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit" alt="pre-commit" style="max-width:100%;"></a> -->
 </p>
 
 This is a monorepo for the Curv Python packages, `curv` and `curvtools` and the shared utilities package, `curvpyutils` on which they both depend.
