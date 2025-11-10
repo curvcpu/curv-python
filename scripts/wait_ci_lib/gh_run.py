@@ -37,6 +37,7 @@ class GhStatus(Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
     COMPLETED = "completed"
+    QUEUED = "queued"
     OTHER = "(other)"
 
 LONGEST_STATUS_NAME_LEN = max(len(status.value) for status in GhStatus)
@@ -135,8 +136,8 @@ class GhJob(list[GhJobStep]):
             steps_by_status[status] = 0
         for step in self:
             steps_by_status[step.status] += 1
-        assert steps_by_status[GhStatus.COMPLETED] + steps_by_status[GhStatus.IN_PROGRESS] + steps_by_status[GhStatus.PENDING] == len(self), \
-            f"This assertion probably failed because more statuses were added to GhStatus enum: {steps_by_status[GhStatus.COMPLETED]} + {steps_by_status[GhStatus.IN_PROGRESS]} + {steps_by_status[GhStatus.PENDING]} != {len(self)}"
+        assert steps_by_status[GhStatus.COMPLETED] + steps_by_status[GhStatus.IN_PROGRESS] + steps_by_status[GhStatus.PENDING] + steps_by_status[GhStatus.QUEUED] == len(self), \
+            f"This assertion probably failed because more statuses were added to GhStatus enum: {steps_by_status[GhStatus.COMPLETED]} + {steps_by_status[GhStatus.IN_PROGRESS]} + {steps_by_status[GhStatus.PENDING] + steps_by_status[GhStatus.QUEUED]} != {len(self)}"
         return steps_by_status
     
     def get_progress(self) -> ProgressStats:
