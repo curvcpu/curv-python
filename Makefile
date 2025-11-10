@@ -185,7 +185,7 @@ publish: check-git-clean readme.md test
 	git push $(REMOTE) --tags
 
 .PHONY: push
-push: update-readme-versions
+push: readme.md
 	@git push $(REMOTE) HEAD
 	@$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on 'chore(release): prepare $$name for $$tag release'"; exit 1; };
 	@echo "🔥 Done with CI - success!";
