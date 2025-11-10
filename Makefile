@@ -111,7 +111,7 @@ clean-venv: clean
 check-git-clean:
 	@test -z "$$(git status --porcelain)" || (echo "Error: git working tree is not clean. Commit/stash first."; exit 1)
 
-readme.md:
+readme.md: build
 	@echo "🔄 Checking $@ for out-of-date version numbers...";
 	@cp $@ $@.tmp
 	@CURV_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curv -L) \
