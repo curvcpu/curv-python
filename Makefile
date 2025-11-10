@@ -165,7 +165,7 @@ publish: check-git-clean test
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
 	  git commit --allow-empty -m "chore(release): prepare $$name for $$tag release" && git push $(REMOTE) HEAD; \
 	  echo "🔄 Waiting for CI to pass on 'chore(release): prepare $$name for $$tag release'..."; \
-	  $(SCRIPT_WAIT_CI) $$(./$(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on 'chore(release): prepare $$name for $$tag release'"; exit 1; }; \
+	  $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on 'chore(release): prepare $$name for $$tag release'"; exit 1; }; \
 	  echo "🔥 Tagging $$name → $$tag"; \
 	  git tag -a "$$tag" -m "Release ($$name): $$tag" && git push $(REMOTE) "$$tag"; \
 	  echo "📣 Published PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
@@ -173,10 +173,10 @@ publish: check-git-clean test
 	git push $(REMOTE) --tags
 
 .PHONY: push
-push:
+push: update-readme-versions
 	@git push $(REMOTE) HEAD
-	@$(SCRIPT_WAIT_CI) $$(./$(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on 'chore(release): prepare $$name for $$tag release'"; exit 1; }; \
-
+	@$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on 'chore(release): prepare $$name for $$tag release'"; exit 1; };
+	@echo "🔥 Done with CI - success!";
 
 #
 # make untag PKG=curvtools [VER=0.0.6]

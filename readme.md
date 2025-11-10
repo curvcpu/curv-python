@@ -13,11 +13,6 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/curvcpu/curv-python/releases/tag/curv-v0.1.9"><img src="https://img.shields.io/badge/v0.1.9-blue?label=curv" alt="curv version 0.1.9"></a>
-  <a href="https://github.com/curvcpu/curv-python/releases/tag/curvtools-v0.0.9"><img src="https://img.shields.io/badge/v0.0.9-blue?label=curvtools" alt="curvtools version 0.0.9"></a>
-  <a href="https://github.com/curvcpu/curv-python/releases/tag/curvpyutils-v0.0.20"><img src="https://img.shields.io/badge/v0.0.29-blue?label=curvpyutils" alt="curvpyutils version 0.0.29"></a>
-</p>
-<p align="center">
   <!-- <a href="https://github.com/curvcpu/curv-python/releases"><img src="https://img.shields.io/github/v/tag/curvcpu/curv-python?label=release" alt="Latest Release"></a> -->
   <a href="https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml"><img src="https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml/badge.svg?branch=main" alt="CI"></a>
   <a href="LICENSE"><img src="https://img.shields.io/github/license/curvcpu/curv-python" alt="LICENSE"></a>
