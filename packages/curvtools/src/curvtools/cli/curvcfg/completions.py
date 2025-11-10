@@ -3,8 +3,8 @@ import shutil
 import subprocess
 import click
 from typing import Optional, Union, Dict
-import curvtools.cli.cfg.lib.globals.curvpaths as curvpaths
-from curvtools.cli.cfg.lib.globals.types import CurvCliArgs
+import curvtools.cli.curvcfg.lib.globals.curvpaths as curvpaths
+from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
 
 def infer_shell_from_env() -> Optional[str]:
     shell_path = os.environ.get("SHELL", "")

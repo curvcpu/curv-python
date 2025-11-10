@@ -6,8 +6,8 @@ import sys
 import os
 import click
 from pathlib import Path
-from curvtools.cli.cfg.cli_helpers.opts.expand_special_vars import expand_curv_root_dir_vars, expand_build_dir_vars
-from curvtools.cli.cfg.cli_helpers.help_formatter.help_formatter import CurvcfgContext
+from curvtools.cli.curvcfg.cli_helpers.opts.expand_special_vars import expand_curv_root_dir_vars, expand_build_dir_vars
+from curvtools.cli.curvcfg.cli_helpers.help_formatter.help_formatter import CurvcfgContext
 from click.shell_completion import CompletionItem
 
 _SystemPath = type(Path())

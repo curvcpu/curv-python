@@ -3,7 +3,7 @@ from typing import Any
 from curvpyutils.toml_utils import MergedTomlDict  # type: ignore
 import os
 from pathlib import Path
-from curvtools.cli.cfg.lib.globals.constants import CURRENT_PROFILE_MK_FILENAME
+from curvtools.cli.curvcfg.lib.globals.constants import CURRENT_PROFILE_MK_FILENAME
 
 ################################################################################
 #

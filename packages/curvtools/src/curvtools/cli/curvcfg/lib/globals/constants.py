@@ -11,13 +11,13 @@ _DEFAULT_SCHEMA_TOML_PATH_SINGLE_DIR = f"<curv-root-dir>/config/schema.toml"
 _DEFAULT_BASE_CONFIG_PATH_SEPARATE_DIRS = f"<curv-root-dir>/config/profiles/default.toml"
 _DEFAULT_SCHEMA_TOML_PATH_SEPARATE_DIRS = f"<curv-root-dir>/config/schema/schema.toml"
 def GET_DEFAULT_BASE_CONFIG_PATH() -> str:
-    from curvtools.cli.cfg.cli_helpers.base_config_and_schema_mode import get_base_config_and_schema_mode, BaseConfigAndSchemaMode
+    from curvtools.cli.curvcfg.cli_helpers.base_config_and_schema_mode import get_base_config_and_schema_mode, BaseConfigAndSchemaMode
     if get_base_config_and_schema_mode() == BaseConfigAndSchemaMode.BASE_CONFIG_AND_SCHEMA_IN_SINGLE_DIRECTORY:
         return _DEFAULT_BASE_CONFIG_PATH_SINGLE_DIR
     else:
         return _DEFAULT_BASE_CONFIG_PATH_SEPARATE_DIRS
 def GET_DEFAULT_SCHEMA_TOML_PATH() -> str:
-    from curvtools.cli.cfg.cli_helpers.base_config_and_schema_mode import get_base_config_and_schema_mode, BaseConfigAndSchemaMode
+    from curvtools.cli.curvcfg.cli_helpers.base_config_and_schema_mode import get_base_config_and_schema_mode, BaseConfigAndSchemaMode
     if get_base_config_and_schema_mode() == BaseConfigAndSchemaMode.BASE_CONFIG_AND_SCHEMA_IN_SINGLE_DIRECTORY:
         return _DEFAULT_SCHEMA_TOML_PATH_SINGLE_DIR
     else:

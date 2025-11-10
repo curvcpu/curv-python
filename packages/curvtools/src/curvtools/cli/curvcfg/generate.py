@@ -2,11 +2,11 @@ from __future__ import annotations
 import os
 from typing import Optional, Dict, Union
 from pathlib import Path
-from curvtools.cli.cfg.lib.globals.console import console
-from curvtools.cli.cfg.lib.globals.curvpaths import get_curv_paths
+from curvtools.cli.curvcfg.lib.globals.console import console
+from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
 from curvpyutils.toml_utils import MergedTomlDict  # type: ignore
-from curvtools.cli.cfg.lib.util import get_config_values, emit_config_files
-from curvtools.cli.cfg.lib.globals.types import CurvCliArgs
+from curvtools.cli.curvcfg.lib.util import get_config_values, emit_config_files
+from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
 
 def generate(args: CurvCliArgs) -> int:
     """

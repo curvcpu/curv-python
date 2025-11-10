@@ -1,7 +1,7 @@
 import click
 import os
 from pathlib import Path
-from curvtools.cli.cfg.lib.globals.constants import DEFAULT_DEP_FILE_PATH, DEFAULT_MERGED_TOML_PATH
+from curvtools.cli.curvcfg.lib.globals.constants import DEFAULT_DEP_FILE_PATH, DEFAULT_MERGED_TOML_PATH
 
 ###############################################################################
 #
@@ -19,7 +19,7 @@ def merged_toml_opt(name: str|None=None, outfile: bool=False):
         If the path is relative, it is resolved against the build directory.
         If the path is a bare name, it is resolved against the config directory.
         """
-        from curvtools.cli.cfg.cli_helpers import expand_build_dir_vars
+        from curvtools.cli.curvcfg.cli_helpers import expand_build_dir_vars
         if not merged_toml_arg:
             merged_toml_arg = DEFAULT_MERGED_TOML_PATH
         merged_toml_arg = expand_build_dir_vars(merged_toml_arg, ctx)
@@ -119,7 +119,7 @@ def output_dep_opt():
     def output_dep_callback(ctx: click.Context, param: click.Parameter, value: str) -> str:
         if not value:
             value = DEFAULT_DEP_FILE_PATH
-        from curvtools.cli.cfg.cli_helpers import expand_build_dir_vars
+        from curvtools.cli.curvcfg.cli_helpers import expand_build_dir_vars
         value = expand_build_dir_vars(value, ctx)
         return os.path.abspath(value)
 

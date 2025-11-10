@@ -2,13 +2,13 @@ from __future__ import annotations
 import os
 from typing import Callable, List
 from pathlib import Path
-from curvtools.cli.cfg.lib.globals.curvpaths import get_curv_paths
+from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
 from curvpyutils.file_utils import DirWalker
 from curvpyutils.toml_utils import MergedTomlDict  # type: ignore
-from curvtools.cli.cfg.lib.util import get_config_values
-from curvtools.cli.cfg.lib.globals.console import console
-from curvtools.cli.cfg.lib.globals.types import CurvCliArgs
-from curvtools.cli.cfg.lib.util.draw_tables import display_toml_tree, display_merged_toml_table, display_dep_file_contents
+from curvtools.cli.curvcfg.lib.util import get_config_values
+from curvtools.cli.curvcfg.lib.globals.console import console
+from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
+from curvtools.cli.curvcfg.lib.util.draw_tables import display_toml_tree, display_merged_toml_table, display_dep_file_contents
 
 ###############################################################################
 #
@@ -217,7 +217,7 @@ def mk_dep_file_contents(merged_toml_name: str, build_dir: str, tomls_list: list
     build_config_dir = repl_root(build_config_dir_abs)
 
     # Determine which file types to include based on runtime flags
-    from curvtools.cli.cfg.lib.util import ConfigFileTypes, ConfigFileTypesForWriting, DEFAULT_OUTFILE_NAMES
+    from curvtools.cli.curvcfg.lib.util import ConfigFileTypes, ConfigFileTypesForWriting, DEFAULT_OUTFILE_NAMES
 
     flag_to_key = {
         ConfigFileTypes.MAKEFILE: "makefile",

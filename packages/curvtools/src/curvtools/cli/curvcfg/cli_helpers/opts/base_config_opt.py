@@ -1,6 +1,6 @@
-from curvtools.cli.cfg.cli_helpers.opts.fs_path_opt import make_fs_path_param_type_class, FsPathType
+from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import make_fs_path_param_type_class, FsPathType
 import click
-from curvtools.cli.cfg.lib.globals.constants import GET_DEFAULT_BASE_CONFIG_PATH
+from curvtools.cli.curvcfg.lib.globals.constants import GET_DEFAULT_BASE_CONFIG_PATH
 
 def must_exist_callback(ctx: click.Context, param: click.Parameter, value: FsPathType) -> FsPathType:
     if not value.exists():

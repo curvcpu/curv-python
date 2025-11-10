@@ -7,7 +7,7 @@ import subprocess
 import re
 from pathlib import Path
 import pytest
-from curvtools.cli.cfg.cli_helpers.base_config_and_schema_mode import BaseConfigAndSchemaMode, get_base_config_and_schema_mode
+from curvtools.cli.curvcfg.cli_helpers.base_config_and_schema_mode import BaseConfigAndSchemaMode, get_base_config_and_schema_mode
 
 pytestmark = pytest.mark.e2e
 
@@ -31,7 +31,7 @@ def _write_filtered_copy(src_path: str, regex_prefixes: list[str], replacement_c
 
 class TestCliMergeGenerate(CurvCfgE2ETestCase):
     def test_cli_merge_generate(self) -> None:
-        from curvtools.cli.cfg.cli_helpers.base_config_and_schema_mode import get_base_config_and_schema_mode as get_base_config_and_schema_mode
+        from curvtools.cli.curvcfg.cli_helpers.base_config_and_schema_mode import get_base_config_and_schema_mode as get_base_config_and_schema_mode
         # Create temporary build directory and ensure cleanup
         build_dir = tempfile.mkdtemp(prefix="curvcfg_e2e_build_")
         self.register_temp_path(build_dir)

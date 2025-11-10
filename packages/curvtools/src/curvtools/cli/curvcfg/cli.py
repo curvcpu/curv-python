@@ -4,16 +4,16 @@ import sys
 import os
 from typing import Dict, Optional, Union
 import click
-from curvtools.cli.cfg.lib.globals.constants import PROGRAM_NAME, PACKAGE_NAME
-from curvtools.cli.cfg.version import get_styled_version, get_styled_version_message
-from curvtools.cli.cfg.cli_helpers import shell_complete_curv_root_dir
-from curvtools.cli.cfg.cli_helpers.help_formatter import CurvcfgGroup, CurvcfgCommand
-from curvtools.cli.cfg.lib.globals.curvpaths import get_curv_paths
-from curvtools.cli.cfg.cli_helpers.opts.fs_path_opt import FsPathType
-from curvtools.cli.cfg.lib.util.draw_tables import display_args_table, display_curvcfg_settings_table
-from curvtools.cli.cfg.lib.globals.constants import DEFAULT_MERGED_TOML_NAME, PROGRAM_NAME
-from curvtools.cli.cfg.lib.globals.curvpaths import get_curv_paths
-from curvtools.cli.cfg.cli_helpers import (
+from curvtools.cli.curvcfg.lib.globals.constants import PROGRAM_NAME, PACKAGE_NAME
+from curvtools.cli.curvcfg.version import get_styled_version, get_styled_version_message
+from curvtools.cli.curvcfg.cli_helpers import shell_complete_curv_root_dir
+from curvtools.cli.curvcfg.cli_helpers.help_formatter import CurvcfgGroup, CurvcfgCommand
+from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
+from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
+from curvtools.cli.curvcfg.lib.util.draw_tables import display_args_table, display_curvcfg_settings_table
+from curvtools.cli.curvcfg.lib.globals.constants import DEFAULT_MERGED_TOML_NAME, PROGRAM_NAME
+from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
+from curvtools.cli.curvcfg.cli_helpers import (
     BaseConfigAndSchemaMode,
     get_base_config_and_schema_mode,
     build_dir_opt,
@@ -32,8 +32,8 @@ from .show import (
 )
 from .merge import merge as _merge_impl
 from .completions import completions as _completions_impl, determine_program_name
-from curvtools.cli.cfg.lib.globals.types import CurvCliArgs
-from curvtools.cli.cfg.cli_helpers.opts.fs_path_opt import FsPathType
+from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
+from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
 
 """
 Usage:

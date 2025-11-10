@@ -1,17 +1,17 @@
 import os
 import sys
 from typing import Dict, Union
-from curvtools.cli.cfg.lib.globals.console import console
-from curvtools.cli.cfg.lib.globals.profiles import get_all_profiles, get_active_profile_name
+from curvtools.cli.curvcfg.lib.globals.console import console
+from curvtools.cli.curvcfg.lib.globals.profiles import get_all_profiles, get_active_profile_name
 from rich.table import Table
-from curvtools.cli.cfg.lib.globals.curvpaths import get_curv_paths
-from curvtools.cli.cfg.lib.util import get_config_values
-from curvtools.cli.cfg.merge import get_tomls_list
-from curvtools.cli.cfg.lib.util.draw_tables import (
+from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
+from curvtools.cli.curvcfg.lib.util import get_config_values
+from curvtools.cli.curvcfg.merge import get_tomls_list
+from curvtools.cli.curvcfg.lib.util.draw_tables import (
     display_toml_tree, 
     display_merged_toml_table
 )
-from curvtools.cli.cfg.lib.globals.types import CurvCliArgs
+from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
 
 def show_profiles(args: CurvCliArgs) -> int:
     """
