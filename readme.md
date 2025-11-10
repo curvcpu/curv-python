@@ -1,17 +1,16 @@
 # curv-python
 
-<!-- Release (latest tag) -->
-[![release](https://img.shields.io/github/v/tag/curvcpu/curv-python?label=release)](https://github.com/curvcpu/curv-python/releases)
-
-<!-- Version (static example) -->
-[![version](https://img.shields.io/badge/v2.1.1-blue)](https://github.com/OWNER/REPO/releases/tag/v2.1.1)
-
-<!-- Build (GitHub Actions workflow) -->
-[![build](https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml)
-
-[![license](https://img.shields.io/github/license/curvcpu/curv-python)](LICENSE)
-[![issues](https://img.shields.io/github/issues/curvcpu/curv-python)](https://github.com/curvcpu/curv-python/issues)
-[![last commit](https://img.shields.io/github/last-commit/curvcpu/curv-python)](https://github.com/curvcpu/curv-python/commits)
+<p align="center">
+  <!-- Release (latest tag) -->
+  [![release](https://img.shields.io/github/v/tag/curvcpu/curv-python?label=release)](https://github.com/curvcpu/curv-python/releases)
+  <!-- Version (static example) -->
+  [![version](https://img.shields.io/badge/v0.0.16-blue?label=curvpyutils)](https://github.com/curvcpu/curv-python/releases/tag/curvpyutils-v0.0.16)
+  <!-- Build (GitHub Actions workflow) -->
+  [![build](https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml)
+  [![license](https://img.shields.io/github/license/curvcpu/curv-python)](LICENSE)
+  <!--[![issues](https://img.shields.io/github/issues/curvcpu/curv-python)](https://github.com/curvcpu/curv-python/issues) -->
+  [![last commit](https://img.shields.io/github/last-commit/curvcpu/curv-python)](https://github.com/curvcpu/curv-python/commits)
+</p>
 
 This is a monorepo for the Curv Python packages, `curv` and `curvtools` and the shared utilities package, `curvpyutils` on which they both depend.
 
