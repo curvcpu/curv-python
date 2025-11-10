@@ -11,6 +11,7 @@ REMOTE ?= origin
 PKG_CURV = packages/curv
 PKG_CURVTOOLS = packages/curvtools
 PKG_CURVPYUTILS = packages/curvpyutils
+SCRIPT_GH_RUN_ID = scripts/last_commit_gh_run_id.sh
 SCRIPT_WAIT_CI = scripts/wait_ci.sh
 
 .PHONY: setup-sync
@@ -157,12 +158,18 @@ publish: check-git-clean test
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
 	  git commit --allow-empty -m "chore(release): prepare $$name for $$tag release" && git push $(REMOTE) HEAD; \
 	  echo "🔄 Waiting for CI to pass on 'chore(release): prepare $$name for $$tag release'..."; \
-	  $(SCRIPT_WAIT_CI) || { echo "Error: CI failed on 'chore(release): prepare $$name for $$tag release'"; exit 1; }; \
+	  $(SCRIPT_WAIT_CI) $$(./$(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on 'chore(release): prepare $$name for $$tag release'"; exit 1; }; \
 	  echo "🔥 Tagging $$name → $$tag"; \
 	  git tag -a "$$tag" -m "Release ($$name): $$tag" && git push $(REMOTE) "$$tag"; \
 	  echo "📣 Published PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
 	done; \
 	git push $(REMOTE) --tags
+
+.PHONY: push
+push:
+	@git push $(REMOTE) HEAD
+	@$(SCRIPT_WAIT_CI) $$(./$(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on 'chore(release): prepare $$name for $$tag release'"; exit 1; }; \
+
 
 #
 # make untag PKG=curvtools [VER=0.0.6]
