@@ -1,8 +1,8 @@
 # curv-python
 
 <p align="center">
-  <!-- curvpyutils Version -->
-  [![version](https://img.shields.io/badge/v0.0.16-blue?label=curvpyutils)](https://github.com/curvcpu/curv-python/releases/tag/curvpyutils-v0.0.16)
+  <!-- Release (latest tag) -->
+  [![release](https://img.shields.io/github/v/tag/curvcpu/curv-python?label=release)](https://github.com/curvcpu/curv-python/releases)
   <!-- Build (GitHub Actions workflow) -->
   [![build](https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml/badge.svg?branch=main)](https://github.com/curvcpu/curv-python/actions/workflows/ci.yaml)
   [![license](https://img.shields.io/github/license/curvcpu/curv-python)](LICENSE)
