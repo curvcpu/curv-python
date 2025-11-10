@@ -20,8 +20,8 @@ class _WorkerProgress:
     task_id: TaskID
 
     @classmethod
-    def create(cls, job_progress: Progress, worker_id: int) -> _WorkerProgress:
-        task_id = job_progress.add_task(f"Worker {worker_id}", total=100.0)
+    def create(cls, job_progress: Progress, worker_id: int, fn_worker_id_to_name: Callable[[int], str]) -> _WorkerProgress:
+        task_id = job_progress.add_task(description=fn_worker_id_to_name(worker_id), total=100.0)
         return cls(job_progress=job_progress, worker_id=worker_id, task_id=task_id)
 
     def completed_pct(self) -> float:
@@ -47,7 +47,7 @@ class WorkerProgressGroup:
         if worker_id in self.workers:
             return
         worker = _WorkerProgress.create(
-            self.stacked_progress_table.get_job_progress(), worker_id
+            self.stacked_progress_table.get_job_progress(), worker_id, self.display_options.FnWorkerIdToName
         )
         self.workers[worker_id] = worker
 
