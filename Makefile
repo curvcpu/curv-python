@@ -13,8 +13,8 @@ PKG_CURVTOOLS = packages/curvtools
 PKG_CURVPYUTILS = packages/curvpyutils
 SCRIPT_GH_RUN_ID = scripts/last_commit_gh_run_id.sh
 SCRIPT_WAIT_CI = scripts/wait_ci.sh
-SCRIPT_SUBST = /home/mwg/ecp5-first-steps/my-designs/util/build_helpers/subst/subst.py
-SCRIPT_SUBST_OPTS = -f
+SCRIPT_SUBST = curv-subst
+SCRIPT_SUBST_OPTS = -f -1
 SCRIPT_CHK_LATEST_VER = scripts/chk-pypi-latest-ver.py
 
 .PHONY: setup-sync
@@ -111,9 +111,21 @@ clean-venv: clean
 check-git-clean:
 	@test -z "$$(git status --porcelain)" || (echo "Error: git working tree is not clean. Commit/stash first."; exit 1)
 
-.PHONY: update-readme-versions
-update-readme-versions:
-	@CURV_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curv -L) CURVTOOLS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvtools -L) CURVPYUTILS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L) $(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) readme.md
+readme.md:
+	@echo "🔄 Checking $@ for out-of-date version numbers...";
+	@cp $@ $@.tmp
+	@CURV_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curv -L) \
+		CURVTOOLS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvtools -L) \
+		CURVPYUTILS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L) \
+		$(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) $@.tmp
+	@if ! cmp -s $@ $@.tmp; then \
+		mv $@.tmp $@; \
+		echo "✔️ Updated readme with new version numbers; please run your make command again"; \
+		exit 1; \
+	else \
+		echo "✔️ No change needed for $@"; \
+		rm -f $@.tmp; \
+	fi
 
 #
 # make publish [PKG=curv|curvpyutils|curvtools|all] [LEVEL=patch|minor|major]
@@ -121,7 +133,7 @@ update-readme-versions:
 # - defaults: PKG=all, LEVEL=patch
 #
 .PHONY: publish
-publish: check-git-clean test
+publish: check-git-clean readme.md test
 	@set -euo pipefail; \
 	echo "🤔 Fetching latest tags from remote '$(REMOTE)'..."; \
 	git fetch $(REMOTE) --tags; \
