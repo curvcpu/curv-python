@@ -89,36 +89,36 @@ def main() -> None:
     )
     worker_group = WorkerProgressGroup(display_options=display_options)
     latest = {i: 0.0 for i in range(len(run))}
-    run.update_run_status(get_gh_run_json(run_id))
-    for new_ghjob in GhJob.construct_from_job_json_element(get_gh_jobs_json(run_id)):
-        run.upsert_job(new_ghjob)
-        worker_group.add_worker(worker_id=new_ghjob.job_id)
-        latest[new_ghjob.job_id] = new_ghjob.get_progress().percent_complete
-    while True:
-        sleep_for_sec:float = float(DEFAULT_INTERVALS['JOBS_POLL'])
+    with worker_group.with_live() as live:
         run.update_run_status(get_gh_run_json(run_id))
         for new_ghjob in GhJob.construct_from_job_json_element(get_gh_jobs_json(run_id)):
             run.upsert_job(new_ghjob)
-            if new_ghjob.job_id not in latest: latest[new_ghjob.job_id] = 0.0
-            latest[new_ghjob.job_id] = max(latest[new_ghjob.job_id], min(100.0, max(0.0, new_ghjob.get_progress().percent_complete)))        
-        with worker_group.with_live() as live:
-            while not worker_group.is_finished():
-                if run.status != GhStatus.COMPLETED:
-                    worker_group.update_all(latest)
-                    time.sleep(0.1)
-                    sleep_for_sec -= 0.1
-                    if (sleep_for_sec <= 0.0):
+            worker_group.add_worker(worker_id=new_ghjob.job_id)
+            latest[new_ghjob.job_id] = new_ghjob.get_progress().percent_complete
+        while True:
+            sleep_for_sec:float = float(DEFAULT_INTERVALS['JOBS_POLL'])
+            run.update_run_status(get_gh_run_json(run_id))
+            for new_ghjob in GhJob.construct_from_job_json_element(get_gh_jobs_json(run_id)):
+                run.upsert_job(new_ghjob)
+                if new_ghjob.job_id not in latest: latest[new_ghjob.job_id] = 0.0
+                latest[new_ghjob.job_id] = max(latest[new_ghjob.job_id], min(100.0, max(0.0, new_ghjob.get_progress().percent_complete)))        
+                while not worker_group.is_finished():
+                    if run.status != GhStatus.COMPLETED:
+                        worker_group.update_all(latest)
+                        time.sleep(0.1)
+                        sleep_for_sec -= 0.1
+                        if (sleep_for_sec <= 0.0):
+                            break
+                        continue
+                    else:
+                        # final update
+                        if run.status == GhStatus.COMPLETED:
+                            latest = {i: 100.0 for i in range(len(run))}
+                        worker_group.complete_all()
+                        time.sleep(2)
                         break
-                    continue
-                else:
-                    # final update
-                    if run.status == GhStatus.COMPLETED:
-                        latest = {i: 100.0 for i in range(len(run))}
-                    worker_group.complete_all()
-                    time.sleep(2)
-                    break
-        if run.status == GhStatus.COMPLETED:
-            break
+            if run.status == GhStatus.COMPLETED:
+                break
 
     print_verbose("----------------------------------------")
 
