@@ -234,8 +234,6 @@ publish: must-be-on-main check-git-clean fetch-latest-tags build test
 	wait_for_pypi_update curvtools "$$CURVTOOLS_VER_MAJMINPTCH"; \
 	echo "✅ All PyPI packages are now at the expected versions";
 
-# // && git push $(REMOTE) "$$tag" // we push tags after all are tagged
-
 .PHONY: sync-published-stamps
 sync-published-stamps:
 	@$(SCRIPT_TOUCH_STAMP_FILES) > /dev/null && echo "✅ Synced published stamps" || echo "❌ Failed to sync published stamps"
