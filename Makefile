@@ -179,10 +179,7 @@ publish: fetch-latest-tags check-git-clean build test
 	  echo "CURVTOOLS_VER_MAJMINPTCH: $$CURVTOOLS_VER_MAJMINPTCH" 1>&2; \
 	  echo "CURVPYUTILS_VER_MAJMINPTCH: $$CURVPYUTILS_VER_MAJMINPTCH" 1>&2; \
 	  echo "🔄 Checking readme.md for out-of-date version numbers..."; \
-	  CURV_VER_MAJMINPTCH=$$CURV_VER_MAJMINPTCH; \
-	  CURVTOOLS_VER_MAJMINPTCH=$$CURVTOOLS_VER_MAJMINPTCH; \
-	  CURVPYUTILS_VER_MAJMINPTCH=$$CURVPYUTILS_VER_MAJMINPTCH; \
-	    $(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) readme.md \
+	  CURV_VER_MAJMINPTCH=$$CURV_VER_MAJMINPTCH CURVTOOLS_VER_MAJMINPTCH=$$CURVTOOLS_VER_MAJMINPTCH CURVPYUTILS_VER_MAJMINPTCH=$$CURVPYUTILS_VER_MAJMINPTCH $(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) readme.md \
 			&& echo "✔️ No change needed to readme.md for $$tag release" \
 			|| { echo "✅ Updated readme.md with new version numbers for $$tag release"; \
 				readme_commit_msg="chore(release): update readme.md to next version numbers before publishing $$tag release"; \
