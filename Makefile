@@ -206,8 +206,7 @@ publish: fetch-latest-tags check-git-clean build test
 	\
 	echo "🔄 Tagged all packages and pushing to remote with CI waiting for success..."; \
 	git push $(REMOTE) --tags || { echo "Error: Failed to push tags"; exit 1; }; \
-	# this ensures that we get the right run id for the CI job that publishes the tags
-	sleep 10; \
+	sleep 5; \
 	$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on push of tags"; exit 1; }; \
 	\
 	echo "🔄 Waiting for PyPI to update showing latest versions..."; \
