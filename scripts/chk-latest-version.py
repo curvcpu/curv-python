@@ -411,22 +411,26 @@ def get_pypi_semvers(pkg, args) -> List[SemVer]:
     semvers.sort()
     return semvers
 
-def get_version_py_semver(pkg: str) -> SemVer:
+def get_version_py_semver(pkg: str) -> Optional[SemVer]:
     """
     Get the version info from the package's _version.py file.
     """
     version_py_path = f"packages/{pkg}/src/{pkg}/_version.py"
     import runpy, re
-    result = runpy.run_path(version_py_path)
-    vt = result["__version_tuple__"]
-    git_describe_str = (
-        ".".join(str(x) for x in vt[:3] if x is not None)
-        + ("-" + re.sub(r"[A-Za-z]+", "", str(vt[3])) if vt[3] is not None else "")
-        + ("+" + str(vt[4]) if len(vt) > 4 and vt[4] is not None else "")
-    )
-    mtime_epoch: float = os.path.getmtime(version_py_path)
-    mtime_dt: DateTime = DateTime.fromtimestamp(mtime_epoch, timezone.utc)
-    return SemVer.parse_git_describe(version_str=git_describe_str, pkg=pkg, dt=mtime_dt)
+    try:
+        result = runpy.run_path(version_py_path)
+        vt = result["__version_tuple__"]
+        git_describe_str = (
+            ".".join(str(x) for x in vt[:3] if x is not None)
+            + ("-" + re.sub(r"[A-Za-z]+", "", str(vt[3])) if vt[3] is not None else "")
+            + ("+" + str(vt[4]) if len(vt) > 4 and vt[4] is not None else "")
+        )
+        mtime_epoch: float = os.path.getmtime(version_py_path)
+        mtime_dt: DateTime = DateTime.fromtimestamp(mtime_epoch, timezone.utc)
+        return SemVer.parse_git_describe(version_str=git_describe_str, pkg=pkg, dt=mtime_dt)
+    except Exception as e:
+        print(f"Couldn't get version info from {version_py_path}: {e}", file=sys.stderr)
+        return None
 
 def main() -> None:
 
@@ -470,8 +474,8 @@ def main() -> None:
     latest_git_tag_dt: DateTime = git_tag_semvers[-1].dt.formatted_str(ts_format)
 
     version_py_semver = get_version_py_semver(pkg)
-    latest_version_py: str = get_version_py_str(version_py_semver)
-    latest_version_py_dt: DateTime = version_py_semver.dt.formatted_str(ts_format)
+    latest_version_py: str = get_version_py_str(version_py_semver) if version_py_semver else ""
+    latest_version_py_dt: DateTime = version_py_semver.dt.formatted_str(ts_format) if version_py_semver else ""
 
     if args.latest_only == SourceType.PYPI:
         if ts_format != DateTime.TsFormat.NONE:
@@ -514,7 +518,7 @@ def main() -> None:
             # coloration if there's a mismatch between local and PyPI tags
             pypi_style = "bold red" if version_info['pypi'] is not None and version_info['tags'] is None else "white"
             tags_style = "bold red" if version_info['tags'] is not None and version_info['pypi'] is None else "white"
-            version_py_style = "bold red" if version_info['_version_py'] is not None and version_info['pypi'] is None else "white"
+            version_py_style = "bold red" if version_info['_version_py'] is not None and (version_info['pypi'] is None or version_info['tags'] is None) else "white"
             
             # apply styles and add row
             pypi_text = Text(pypi_ver, style=pypi_style)
