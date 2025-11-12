@@ -7,6 +7,7 @@
 import os, subprocess, sys
 from rich.console import Console
 from rich.text import Text
+import re
 
 console = Console()
 
@@ -29,14 +30,16 @@ PKGS = {
 # don't re-touch stamps if the only thing that changed was the stamp itself
 EXCLUDED_FILES = [info["last_changed_stamp_file"] for info in PKGS.values()]
 
-def get_latest_published_ts(pkg:str) -> int:
+def get_latest_published_ts(pkg:str) -> float:
     # get the latest published version from PyPI
     p = subprocess.run(
-        ['python3', 'scripts/chk-latest-version.py', '-L', '-ts', 'epoch', pkg]
+        ['python3', 'scripts/chk-latest-version.py', '-L', '-ts', 'epoch', pkg],
+        text=True,
+        capture_output=True
     )
     if p.returncode != 0:
-        raise subprocess.CalledProcessError(p.returncode, p.args)
-    return int(p.stdout.strip())
+        raise subprocess.CalledProcessError(p.returncode, p.args, p.stdout, p.stderr)
+    return float(p.stdout.strip())
 
 def get_latest_tag_ts(pkg:str) -> tuple[str, int]:
     def sh(*args, **kw):
@@ -71,34 +74,32 @@ def touch(path: str, mtime_epoch: int|float|None = None) -> None:
         with open(path, "x") as f:
             f.write("# empty file whose mtime is used by make to track whether last commit was more recent than last published time\n")
             f.write("# *do not* commit to source control\n")
-    st_atime, st_mtime = os.stat(path)
-    if mtime_epoch is None:
-        new_mtime: float = st_mtime
-    else:
-        new_mtime: float = float(mtime_epoch)
-    os.utime(path, (st_atime, new_mtime))
+    st = os.stat(path)
+    st_atime = st.st_atime
+    st_mtime = st.st_mtime
+    os.utime(path, (st_atime, float(mtime_epoch or st_mtime)))
 
 def main(argv):
-    latest_tag, latest_tag_ts = get_latest_tag_ts(pkg='curv')
-    console.print(f"[bold yellow]latest_tag:[/bold yellow] {latest_tag}")
-    console.print(f"[bold yellow]latest_tag_ts:[/bold yellow] {latest_tag_ts}")
-    sys.exit(0)
-
     # keep track of whether we've already touched the stamps
     touched_stamps = False
 
-    # first time only: create any stamps that don't exist yet
+    # create any stamps that don't exist yet and bring all published stamps up to date with most recent PyPI published version
     for pfx, info in PKGS.items():
         changed_stamp = info["last_changed_stamp_file"]
         published_stamp = info["last_published_stamp_file"]
         if not os.path.exists(changed_stamp):
             touch(changed_stamp)
             touched_changed_stamps = True
-            print(f"created {changed_stamp} because it didn't exist yet")
-        if not os.path.exists(published_stamp):
-            touch(published_stamp)
-            touched_published_stamps = True
-            print(f"created {published_stamp} because it didn't exist yet")
+            console.print(f"[bold yellow]created {changed_stamp} because it didn't exist yet[/bold yellow]")
+        # update published stamps by checking last publish time on PyPI
+        m = re.match(r'packages/(?P<pkg>curv|curvtools|curvpyutils)/', pfx)
+        if not m:
+            raise ValueError(f"invalid package prefix: {pfx}")
+        pkg = m.group('pkg')
+        latest_published_ts = get_latest_published_ts(pkg=pkg)
+        touch(published_stamp, mtime_epoch=latest_published_ts)
+        touched_published_stamps = True
+        console.print(f"[bold yellow]synced {published_stamp} to most recent PyPI published version's publishing timestamp[/bold yellow]")
     
     # normal operation: touch any stamps that are triggered by changes to files under the given package path
     files: list[str] = argv or list_changed_in_head()      # if run as pre-commit, filenames arrive in argv
@@ -107,7 +108,7 @@ def main(argv):
     console.print(f"[bold yellow]excluded_files:[/bold yellow] {EXCLUDED_FILES}")
 
     # example of to_touch:
-    # {'packages/curv/.package_changed_stamp.txt': 
+    # {'packages/curv/.package_changed_stamp.stamp': 
     #      {'triggered_by': ['packages/curv/src/curv/foo.py', 'packages/curv/src/curv/bar.py']}
     # }
     to_touch = {}
@@ -119,7 +120,7 @@ def main(argv):
                     to_touch[stamp] = {'triggered_by': []}
                 to_touch[stamp]['triggered_by'].append(f)
     
-    # touch each stamp and print a summary of the changes that triggered it
+    # touch each changed stamp and print a summary of the changes that triggered it
     for stamp, data in sorted(to_touch.items()):
         touch(stamp)
         touched_stamps = True
