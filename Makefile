@@ -128,9 +128,9 @@ publish: fetch-latest-tags check-git-clean build test
 	set -euo pipefail; \
 	LEVEL=$${LEVEL:-patch}; \
 	: "$${PKG:?Set PKG to one of: curvpyutils|curv|curvtools|all}"; \
-	export CURV_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curv -L); \
-	export CURVTOOLS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvtools -L); \
-	export CURVPYUTILS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L); \
+	CURV_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curv -L); \
+	CURVTOOLS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvtools -L); \
+	CURVPYUTILS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L); \
 	case "$$PKG" in \
 	  all) ORDER="curvpyutils curv curvtools" ;; \
 	  curv|curvtools|curvpyutils) ORDER="$$PKG" ;; \
@@ -170,9 +170,9 @@ publish: fetch-latest-tags check-git-clean build test
 	  # Extract version from tag and export to environment \
 	  ver=$$(printf '%s' "$$tag" | sed -E "s/^$${pfx}//"); \
 	  case "$$pfx" in \
-	    curv-v) export CURV_VER_MAJMINPTCH=$$ver ;; \
-	    curvtools-v) export CURVTOOLS_VER_MAJMINPTCH=$$ver ;; \
-	    curvpyutils-v) export CURVPYUTILS_VER_MAJMINPTCH=$$ver ;; \
+	    curv-v) CURV_VER_MAJMINPTCH=$$ver ;; \
+	    curvtools-v) CURVTOOLS_VER_MAJMINPTCH=$$ver ;; \
+	    curvpyutils-v) CURVPYUTILS_VER_MAJMINPTCH=$$ver ;; \
 	    *) echo "Unknown package prefix: $$pfx"; exit 1 ;; \
 	  esac; \
 	  echo "CURV_VER_MAJMINPTCH: $$CURV_VER_MAJMINPTCH" 1>&2; \
@@ -200,9 +200,30 @@ publish: fetch-latest-tags check-git-clean build test
 	  $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
 	  echo "🔥 Tagging $$name → $$tag"; \
 	  git tag -a "$$tag" -m "Release ($$name): $$tag" && git push $(REMOTE) "$$tag"; \
-	  echo "📣 Published PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
+	  echo "📣 Tagged PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
 	done; \
-	git push $(REMOTE) --tags;
+	echo "🔄 Tagged all packages and pushing to remote with CI waiting for success..."; \
+	git push $(REMOTE) --tags && $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on push of tags"; exit 1; };
+	echo "🔄 Waiting for PyPI to update showing latest versions...";
+	wait_for_pypi_update() { \
+		local pkg_name="$$1"; \
+		local expected_ver="$$2"; \
+		local script_cmd="$(SCRIPT_CHK_LATEST_VER) $$pkg_name -L"; \
+		echo "⏳ Waiting for PyPI $$pkg_name to show version $$expected_ver"; \
+		while true; do \
+			local current_ver=$$($$script_cmd 2>/dev/null || echo "error"); \
+			if [ "$$current_ver" = "$$expected_ver" ]; then \
+				echo "✅ PyPI $$pkg_name is now at expected version $$expected_ver"; \
+				break; \
+			else \
+				echo "⏳ PyPI $$pkg_name currently shows: $$current_ver (expecting: $$expected_ver)"; \
+				sleep 5; \
+			fi; \
+		done; \
+	}; \
+	wait_for_pypi_update curvpyutils "$$CURVPYUTILS_VER_MAJMINPTCH"; \
+	wait_for_pypi_update curv "$$CURV_VER_MAJMINPTCH"; \
+	wait_for_pypi_update curvtools "$$CURVTOOLS_VER_MAJMINPTCH";
 
 .PHONY: sync-published-stamps
 sync-published-stamps:
