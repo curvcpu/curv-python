@@ -140,6 +140,7 @@ def main() -> None:
                                                      border_style=Style(color="red", bold=True)),
                     ))
                     worker_group.update_all(latest=latest)
+                time.sleep(2)
                 break
             else:
                 if sleep_for_sec > 0.0:
