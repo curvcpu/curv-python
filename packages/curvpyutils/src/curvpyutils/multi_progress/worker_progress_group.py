@@ -39,9 +39,35 @@ class WorkerProgressGroup:
             display_options=self.display_options
         )
         self.is_full_screen = self.stacked_progress_table.is_full_screen
+        self.max_names_length: int | None = self.display_options.MaxNamesLength
+
+        # worker tasks and overall task
         self.workers: Dict[int, _WorkerProgress] = {}
         self.overall_task_id: TaskID | None = None
-        self.max_names_length: int | None = self.display_options.MaxNamesLength
+
+    def update_display_options(self, new_display_options: DisplayOptions) -> None:
+        """
+        Only supports updating the following display options:
+        - OverallBarColors
+        - WorkerBarColors
+        - Message
+        - BoundingRect
+        Rest of new_display_options is ignored.
+        """
+        overall_bar_colors_changed = self.display_options.OverallBarColors != new_display_options.OverallBarColors
+        worker_bar_colors_changed = self.display_options.WorkerBarColors != new_display_options.WorkerBarColors
+        message_changed = self.display_options.Message != new_display_options.Message
+        bounding_rect_changed = self.display_options.BoundingRect != new_display_options.BoundingRect
+        if overall_bar_colors_changed or worker_bar_colors_changed:
+            self.display_options.OverallBarColors = new_display_options.OverallBarColors
+            self.display_options.WorkerBarColors = new_display_options.WorkerBarColors
+            self.stacked_progress_table.update_bar_colors(bar_colors=self.display_options.OverallBarColors, worker_bar_colors=self.display_options.WorkerBarColors)
+        if message_changed:
+            self.display_options.Message = new_display_options.Message
+            self.stacked_progress_table.update_message(message=self.display_options.Message)
+        if bounding_rect_changed:
+            self.display_options.BoundingRect = new_display_options.BoundingRect
+            self.stacked_progress_table.update_bounding_rect(bounding_rect=self.display_options.BoundingRect)
 
     def truncate_description_str(self, description: str|Callable[[int], str]) -> str|Callable[[int], str]:
         if self.max_names_length is None:
@@ -125,10 +151,12 @@ class WorkerProgressGroup:
 
     def with_live(self, *, console: Optional[Console] = None) -> Live:
         return Live(
-            self.stacked_progress_table.get_progress_table(),
+            #self.stacked_progress_table.get_progress_table(),
             refresh_per_second=10,
             transient=self.stacked_progress_table.transient,
             screen=self.is_full_screen,
             console=console,
+            auto_refresh=True,
+            get_renderable=self.stacked_progress_table.get_progress_table,
         )
 

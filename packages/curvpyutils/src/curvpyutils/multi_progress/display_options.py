@@ -84,6 +84,13 @@ class BarColors:
             text=Style(color="white", bold=False),
         )
 
+    @classmethod
+    def red(cls) -> BarColors:
+        return cls(
+            completed=Style(color="bright_red", bold=True),
+            finished=Style(color="bright_red", bold=True),
+            text=Style(color="red", bold=True),
+        )
 
 @dataclass(slots=True)
 class MessageLineOpt:

@@ -34,14 +34,67 @@ class StackedProgressTable:
     def __init__(self, display_options: DisplayOptions | None = None) -> None:
         self.display_options = display_options or DisplayOptions()
 
-        self.is_full_screen = False
-        self.expand = False
+        self.is_full_screen = True if self.display_options.Size == SizeOpt.FULL_SCREEN else False
+        self.expand = True if self.display_options.Size == SizeOpt.FULL_SCREEN else False
         self.transient = self.display_options.Transient
 
-        job_bar_args = self.display_options.WorkerBarColors.get_args_dict()
-        overall_bar_args = self.display_options.OverallBarColors.get_args_dict()
+        job_bar_args, overall_bar_args = self._make_bar_args(
+            self.display_options.Size,
+            self.display_options.WorkerBarColors, 
+            self.display_options.OverallBarColors)
 
-        match self.display_options.Size:
+        job_progress_columns = self._make_job_progress_columns(
+            finished_text="[bold green]:heavy_check_mark:[/bold green]", 
+            job_bar_args=job_bar_args)
+        self.job_progress = Progress(
+            *job_progress_columns, expand=self.expand, transient=self.transient
+        )
+
+        overall_progress_columns = self._make_overall_progress_columns(
+            finished_text="[bold green]:heavy_check_mark:[/bold green]", 
+            overall_bar_args=overall_bar_args)
+        self.overall_progress = Progress(
+            *overall_progress_columns, expand=self.expand, transient=self.transient
+        )
+
+        self.progress_table = self._build_progress_table()
+
+    def _make_job_progress_columns(self, finished_text: str, job_bar_args: dict[str, object]) -> list[ProgressColumn]:
+        job_progress_columns: list[ProgressColumn] = [
+            TextColumn("[dim]{task.description}[/dim]"),
+            SpinnerColumn(finished_text=finished_text),
+            BarColumn(
+                bar_width=job_bar_args["width"],
+                **self.display_options.WorkerBarColors.remap_bar_style_names(),
+            ),
+            TextColumn("[dim]{task.percentage:>5.1f}%[/dim]"),
+        ]
+        if job_bar_args.get("fn_remaining") is not None:
+            job_progress_columns.append(job_bar_args["fn_remaining"]())
+        return job_progress_columns
+
+    def _make_overall_progress_columns(self, finished_text: str, overall_bar_args: dict[str, object]) -> list[ProgressColumn]:
+        overall_style = _resolve_style(self.display_options.OverallNameStrStyle) or Style()
+        overall_bar_styles = self.display_options.OverallBarColors.remap_bar_style_names()
+        overall_progress_columns: list[ProgressColumn] = [
+            TextColumn("{task.description}", style=overall_style),
+            SpinnerColumn(finished_text="[bold green]:heavy_check_mark:[/bold green]"),
+            BarColumn(
+                bar_width=overall_bar_args["width"],
+                **overall_bar_styles,
+            ),
+            TextColumn("{task.percentage:>5.1f}%"),
+        ]
+        if overall_bar_args.get("fn_elapsed") is not None:
+            overall_progress_columns.append(overall_bar_args["fn_elapsed"]())
+        if overall_bar_args.get("fn_remaining") is not None:
+            overall_progress_columns.append(overall_bar_args["fn_remaining"]())
+        return overall_progress_columns
+    
+    def _make_bar_args(self, size: SizeOpt, worker_bar_colors: BarColors, overall_bar_colors: BarColors) -> tuple[dict[str, object], dict[str, object]]:
+        job_bar_args: dict[str, object] = worker_bar_colors.get_args_dict()
+        overall_bar_args: dict[str, object] = overall_bar_colors.get_args_dict()
+        match size:
             case SizeOpt.SMALL:
                 job_bar_args.update({"width": 20, "fn_remaining": None})
                 overall_bar_args.update(
@@ -103,45 +156,37 @@ class StackedProgressTable:
                         ),
                     }
                 )
-                self.is_full_screen = True
-                self.expand = True
             case _:
                 raise ValueError(f"Invalid size option: {self.display_options.Size!r}")
+        return job_bar_args, overall_bar_args
 
-        job_progress_columns: list[ProgressColumn] = [
-            TextColumn("[dim]{task.description}[/dim]"),
-            SpinnerColumn(finished_text="[bold green]:heavy_check_mark:[/bold green]"),
-            BarColumn(
-                bar_width=job_bar_args["width"],
-                **self.display_options.WorkerBarColors.remap_bar_style_names(),
-            ),
-            TextColumn("[dim]{task.percentage:>5.1f}%[/dim]"),
-        ]
-        if job_bar_args.get("fn_remaining") is not None:
-            job_progress_columns.append(job_bar_args["fn_remaining"]())
-        self.job_progress = Progress(
-            *job_progress_columns, expand=self.expand, transient=self.transient
-        )
+    def update_bar_colors(self, bar_colors: BarColors, worker_bar_colors: BarColors) -> None:
+        self.display_options.OverallBarColors = bar_colors
+        self.display_options.WorkerBarColors = worker_bar_colors
 
-        overall_style = _resolve_style(self.display_options.OverallNameStrStyle) or Style()
-        overall_bar_styles = self.display_options.OverallBarColors.remap_bar_style_names()
-        overall_progress_columns: list[ProgressColumn] = [
-            TextColumn("{task.description}", style=overall_style),
-            SpinnerColumn(finished_text="[bold green]:heavy_check_mark:[/bold green]"),
-            BarColumn(
-                bar_width=overall_bar_args["width"],
-                **overall_bar_styles,
-            ),
-            TextColumn("{task.percentage:>5.1f}%"),
-        ]
-        if overall_bar_args.get("fn_elapsed") is not None:
-            overall_progress_columns.append(overall_bar_args["fn_elapsed"]())
-        if overall_bar_args.get("fn_remaining") is not None:
-            overall_progress_columns.append(overall_bar_args["fn_remaining"]())
-        self.overall_progress = Progress(
-            *overall_progress_columns, expand=self.expand, transient=self.transient
-        )
+        job_bar_args, overall_bar_args = self._make_bar_args(
+            self.display_options.Size,
+            self.display_options.WorkerBarColors, 
+            self.display_options.OverallBarColors)
 
+        job_progress_columns = self._make_job_progress_columns(
+            finished_text="[bold green]:heavy_check_mark:[/bold green]", 
+            job_bar_args=job_bar_args)
+        self.job_progress.columns = job_progress_columns
+
+        overall_progress_columns = self._make_overall_progress_columns(
+            finished_text="[bold green]:heavy_check_mark:[/bold green]", 
+            overall_bar_args=overall_bar_args)
+        self.overall_progress.columns = overall_progress_columns
+
+        # self.progress_table = self._build_progress_table()
+
+    def update_message(self, message: MessageLineOpt) -> None:
+        self.display_options.Message = message
+        self.progress_table = self._build_progress_table()
+
+    def update_bounding_rect(self, bounding_rect: BoundingRectOpt) -> None:
+        self.display_options.BoundingRect = bounding_rect
         self.progress_table = self._build_progress_table()
 
     def get_job_progress(self) -> Progress:
@@ -151,6 +196,7 @@ class StackedProgressTable:
         return self.overall_progress
 
     def get_progress_table(self) -> Table:
+        self.progress_table = self._build_progress_table()
         return self.progress_table
 
     def _build_progress_table(self) -> Table:

@@ -6,7 +6,7 @@ import subprocess
 from enum import Enum, IntEnum
 import sys
 import time
-from wait_ci_lib.gh_run import GhRun, GhJob, GhStatus, get_gh_jobs_json, get_gh_run_json, DEFAULT_INTERVALS
+from wait_ci_lib.gh_run import GhRun, GhJob, GhStatus, GhConclusion, get_gh_jobs_json, get_gh_run_json, DEFAULT_INTERVALS
 from curvpyutils.multi_progress import DisplayOptions, MessageLineOpt, SizeOpt, StackupOpt, BoundingRectOpt, BarColors, WorkerProgressGroup
 from curvpyutils.multi_progress.display_options import Style
 from rich.console import Console
@@ -70,7 +70,7 @@ def main() -> None:
     prog_name = os.path.basename(sys.argv[0])
     run_id = int(args.GH_ACTION_RUN_ID)
 
-    def print_out(message: str, severity: PrintSeverity = PrintSeverity.NORMAL, verbosity: PrintVerbosityLevel = PrintVerbosityLevel.NORMAL) -> None:
+    def print_out(message: str|Text, severity: PrintSeverity = PrintSeverity.NORMAL, verbosity: PrintVerbosityLevel = PrintVerbosityLevel.NORMAL) -> None:
         if args.verbosity >= verbosity.value or severity.value >= PrintSeverity.WARNING.value:
             print_args = []
             prog_name_text = Text(f"[{prog_name}] ", style=Style(color="dark_blue", bold=False))
@@ -81,7 +81,10 @@ def main() -> None:
             elif severity.value >= PrintSeverity.WARNING.value:
                 prefix_text = Text(f"{severity.name}: ", style=Style(color="yellow", bold=False))
                 print_args.append(prefix_text)
-            message_text = Text(message, style=Style(color="white", bold=False))
+            if isinstance(message, str):
+                message_text = Text(message, style=Style(color="white", bold=False))
+            else:
+                message_text = message
             print_args.append(message_text)
             console.print(*print_args)
 
@@ -96,7 +99,7 @@ def main() -> None:
 
     display_options = DisplayOptions(
         Message=MessageLineOpt(message="Waiting for CI...", message_style=Style(color="red", bold=True)),
-        Transient=True,
+        Transient=False,
         FnWorkerIdToName=get_worker_name,
         OverallNameStr=f"{run.name}",
         OverallNameStrStyle=Style(color="dark_blue", bold=True),
@@ -108,39 +111,46 @@ def main() -> None:
                                      border_style=Style(color="blue", bold=True)),
     )
     worker_group = WorkerProgressGroup(display_options=display_options)
-    latest = {i: 0.0 for i in range(len(run))}
-    with worker_group.with_live() as live:
+    latest = {}
+    worker_group.update_all(latest=None)
+    with worker_group.with_live(console=console) as live:
         run.update_run_status(get_gh_run_json(run_id))
         for new_ghjob in GhJob.construct_from_job_json_element(get_gh_jobs_json(run_id)):
             run.upsert_job(new_ghjob)
             worker_group.add_worker(worker_id=new_ghjob.job_id)
             latest[new_ghjob.job_id] = new_ghjob.get_progress().percent_complete
+            worker_group.update_all(latest=latest)
         while True:
             sleep_for_sec:float = float(DEFAULT_INTERVALS['JOBS_POLL'])
             run.update_run_status(get_gh_run_json(run_id))
-            for new_ghjob in GhJob.construct_from_job_json_element(get_gh_jobs_json(run_id)):
-                run.upsert_job(new_ghjob)
-                if new_ghjob.job_id not in latest: latest[new_ghjob.job_id] = 0.0
-                latest[new_ghjob.job_id] = max(latest[new_ghjob.job_id], min(100.0, max(0.0, new_ghjob.get_progress().percent_complete)))        
-                while not worker_group.is_finished():
-                    if run.status != GhStatus.COMPLETED:
-                        worker_group.update_all(latest)
-                        time.sleep(0.1)
-                        sleep_for_sec -= 0.1
-                        if (sleep_for_sec <= 0.0):
-                            break
-                        continue
-                    else:
+            while not worker_group.is_finished():
+                for new_ghjob in GhJob.construct_from_job_json_element(get_gh_jobs_json(run_id)):
+                    run.upsert_job(new_ghjob)
+                    if new_ghjob.job_id not in latest: latest[new_ghjob.job_id] = 0.0
+                    latest[new_ghjob.job_id] = max(latest[new_ghjob.job_id], min(100.0, max(0.0, new_ghjob.get_progress().percent_complete)))        
+                    worker_group.update_all(latest)
+                    if run.status == GhStatus.COMPLETED:
                         # final update
-                        if run.status == GhStatus.COMPLETED:
-                            latest = {i: 100.0 for i in range(len(run))}
-                        worker_group.complete_all()
+                        if run.conclusion == GhConclusion.SUCCESS:
+                            worker_group.complete_all()
+                        else:
+                            worker_group.update_display_options(new_display_options=DisplayOptions(
+                                Message=MessageLineOpt(message="CI run completed with failure", message_style=Style(color="red", bold=True)),
+                                OverallBarColors=BarColors.red(),
+                                WorkerBarColors=BarColors.red(),
+                                BoundingRect=BoundingRectOpt(title=f"FAILED: Run {run.run_id}", 
+                                                            border_style=Style(color="red", bold=True)),
+                            ))
                         time.sleep(2)
                         break
+                time.sleep(0.1)
+                sleep_for_sec -= 0.1
+                if (sleep_for_sec <= 0.0) or (run.status == GhStatus.COMPLETED):
+                    break
             if run.status == GhStatus.COMPLETED:
                 break
 
-    print_out("----------------------------------------", verbosity=PrintVerbosityLevel.VERBOSE)
+    print_out("----------------------------------------", verbosity=PrintVerbosityLevel.DEBUG)
 
     cmd = ["gh", "run", "watch", "--interval", "10", "--exit-status", str(run_id)]
 
@@ -163,7 +173,21 @@ def main() -> None:
             print_out("CI run was cancelled by user", severity=PrintSeverity.WARNING)
             sys.exit(0)
         elif e.returncode == 1:
-            print_out("CI run failed", severity=PrintSeverity.ERROR)
+            import re
+            find_status_match = re.search(r"completed with '(.*)'", e.stdout)
+            ci_run_failed_text = Text('CI run failed', Style(color="red", bold=True))
+            if find_status_match:
+                out_text = Text.assemble(
+                    ci_run_failed_text, 
+                    ' (',
+                    Text(f'{find_status_match.group(1)}', Style(color="dark_red", bold=True)),
+                    ')'
+                )
+            else:
+                out_text = Text.assemble(
+                    ci_run_failed_text, 
+                )
+            print_out(out_text, severity=PrintSeverity.ERROR)
             sys.exit(1)
         else:
             raise e
