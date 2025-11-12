@@ -255,6 +255,18 @@ publish-curvpyutils-patch: packages/curvpyutils/src/curvpyutils/.package_publish
 publish-curvtools-patch: LEVEL=patch
 publish-curvtools-patch: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp packages/curv/src/curv/.package_published_stamp.stamp packages/curvtools/src/curvtools/.package_published_stamp.stamp
 
+.PHONY: publish-curv-minor
+publish-curv-minor: LEVEL=minor
+publish-curv-minor: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp packages/curv/src/curv/.package_published_stamp.stamp
+
+.PHONY: publish-curvpyutils-minor
+publish-curvpyutils-minor: LEVEL=minor
+publish-curvpyutils-minor: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp
+
+.PHONY: publish-curvtools-minor
+publish-curvtools-minor: LEVEL=minor
+publish-curvtools-minor: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp packages/curv/src/curv/.package_published_stamp.stamp packages/curvtools/src/curvtools/.package_published_stamp.stamp
+
 # This is just a temporary rule that I've been using to test ./scripts/wait_ci.py...
 .PHONY: push
 push: fetch-latest-tags
