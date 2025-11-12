@@ -10,3 +10,5 @@ packages/*/dist/
 packages/*/build/
 packages/*/*.egg-info
 packages/*/src/**/_version.py
+packages/*/src/**/*.stamp
+packages/*/src/**/*.stamp
