@@ -117,31 +117,6 @@ clean-venv: clean
 check-git-clean:
 	@test -z "$$(git status --porcelain)" || (echo "Error: git working tree is not clean. Commit/stash first."; exit 1)
 
-# # Default value for README_VERSION_SRC (when readme.md is built directly)
-# # Set README_VERSION_SRC to -V when building advance-readme-to-next-version
-# README_VERSION_SRC ?= -L
-# .PHONY: advance-readme-to-next-version
-# advance-readme-to-next-version: README_VERSION_SRC=-V
-# advance-readme-to-next-version: readme.md
-
-# readme.md: build
-# 	@echo "🔄 Checking $@ for out-of-date version numbers...";
-# 	@CURV_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curv $(README_VERSION_SRC)) \
-# 		CURVTOOLS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvtools $(README_VERSION_SRC)) \
-# 		CURVPYUTILS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvpyutils $(README_VERSION_SRC)) \
-# 		$(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) $@ \
-# 			&& echo "✔️ No change needed for $@" \
-# 			|| { echo "❌ Updated $@ with new version numbers"; \
-# 				commit_msg="chore(release): update readme.md to next version numbers before publishing"; \
-# 				git add $@; \
-# 				git commit -m "$$commit_msg" || { echo "❌ Failed to commit changes"; exit 1; }; \
-# 				git push $(REMOTE) HEAD || { echo "❌ Failed to push commit; please do it manually"; exit 1; }; \
-# 				echo "🔄 Waiting for CI to pass on '$$commit_msg'..."; \
-# 				$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
-# 				echo "✅ Pushed commit to update $@ with new version numbers before publishing"; \
-# 				echo "🔄 Please re-run your make command again and it will now succeed"; \
-# 				exit 1; };
-
 
 #
 # make publish [PKG=curv|curvpyutils|curvtools|all] [LEVEL=patch|minor|major]
