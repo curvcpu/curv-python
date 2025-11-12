@@ -190,18 +190,23 @@ publish: fetch-latest-tags check-git-clean build test
 				$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$readme_commit_msg'"; exit 1; }; \
 				echo "✅ Pushed commit to update readme.md with new version numbers before publishing $$tag release"; \
 				}; \
+	  \
 	  echo "🔄 Committing and pushing empty commit to trigger CI for $$tag release..."; \
 	  commit_msg="chore(release): prepare $$name for $$tag release"; \
 	  git commit --allow-empty -m "$$commit_msg" && git push $(REMOTE) HEAD; \
+	  \
 	  echo "🔄 Waiting for CI to pass on '$$commit_msg'..."; \
 	  $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
+	  \
 	  echo "🔥 Tagging $$name → $$tag"; \
 	  git tag -a "$$tag" -m "Release ($$name): $$tag" && git push $(REMOTE) "$$tag"; \
 	  echo "📣 Tagged PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
 	done; \
+	\
 	echo "🔄 Tagged all packages and pushing to remote with CI waiting for success..."; \
-	git push $(REMOTE) --tags && $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on push of tags"; exit 1; };
-	echo "🔄 Waiting for PyPI to update showing latest versions...";
+	git push $(REMOTE) --tags && $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on push of tags"; exit 1; }; \
+	\
+	echo "🔄 Waiting for PyPI to update showing latest versions..."; \
 	wait_for_pypi_update() { \
 		local pkg_name="$$1"; \
 		local expected_ver="$$2"; \
@@ -220,7 +225,8 @@ publish: fetch-latest-tags check-git-clean build test
 	}; \
 	wait_for_pypi_update curvpyutils "$$CURVPYUTILS_VER_MAJMINPTCH"; \
 	wait_for_pypi_update curv "$$CURV_VER_MAJMINPTCH"; \
-	wait_for_pypi_update curvtools "$$CURVTOOLS_VER_MAJMINPTCH";
+	wait_for_pypi_update curvtools "$$CURVTOOLS_VER_MAJMINPTCH"; \
+	echo "✅ All PyPI packages are now at the expected versions";
 
 .PHONY: sync-published-stamps
 sync-published-stamps:
