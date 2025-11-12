@@ -188,9 +188,9 @@ publish: check-git-clean test
 	  [ -z "$$last" ] && last="0.0.0"; \
 	  ver=$$(bump "$$last" "$$lvl"); \
 	  case "$$pfx" in \
-	    curv-v) CURV_VER_MAJMINPTCH=$${$$ver:-$${CURV_VER_MAJMINPTCH}} ;; \
-	    curvtools-v) CURVTOOLS_VER_MAJMINPTCH=$${$$ver:-$${CURVTOOLS_VER_MAJMINPTCH}} ;; \
-	    curvpyutils-v) CURVPYUTILS_VER_MAJMINPTCH=$${$$ver:-$${CURVPYUTILS_VER_MAJMINPTCH}} ;; \
+	    curv-v) CURV_VER_MAJMINPTCH=$$ver ;; \
+	    curvtools-v) CURVTOOLS_VER_MAJMINPTCH=$$ver ;; \
+	    curvpyutils-v) CURVPYUTILS_VER_MAJMINPTCH=$$ver ;; \
 	    *) echo "Unknown package prefix: $$pfx"; exit 1 ;; \
 	  esac; \
 	  printf '%s%s\n' "$$pfx" "$$ver"; \
@@ -235,7 +235,7 @@ publish: check-git-clean test
 # This is just a temporary rule that I've been using to test ./scripts/wait_ci.py...
 .PHONY: push
 push: fetch-latest-tags
-	@set -euo pipefail; \
+	set -euo pipefail; \
 	LEVEL=$${LEVEL:-patch}; \
 	PKG=$${PKG:-curv}; \
 	CURV_VER_MAJMINPTCH=$${CURV_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curv -L)}; \
@@ -265,9 +265,9 @@ push: fetch-latest-tags
 	  [ -z "$$last" ] && last="0.0.0"; \
 	  ver=$$(bump "$$last" "$$lvl"); \
 	  case "$$pfx" in \
-	    curv-v) CURV_VER_MAJMINPTCH=$${$$ver:-$${CURV_VER_MAJMINPTCH}} ;; \
-	    curvtools-v) CURVTOOLS_VER_MAJMINPTCH=$${$$ver:-$${CURVTOOLS_VER_MAJMINPTCH}} ;; \
-	    curvpyutils-v) CURVPYUTILS_VER_MAJMINPTCH=$${$$ver:-$${CURVPYUTILS_VER_MAJMINPTCH}} ;; \
+	    curv-v) CURV_VER_MAJMINPTCH=$$ver ;; \
+	    curvtools-v) CURVTOOLS_VER_MAJMINPTCH=$$ver ;; \
+	    curvpyutils-v) CURVPYUTILS_VER_MAJMINPTCH=$$ver ;; \
 	    *) echo "Unknown package prefix: $$pfx"; exit 1 ;; \
 	  esac; \
 	  printf '%s%s\n' "$$pfx" "$$ver"; \
