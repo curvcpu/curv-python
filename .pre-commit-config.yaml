@@ -3,9 +3,9 @@ default_install_hook_types: [pre-commit]
 repos:
   - repo: local
     hooks:
-      - id: touch-commit-stamp
+      - id: touch-stamp-files
         name: Touch package commit stamp files before commit
-        entry: python3 scripts/touch_commit_stamp.py
+        entry: python3 scripts/touch_stamp_files.py
         language: system
         stages: [pre-commit]
         always_run: true

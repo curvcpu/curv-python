@@ -16,13 +16,7 @@ SCRIPT_WAIT_CI := scripts/wait_ci.py
 SCRIPT_SUBST := curv-subst
 SCRIPT_SUBST_OPTS := -f -1 -m
 SCRIPT_CHK_LATEST_VER := scripts/chk-latest-version.py
-PKG_CURV_COMMIT_STAMP_FILE = $(PKG_CURV)/src/curv/.package_changed_stamp.txt
-PKG_CURVTOOLS_COMMIT_STAMP_FILE = $(PKG_CURVTOOLS)/src/curvtools/.package_changed_stamp.txt
-PKG_CURVPYUTILS_COMMIT_STAMP_FILE = $(PKG_CURVPYUTILS)/src/curvpyutils/.package_changed_stamp.txt
-PKG_CURV_PUBLISH_STAMP_FILE = $(PKG_CURV)/src/curv/.package_publish_stamp.txt
-PKG_CURVTOOLS_PUBLISH_STAMP_FILE = $(PKG_CURVTOOLS)/src/curvtools/.package_publish_stamp.txt
-PKG_CURVPYUTILS_PUBLISH_STAMP_FILE = $(PKG_CURVPYUTILS)/src/curvpyutils/.package_publish_stamp.txt
-GIT_PRECOMMIT_HOOK_FILE := .git/hooks/pre-commit
+SCRIPT_TOUCH_STAMP_FILES := scripts/touch_stamp_files.py
 
 .PHONY: setup-sync
 setup-sync:
@@ -228,7 +222,24 @@ publish: fetch-latest-tags check-git-clean test
 	  git tag -a "$$tag" -m "Release ($$name): $$tag" && git push $(REMOTE) "$$tag"; \
 	  echo "📣 Published PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
 	done; \
-	git push $(REMOTE) --tags; \
+	git push $(REMOTE) --tags;
+
+.PHONY: sync-published-stamps
+sync-published-stamps:
+	@$(SCRIPT_TOUCH_STAMP_FILES)
+
+packages/%/.package_published_stamp.stamp: packages/%/.package_changed_stamp.stamp | sync-published-stamps
+	@echo "🔄 $(notdir $*) needs republish"
+
+.PHONY: publish-curv-patch
+publish-curv-patch: packages/curv/src/curv/.package_published_stamp.stamp
+	@$(MAKE) publish PKG=curv LEVEL=patch
+.PHONY: publish-curvpyutils-patch
+publish-curvpyutils-patch: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp
+	@$(MAKE) publish PKG=curvpyutils LEVEL=patch
+.PHONY: publish-curvtools-patch
+publish-curvtools-patch: packages/curvtools/src/curvtools/.package_published_stamp.stamp
+	@$(MAKE) publish PKG=curvtools LEVEL=patch
 
 # This is just a temporary rule that I've been using to test ./scripts/wait_ci.py...
 .PHONY: push

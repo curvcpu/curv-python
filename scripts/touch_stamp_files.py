@@ -28,7 +28,7 @@ PKGS = {
 }
 
 # don't re-touch stamps if the only thing that changed was the stamp itself
-EXCLUDED_FILES = [info["last_changed_stamp_file"] for info in PKGS.values()]
+EXCLUDED_FILES = [info["last_changed_stamp_file"] for info in PKGS.values()] + [info["last_published_stamp_file"] for info in PKGS.values()]
 
 def get_latest_published_ts(pkg:str) -> float:
     # get the latest published version from PyPI
@@ -75,9 +75,9 @@ def touch(path: str, mtime_epoch: int|float|None = None) -> None:
             f.write("# empty file whose mtime is used by make to track whether last commit was more recent than last published time\n")
             f.write("# *do not* commit to source control\n")
     st = os.stat(path)
-    st_atime = st.st_atime
-    st_mtime = st.st_mtime
-    os.utime(path, (st_atime, float(mtime_epoch or st_mtime)))
+    if mtime_epoch is None:
+        mtime_epoch = datetime.now(timezone.utc).timestamp()
+    os.utime(path, (st.st_atime, float(mtime_epoch)))
 
 def main(argv):
     # keep track of whether we've already touched the stamps
