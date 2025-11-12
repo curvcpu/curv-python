@@ -299,8 +299,8 @@ push: fetch-latest-tags
 				echo "✅ Pushed commit to update readme.md with new version numbers before publishing $$tag release"; \
 				}; \
 	done
-# @git push $(REMOTE) HEAD
-# @$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed"; exit 1; };
+	@git push $(REMOTE) HEAD
+	@$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed"; exit 1; };
 
 #
 # make untag PKG=curvtools [VER=0.0.6]
