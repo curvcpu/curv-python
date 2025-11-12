@@ -155,10 +155,8 @@ check-git-clean:
 # - defaults: PKG=all, LEVEL=patch
 #
 .PHONY: publish
-publish: check-git-clean test
+publish: fetch-latest-tags check-git-clean test
 	@set -euo pipefail; \
-	echo "🤔 Fetching latest tags from remote '$(REMOTE)'..."; \
-	git fetch $(REMOTE) --tags; \
 	LEVEL=$${LEVEL:-patch}; \
 	: "$${PKG:?Set PKG to one of: curvpyutils|curv|curvtools|all}"; \
 	CURV_VER_MAJMINPTCH=$${CURV_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curv -L)}; \
