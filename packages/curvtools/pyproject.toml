@@ -51,6 +51,8 @@ curv-memmap2 = "curvtools.cli.memmap2:main"
 curv-subst = "curvtools.cli.subst.subst:main"
 curv-verilog-hex-generate = "curvtools.cli.verilog_hex_generate.verilog_hex_generate:main"
 curv-verilog-hex-reformat = "curvtools.cli.verilog_hex_reformat.verilog_hex_reformat:main"
+curv-svh-from-plusargs = "curvtools.cli.svh_from_plusargs.svh_from_plusargs:main"
+curv-svh-from-template = "curvtools.cli.svh_from_template.svh_from_template:main"
 
 # Legacy alias preserved
 curvcfg = "curvtools.cli.curvcfg:main"
