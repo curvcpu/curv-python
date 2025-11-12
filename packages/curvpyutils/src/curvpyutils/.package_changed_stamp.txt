@@ -1,3 +1,0 @@
-# empty file whose mtime is used to track last commit that changed this package
-
-# *do* commit this to source control

@@ -9,6 +9,7 @@ import argparse
 import json
 import re
 import sys
+import os
 import urllib.request
 from dataclasses import dataclass
 from typing import Dict, Iterator, List, Optional, Set, Tuple, Union
@@ -20,12 +21,30 @@ import subprocess
 from datetime import datetime, timezone
 
 class DateTime(datetime):
+    class TsFormat(Enum):
+        NONE = "none"
+        UTC = "utc"
+        EPOCH = "epoch"
+        LOCAL = "local"
+
     def localformat(self) -> str:
         if self.tzinfo is None:
             self = self.replace(tzinfo=timezone.utc)
         local_dt = self.astimezone()
         tz_name = local_dt.tzname()
         return local_dt.strftime(f"%Y-%m-%d %I:%M%p").lower() + " " + local_dt.strftime(f"{tz_name}")
+    
+    def formatted_str(self, ts_format: 'DateTime.TsFormat') -> str:
+        if ts_format == DateTime.TsFormat.NONE:
+            return self.isoformat()
+        elif ts_format == DateTime.TsFormat.UTC:
+            return self.isoformat()
+        elif ts_format == DateTime.TsFormat.EPOCH:
+            return str(self.timestamp())
+        elif ts_format == DateTime.TsFormat.LOCAL:
+            return self.localformat()
+        else:
+            raise ValueError(f"invalid ts_format: {ts_format}")
 
 # SemVer regex examples (1.2.3 with optional prerelease/build):
 # - prerelease only: 1.2.3-alpha.1 -> prerelease='alpha.1', build=None
@@ -377,7 +396,8 @@ def get_pypi_semvers(pkg, args) -> List[SemVer]:
             continue
         try:
             try:
-                dt = DateTime.fromisoformat(files[0].get("upload_time"))
+                upload_time_str = files[0].get("upload_time")
+                dt = DateTime.fromisoformat(upload_time_str).replace(tzinfo=timezone.utc)
             except:
                 dt = None
             semvers.append(SemVer.parse(ver_str, pkg=pkg, dt=dt))
@@ -395,21 +415,26 @@ def get_version_py_semver(pkg: str) -> SemVer:
     """
     Get the version info from the package's _version.py file.
     """
+    version_py_path = f"packages/{pkg}/src/{pkg}/_version.py"
     import runpy, re
-    result = runpy.run_path(f"packages/{pkg}/src/{pkg}/_version.py")
+    result = runpy.run_path(version_py_path)
     vt = result["__version_tuple__"]
     git_describe_str = (
         ".".join(str(x) for x in vt[:3] if x is not None)
         + ("-" + re.sub(r"[A-Za-z]+", "", str(vt[3])) if vt[3] is not None else "")
         + ("+" + str(vt[4]) if len(vt) > 4 and vt[4] is not None else "")
     )
-    return SemVer.parse_git_describe(version_str=git_describe_str, pkg=pkg, dt=datetime.now(timezone.utc))
+    mtime_epoch: float = os.path.getmtime(version_py_path)
+    mtime_dt: DateTime = DateTime.fromtimestamp(mtime_epoch, timezone.utc)
+    return SemVer.parse_git_describe(version_str=git_describe_str, pkg=pkg, dt=mtime_dt)
 
 def main() -> None:
+
     ap = argparse.ArgumentParser(description="List SemVer for PyPI releases, git tags or _version.py files in this repo")
     ap.add_argument("--include-yanked", action="store_true", help="include versions where all files are yanked")
     ap.add_argument("--include-commit-hash", "-b", action="store_true", help="Include the commit hash in git tag string")
     ap.add_argument("--include-pkg-name", "-p", action="store_true", help="Include the package name prefix in git tag string")
+    ap.add_argument("--include-ts", "-ts", dest="include_ts", type=str, choices=[fmt.value for fmt in DateTime.TsFormat], default=DateTime.TsFormat.NONE.value, help="Include the timestamp; for -L/-G/-V, replaces the version string with the timestamp in this format")
     ap.add_argument("pkg", metavar="PKG", nargs=1, help="Must be: 'curv', 'curvtools', or 'curvpyutils'", choices=["curv", "curvtools", "curvpyutils"])
 
     class SourceType(Enum):
@@ -427,6 +452,7 @@ def main() -> None:
     ap.set_defaults(latest_only=SourceType.NONE)
 
     args = ap.parse_args()
+    ts_format = DateTime.TsFormat(args.include_ts)
     pkg = args.pkg[0]
 
     # args-aware semver->str function
@@ -437,37 +463,54 @@ def main() -> None:
 
     pypi_semvers = get_pypi_semvers(pkg, args)
     latest_pypi: str = get_pypi_ver_str(pypi_semvers[-1])
+    latest_pypi_dt: DateTime = pypi_semvers[-1].dt.formatted_str(ts_format)
 
     git_tag_semvers = get_local_tags3(pkg)
     latest_git_tag: str = get_tag_str(git_tag_semvers[-1])
+    latest_git_tag_dt: DateTime = git_tag_semvers[-1].dt.formatted_str(ts_format)
 
     version_py_semver = get_version_py_semver(pkg)
     latest_version_py: str = get_version_py_str(version_py_semver)
+    latest_version_py_dt: DateTime = version_py_semver.dt.formatted_str(ts_format)
 
     if args.latest_only == SourceType.PYPI:
-        print(latest_pypi)
+        if ts_format != DateTime.TsFormat.NONE:
+            print(f"{latest_pypi_dt}")
+        else:
+            print(latest_pypi)
     elif args.latest_only == SourceType.GIT_TAGS:
-        print(latest_git_tag)
+        if ts_format != DateTime.TsFormat.NONE:
+            print(f"{latest_git_tag_dt}")
+        else:
+            print(latest_git_tag)
     elif args.latest_only == SourceType.VERSION_PY:
-        print(latest_version_py)
+        if ts_format != DateTime.TsFormat.NONE:
+            print(f"{latest_version_py_dt}")
+        else:
+            print(latest_version_py)
     else:
         table = Table(title=f"Versions for {pkg}", title_style="bold green")
         table.add_column("Version", justify="left", no_wrap=False)
         table.add_column("PyPI", justify="left", no_wrap=False)
-        table.add_column("PyPI Timestamp", justify="left", no_wrap=False)
+        if ts_format != DateTime.TsFormat.NONE:
+            table.add_column(f"PyPI Timestamp ({ts_format.value})", justify="left", no_wrap=False)
         table.add_column("Tag", justify="left", no_wrap=False)
-        table.add_column("Tag Timestamp", justify="left", no_wrap=False)
+        if ts_format != DateTime.TsFormat.NONE:
+            table.add_column(f"Tag Timestamp ({ts_format.value})", justify="left", no_wrap=False)
         if args.include_commit_hash:
             table.add_column("git describe --long", justify="left", no_wrap=False)
         table.add_column("_version.py", justify="left", no_wrap=False)
+        if ts_format != DateTime.TsFormat.NONE:
+            table.add_column(f"_version.py Timestamp ({ts_format.value})", justify="left", no_wrap=False)
         
         for semver, version_info in combine_iterators(pypi_semvers, git_tag_semvers, version_py_semver):
             ver_str: str = str(semver)
             pypi_ver: Optional[str] = get_pypi_ver_str(version_info['pypi']) if version_info['pypi'] else ""
             tag_str: str = version_info['tags'].get_full_str(fields=SemVer.Fields.PKG) if version_info['tags'] else ""
-            pypi_datetime = version_info['pypi'].dt.localformat() if version_info['pypi'] is not None else ""
-            tag_datetime = version_info['tags'].dt.localformat() if version_info['tags'] is not None else ""
-
+            pypi_datetime = version_info['pypi'].dt.formatted_str(ts_format) if version_info['pypi'] is not None else ""
+            tag_datetime = version_info['tags'].dt.formatted_str(ts_format) if version_info['tags'] is not None else ""
+            version_py_datetime = version_info['_version_py'].dt.formatted_str(ts_format) if version_info['_version_py'] is not None else ""
+            
             # coloration if there's a mismatch between local and PyPI tags
             pypi_style = "bold red" if version_info['pypi'] is not None and version_info['tags'] is None else "white"
             tags_style = "bold red" if version_info['tags'] is not None and version_info['pypi'] is None else "white"
@@ -478,15 +521,21 @@ def main() -> None:
             pypi_datetime_text = Text(pypi_datetime, style=pypi_style)
             tag_text = Text(tag_str, style=tags_style)
             tag_datetime_text = Text(tag_datetime, style=tags_style)
-            add_row_args = [ver_str, pypi_text, pypi_datetime_text, tag_text]
-            add_row_args.append(tag_datetime_text)
+            version_py_text = Text(get_version_py_str(version_info['_version_py']) if version_info['_version_py'] else "", style=version_py_style)
+            version_py_datetime_text = Text(version_py_datetime, style=version_py_style)
+
+            add_row_args = [ver_str, pypi_text]
+            if ts_format != DateTime.TsFormat.NONE:
+                add_row_args.append(pypi_datetime_text)
+            add_row_args.append(tag_text)
+            if ts_format != DateTime.TsFormat.NONE:
+                add_row_args.append(tag_datetime_text)
             if args.include_commit_hash:
                 build_text_tags = Text(version_info['tags'].get_full_str(format=SemVer.Format.GIT, fields=SemVer.Fields.ALL) if version_info['tags'] else "", style=tags_style)
                 add_row_args.append(build_text_tags)
-                # build_text_version_py = Text(version_info['_version_py'].get_full_str(format=SemVer.Format.GIT, fields=SemVer.Fields.BUILD) if version_info['_version_py'] else "", style=version_py_style)
-            # else:
-            build_text_version_py = Text(get_version_py_str(version_info['_version_py']) if version_info['_version_py'] else "", style=version_py_style)
-            add_row_args.append(build_text_version_py)
+            add_row_args.append(version_py_text)
+            if ts_format != DateTime.TsFormat.NONE:
+                add_row_args.append(version_py_datetime_text)
             table.add_row(*add_row_args)
         console = Console()
         console.print(table)
