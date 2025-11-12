@@ -220,72 +220,9 @@ publish-curvtools-patch: publish-curvpyutils-patch publish-curv-patch
 # This is just a temporary rule that I've been using to test ./scripts/wait_ci.py...
 .PHONY: push
 push: fetch-latest-tags
-	set -euo pipefail; \
-	LEVEL=$${LEVEL:-patch}; \
-	PKG=$${PKG:-curv}; \
-	CURV_VER_MAJMINPTCH=$${CURV_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curv -L)}; \
-	CURVTOOLS_VER_MAJMINPTCH=$${CURVTOOLS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvtools -L)}; \
-	CURVPYUTILS_VER_MAJMINPTCH=$${CURVPYUTILS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L)}; \
-	case "$$PKG" in \
-	  all) ORDER="curvpyutils curv curvtools" ;; \
-	  curv|curvtools|curvpyutils) ORDER="$$PKG" ;; \
-	  *) echo "Unknown PKG='$$PKG'"; exit 1 ;; \
-	esac; \
-	bump() { \
-	  v="$${1:-0.0.0}"; lvl="$${2:-patch}"; \
-	  set -- $$(printf '%s' "$$v" | tr '.' ' '); \
-	  MA=$${1:-0}; MI=$${2:-0}; PA=$${3:-0}; \
-	  case "$$lvl" in \
-	    major) MA=$$((MA+1)); MI=0; PA=0 ;; \
-	    minor) MI=$$((MI+1)); PA=0 ;; \
-	    patch|*) PA=$$((PA+1)) ;; \
-	  esac; \
-	  printf '%s.%s.%s\n' "$$MA" "$$MI" "$$PA"; \
-	}; \
-	\
-	next_tag() { \
-	  pfx="$$1"; lvl="$$2"; \
-	  last=$$(git tag --list "$${pfx}*" | sed -E "s/^$${pfx}//" \
-	    | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1); \
-	  [ -z "$$last" ] && last="0.0.0"; \
-	  ver=$$(bump "$$last" "$$lvl"); \
-	  case "$$pfx" in \
-	    curv-v) CURV_VER_MAJMINPTCH=$$ver ;; \
-	    curvtools-v) CURVTOOLS_VER_MAJMINPTCH=$$ver ;; \
-	    curvpyutils-v) CURVPYUTILS_VER_MAJMINPTCH=$$ver ;; \
-	    *) echo "Unknown package prefix: $$pfx"; exit 1 ;; \
-	  esac; \
-	  printf '%s%s\n' "$$pfx" "$$ver"; \
-	}; \
-	\
-	for name in $$ORDER; do \
-	  if [ "$$name" = "curv" ]; then \
-	    pfx="curv-v"; \
-	  elif [ "$$name" = "curvtools" ]; then \
-	    pfx="curvtools-v"; \
-	  elif [ "$$name" = "curvpyutils" ]; then \
-	    pfx="curvpyutils-v"; \
-	  fi; \
-	  lvl="$$LEVEL"; \
-	  tag=$$(next_tag "$$pfx" "$$lvl"); \
-	  echo "🔄 Checking readme.md for out-of-date version numbers..."; \
-	  CURV_VER_MAJMINPTCH=$${CURV_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curv -V)}; \
-		CURVTOOLS_VER_MAJMINPTCH=$${CURVTOOLS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvtools -V)}; \
-		CURVPYUTILS_VER_MAJMINPTCH=$${CURVPYUTILS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -V)}; \
-		$(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) readme.md \
-			&& echo "✔️ No change needed to readme.md for $$tag release" \
-			|| { echo "✅ Updated readme.md with new version numbers for $$tag release"; \
-				readme_commit_msg="chore(release): update readme.md to next version numbers before publishing $$tag release"; \
-				git add readme.md; \
-				git commit -m "$$readme_commit_msg" || { echo "❌ Failed to commit changes"; exit 1; }; \
-				git push $(REMOTE) HEAD || { echo "❌ Failed to push commit; please do it manually"; exit 1; }; \
-				echo "🔄 Waiting for CI to pass on '$$readme_commit_msg'..."; \
-				$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$readme_commit_msg'"; exit 1; }; \
-				echo "✅ Pushed commit to update readme.md with new version numbers before publishing $$tag release"; \
-				}; \
-	done
-	@git push $(REMOTE) HEAD
-	@$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed"; exit 1; };
+	@set -euo pipefail; \
+	  git push $(REMOTE) HEAD || { echo "Error: Failed to push commit"; exit 1; }; \
+	  $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed"; exit 1; };
 
 #
 # make untag PKG=curvtools [VER=0.0.6]
