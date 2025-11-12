@@ -199,7 +199,7 @@ publish: fetch-latest-tags check-git-clean build test
 	  $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
 	  \
 	  echo "🔥 Tagging $$name → $$tag"; \
-	  git tag -a "$$tag" -m "Release ($$name): $$tag" && git push $(REMOTE) "$$tag"; \
+	  git tag -a "$$tag" -m "Release ($$name): $$tag"; \
 	  echo "📣 Tagged PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
 	done; \
 	\
