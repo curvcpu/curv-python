@@ -146,9 +146,6 @@ def main() -> None:
                     time.sleep(0.1)
                     sleep_for_sec -= 0.1
                 worker_group.update_all(latest=latest)
-        # keep displaying in final state for a short time
-        time.sleep(2)
-
 
     print_out("----------------------------------------", verbosity=PrintVerbosityLevel.DEBUG)
 
