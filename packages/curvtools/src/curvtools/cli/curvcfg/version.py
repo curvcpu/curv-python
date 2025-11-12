@@ -1,6 +1,6 @@
 import click
 from importlib import metadata as ilmd
-from curvtools.version import get_version_str
+from curvtools import get_curvtools_version_str
 
 
 def _dist_name_for_this_package() -> str:
@@ -25,7 +25,7 @@ def get_styled_version(prepend_v: bool = False) -> str:
     """
     Return styled version for click.version_option.
     """
-    version = get_version_str(short_version=True)
+    version = get_curvtools_version_str(short_version=True)
     version_styled = click.style(f"{'v' if prepend_v else ''}{version}", fg="bright_yellow")
     return version_styled
 
