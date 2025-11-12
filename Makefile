@@ -125,10 +125,10 @@ check-git-clean:
 #
 .PHONY: publish
 publish: fetch-latest-tags check-git-clean build test
-	@set -euo pipefail; \
+	set -euo pipefail; \
 	LEVEL=$${LEVEL:-patch}; \
 	: "$${PKG:?Set PKG to one of: curvpyutils|curv|curvtools|all}"; \
-	CURV_VER_MAJMINPTCH=$${CURV_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curv -L)}; \
+	CURV_VER_MAJMINPTCH=	$$($(SCRIPT_CHK_LATEST_VER) curv -L)}; \
 	CURVTOOLS_VER_MAJMINPTCH=$${CURVTOOLS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvtools -L)}; \
 	CURVPYUTILS_VER_MAJMINPTCH=$${CURVPYUTILS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L)}; \
 	case "$$PKG" in \
