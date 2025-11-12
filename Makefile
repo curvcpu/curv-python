@@ -180,23 +180,24 @@ publish: fetch-latest-tags check-git-clean build test
 	  echo "CURVPYUTILS_VER_MAJMINPTCH: $$CURVPYUTILS_VER_MAJMINPTCH" 1>&2; \
 	  echo "🔄 Checking readme.md for out-of-date version numbers..."; \
 	  CURV_VER_MAJMINPTCH=$$CURV_VER_MAJMINPTCH CURVTOOLS_VER_MAJMINPTCH=$$CURVTOOLS_VER_MAJMINPTCH CURVPYUTILS_VER_MAJMINPTCH=$$CURVPYUTILS_VER_MAJMINPTCH $(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) readme.md \
-			&& echo "✔️ No change needed to readme.md for $$tag release" \
+			&& { echo "✔️ No change needed to readme.md for $$tag release"; \
+				 echo "🔄 Committing and pushing empty commit to trigger CI for $$tag release..."; \
+				 commit_msg="chore(release): prepare $$name for $$tag release"; \
+				 git commit --allow-empty -m "$$commit_msg" && git push $(REMOTE) HEAD; \
+				 echo "🔄 Waiting for CI to pass on '$$commit_msg'..."; \
+				 $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
+			   } \
 			|| { echo "✅ Updated readme.md with new version numbers for $$tag release"; \
 				readme_commit_msg="chore(release): update readme.md to next version numbers before publishing $$tag release"; \
 				git add readme.md; \
 				git commit -m "$$readme_commit_msg" || { echo "❌ Failed to commit changes"; exit 1; }; \
+				echo "🔄 Committing and pushing empty commit to trigger CI for $$tag release..."; \
+				commit_msg="chore(release): prepare $$name for $$tag release"; \
+				git commit --allow-empty -m "$$commit_msg" && git push $(REMOTE) HEAD; \
 				git push $(REMOTE) HEAD || { echo "❌ Failed to push commit; please do it manually"; exit 1; }; \
-				echo "🔄 Waiting for CI to pass on '$$readme_commit_msg'..."; \
-				$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$readme_commit_msg'"; exit 1; }; \
-				echo "✅ Pushed commit to update readme.md with new version numbers before publishing $$tag release"; \
+				echo "🔄 Waiting for CI to pass on '$$commit_msg'..."; \
+				$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
 				}; \
-	  \
-	  echo "🔄 Committing and pushing empty commit to trigger CI for $$tag release..."; \
-	  commit_msg="chore(release): prepare $$name for $$tag release"; \
-	  git commit --allow-empty -m "$$commit_msg" && git push $(REMOTE) HEAD; \
-	  \
-	  echo "🔄 Waiting for CI to pass on '$$commit_msg'..."; \
-	  $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
 	  \
 	  echo "🔥 Tagging $$name → $$tag"; \
 	  git tag -a "$$tag" -m "Release ($$name): $$tag"; \
@@ -204,7 +205,10 @@ publish: fetch-latest-tags check-git-clean build test
 	done; \
 	\
 	echo "🔄 Tagged all packages and pushing to remote with CI waiting for success..."; \
-	git push $(REMOTE) --tags && $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on push of tags"; exit 1; }; \
+	git push $(REMOTE) --tags || { echo "Error: Failed to push tags"; exit 1; }; \
+	# this ensures that we get the right run id for the CI job that publishes the tags
+	sleep 10; \
+	$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on push of tags"; exit 1; }; \
 	\
 	echo "🔄 Waiting for PyPI to update showing latest versions..."; \
 	wait_for_pypi_update() { \
@@ -227,6 +231,8 @@ publish: fetch-latest-tags check-git-clean build test
 	wait_for_pypi_update curv "$$CURV_VER_MAJMINPTCH"; \
 	wait_for_pypi_update curvtools "$$CURVTOOLS_VER_MAJMINPTCH"; \
 	echo "✅ All PyPI packages are now at the expected versions";
+
+# // && git push $(REMOTE) "$$tag" // we push tags after all are tagged
 
 .PHONY: sync-published-stamps
 sync-published-stamps:
