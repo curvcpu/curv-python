@@ -117,6 +117,9 @@ clean-venv: clean
 check-git-clean:
 	@test -z "$$(git status --porcelain)" || (echo "Error: git working tree is not clean. Commit/stash first."; exit 1)
 
+.PHONY: must-be-on-main
+must-be-on-main:
+	@git branch --show-current | grep -q "^main$$" || (echo "Error: must be on main branch"; exit 1)
 
 #
 # make publish [PKG=curv|curvpyutils|curvtools|all] [LEVEL=patch|minor|major]
@@ -124,7 +127,7 @@ check-git-clean:
 # - defaults: PKG=all, LEVEL=patch
 #
 .PHONY: publish
-publish: fetch-latest-tags check-git-clean build test
+publish: must-be-on-main check-git-clean fetch-latest-tags build test
 	set -euo pipefail; \
 	LEVEL=$${LEVEL:-patch}; \
 	: "$${PKG:?Set PKG to one of: curvpyutils|curv|curvtools|all}"; \
@@ -237,7 +240,7 @@ publish: fetch-latest-tags check-git-clean build test
 sync-published-stamps:
 	@$(SCRIPT_TOUCH_STAMP_FILES) > /dev/null && echo "✅ Synced published stamps" || echo "❌ Failed to sync published stamps"
 
-packages/%/.package_published_stamp.stamp: packages/%/.package_changed_stamp.stamp | sync-published-stamps
+packages/%/.package_published_stamp.stamp: packages/%/.package_changed_stamp.stamp | must-be-on-main sync-published-stamps
 	@echo "🔄 Republishing $(notdir $*)"
 	@$(MAKE) publish PKG=$(notdir $*) LEVEL=$(LEVEL)
 	@touch $@
