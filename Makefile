@@ -239,18 +239,20 @@ sync-published-stamps:
 
 packages/%/.package_published_stamp.stamp: packages/%/.package_changed_stamp.stamp | sync-published-stamps
 	@echo "🔄 Republishing $(notdir $*)"
-	@$(MAKE) publish PKG=$(notdir $*) LEVEL=patch
+	@$(MAKE) publish PKG=$(notdir $*) LEVEL=$(LEVEL)
 	@touch $@
 
 .PHONY: publish-curv-patch
-publish-curv-patch: publish-curvpyutils-patch
-	@$(MAKE) packages/curv/src/curv/.package_published_stamp.stamp PKG=curv LEVEL=patch
+publish-curv-patch: LEVEL=patch
+publish-curv-patch: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp packages/curv/src/curv/.package_published_stamp.stamp
+
 .PHONY: publish-curvpyutils-patch
-publish-curvpyutils-patch:
-	@$(MAKE) packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp PKG=curvpyutils LEVEL=patch
+publish-curvpyutils-patch: LEVEL=patch
+publish-curvpyutils-patch: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp
+
 .PHONY: publish-curvtools-patch
-publish-curvtools-patch: publish-curvpyutils-patch publish-curv-patch
-	@$(MAKE) packages/curvtools/src/curvtools/.package_published_stamp.stamp PKG=curvtools LEVEL=patch
+publish-curvtools-patch: LEVEL=patch
+publish-curvtools-patch: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp packages/curv/src/curv/.package_published_stamp.stamp packages/curvtools/src/curvtools/.package_published_stamp.stamp
 
 # This is just a temporary rule that I've been using to test ./scripts/wait_ci.py...
 .PHONY: push
