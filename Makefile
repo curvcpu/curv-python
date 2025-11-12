@@ -62,8 +62,8 @@ setup-precommit:
 
 .PHONY: setup
 setup: install-min fetch-latest-tags setup-precommit
-	@#SETUPTOOLS_SCM_PRETEND_VERSION=$$($(SCRIPT_CHK_LATEST_VER) curvtools -Gb) $(UV) tool install --editable $(PKG_CURVTOOLS)
-	@$(UV) tool install --editable $(PKG_CURVTOOLS)
+	@SETUPTOOLS_SCM_PRETEND_VERSION=$$($(SCRIPT_CHK_LATEST_VER) curvtools -Gb) $(UV) tool install --editable $(PKG_CURVTOOLS)
+	@#$(UV) tool install --editable $(PKG_CURVTOOLS)
 	@echo "✓ All CLI tools (editable) available on PATH"
 	@# Edit shell's rc file to keep the PATH update persistent
 	@$(UV) tool update-shell -q || true
