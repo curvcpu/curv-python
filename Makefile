@@ -198,6 +198,7 @@ publish: fetch-latest-tags check-git-clean test
 	  echo "📣 Published PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
 	done; \
 	git push $(REMOTE) --tags;
+	@$(SCRIPT_TOUCH_STAMP_FILES)
 
 .PHONY: sync-published-stamps
 sync-published-stamps:
