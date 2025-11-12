@@ -198,7 +198,7 @@ publish: fetch-latest-tags check-git-clean build test
 
 .PHONY: sync-published-stamps
 sync-published-stamps:
-	@$(SCRIPT_TOUCH_STAMP_FILES)
+	@$(SCRIPT_TOUCH_STAMP_FILES) > /dev/null && echo "✅ Synced published stamps" || echo "❌ Failed to sync published stamps"
 
 packages/%/.package_published_stamp.stamp: packages/%/.package_changed_stamp.stamp | sync-published-stamps
 	@echo "🔄 Republishing $(notdir $*)"
