@@ -128,10 +128,20 @@ class DisplayOptions:
     FnWorkerIdToName: Callable[[int], str] = field(
         default_factory=lambda: (lambda worker_id: f"Worker {worker_id}")
     )
+    MaxNamesLength: int | None = field(default=None)
 
     def __post_init__(self) -> None:
         if isinstance(self.OverallNameStrStyle, str):
             self.OverallNameStrStyle = Style.parse(self.OverallNameStrStyle)
+        match self.Size:
+            case SizeOpt.SMALL:
+                self.MaxNamesLength = 10
+            case SizeOpt.MEDIUM:
+                self.MaxNamesLength = 20
+            case SizeOpt.LARGE:
+                self.MaxNamesLength = 40
+            case SizeOpt.FULL_SCREEN:
+                self.MaxNamesLength = None
 
 
 def get_default_display_options(

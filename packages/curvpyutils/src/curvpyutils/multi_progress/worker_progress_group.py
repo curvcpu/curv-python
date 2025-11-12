@@ -30,7 +30,6 @@ class _WorkerProgress:
             return 0.0
         return min(max(completed, 0.0), 100.0)
 
-
 class WorkerProgressGroup:
     """Manage a set of Rich progress bars for worker tasks plus an overall bar."""
 
@@ -42,12 +41,23 @@ class WorkerProgressGroup:
         self.is_full_screen = self.stacked_progress_table.is_full_screen
         self.workers: Dict[int, _WorkerProgress] = {}
         self.overall_task_id: TaskID | None = None
+        self.max_names_length: int | None = self.display_options.MaxNamesLength
+
+    def truncate_description_str(self, description: str|Callable[[int], str]) -> str|Callable[[int], str]:
+        if self.max_names_length is None:
+            return description
+        if isinstance(description, str):
+            return description[:self.max_names_length] if len(description) <= self.max_names_length else description[:self.max_names_length-1] + "…"
+        else:
+            return lambda worker_id: description(worker_id)[:self.max_names_length] if len(description(worker_id)) <= self.max_names_length else description(worker_id)[:self.max_names_length-1] + "…"
 
     def add_worker(self, worker_id: int) -> None:
         if worker_id in self.workers:
             return
         worker = _WorkerProgress.create(
-            self.stacked_progress_table.get_job_progress(), worker_id, self.display_options.FnWorkerIdToName
+            self.stacked_progress_table.get_job_progress(), 
+            worker_id, 
+            self.truncate_description_str(self.display_options.FnWorkerIdToName)
         )
         self.workers[worker_id] = worker
 
@@ -67,7 +77,7 @@ class WorkerProgressGroup:
         if self.overall_task_id is not None:
             overall_progress.remove_task(self.overall_task_id)
         self.overall_task_id = overall_progress.add_task(
-            self.display_options.OverallNameStr, total=100.0
+            self.truncate_description_str(self.display_options.OverallNameStr), total=100.0
         )
 
     def _overall_completed_pct(self) -> float:
