@@ -112,7 +112,12 @@ def main() -> None:
     )
     worker_group = WorkerProgressGroup(display_options=display_options)
     latest = {}
-    worker_group.update_all(latest=None)
+    run.update_run_status(get_gh_run_json(run_id))
+    for new_ghjob in GhJob.construct_from_job_json_element(get_gh_jobs_json(run_id)):
+        run.upsert_job(new_ghjob)
+        worker_group.add_worker(worker_id=new_ghjob.job_id)
+        latest[new_ghjob.job_id] = new_ghjob.get_progress().percent_complete
+    worker_group.update_all(latest=latest)
     with worker_group.with_live(console=console) as live:
         while not worker_group.is_finished():
             sleep_for_sec:float = float(DEFAULT_INTERVALS['JOBS_POLL'])
@@ -121,7 +126,7 @@ def main() -> None:
                 run.upsert_job(new_ghjob)
                 worker_group.add_worker(worker_id=new_ghjob.job_id)
                 latest[new_ghjob.job_id] = new_ghjob.get_progress().percent_complete
-                worker_group.update_all(latest=latest)
+            worker_group.update_all(latest=latest)
             if run.status == GhStatus.COMPLETED:
                 # final update
                 if run.conclusion == GhConclusion.SUCCESS:
