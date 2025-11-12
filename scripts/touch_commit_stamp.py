@@ -40,6 +40,7 @@ def touch(path: str) -> None:
                 f.write("# *do* commit this to source control\n")
         except FileNotFoundError:
             raise
+    # add the file we touched to the git index for current commit
     subprocess.run(
         ["git", "add", path],
         check=True
@@ -83,10 +84,6 @@ def main(argv):
             console.print(f"    [bold yellow]● {f}[/bold yellow]")
         console.print("")
 
-    # if touched_stamps:
-    #     console.print(f"[bold red]Re-run your `git commit` command and it will work now with updated stamp file(s) added[/bold red]")
-    #     sys.exit(1)
-    # else:
     sys.exit(0)
 
 if __name__ == "__main__":

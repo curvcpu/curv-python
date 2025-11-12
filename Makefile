@@ -4,18 +4,25 @@ SHELL := /usr/bin/env bash
 
 UV ?= uv
 VENVDIR ?= .venv
-PYTEST = uv run pytest
-PYTEST_OPTS = -q --numprocesses auto
-PACKAGES = packages/curv packages/curvtools packages/curvpyutils
+PYTEST := uv run pytest
+PYTEST_OPTS := -q --numprocesses auto
+PACKAGES := packages/curv packages/curvtools packages/curvpyutils
 REMOTE ?= origin
-PKG_CURV = packages/curv
-PKG_CURVTOOLS = packages/curvtools
-PKG_CURVPYUTILS = packages/curvpyutils
-SCRIPT_GH_RUN_ID = scripts/last_commit_gh_run_id.sh
-SCRIPT_WAIT_CI = scripts/wait_ci.py
-SCRIPT_SUBST = curv-subst
-SCRIPT_SUBST_OPTS = -f -1
-SCRIPT_CHK_LATEST_VER = scripts/chk-pypi-latest-ver.py
+PKG_CURV := packages/curv
+PKG_CURVTOOLS := packages/curvtools
+PKG_CURVPYUTILS := packages/curvpyutils
+SCRIPT_GH_RUN_ID := scripts/get_gh_run_id_for_last_commit.sh
+SCRIPT_WAIT_CI := scripts/wait_ci.py
+SCRIPT_SUBST := curv-subst
+SCRIPT_SUBST_OPTS := -f -1 -m
+SCRIPT_CHK_LATEST_VER := scripts/chk-latest-version.py
+PKG_CURV_COMMIT_STAMP_FILE = $(PKG_CURV)/src/curv/.package_changed_stamp.txt
+PKG_CURVTOOLS_COMMIT_STAMP_FILE = $(PKG_CURVTOOLS)/src/curvtools/.package_changed_stamp.txt
+PKG_CURVPYUTILS_COMMIT_STAMP_FILE = $(PKG_CURVPYUTILS)/src/curvpyutils/.package_changed_stamp.txt
+PKG_CURV_PUBLISH_STAMP_FILE = $(PKG_CURV)/src/curv/.package_publish_stamp.txt
+PKG_CURVTOOLS_PUBLISH_STAMP_FILE = $(PKG_CURVTOOLS)/src/curvtools/.package_publish_stamp.txt
+PKG_CURVPYUTILS_PUBLISH_STAMP_FILE = $(PKG_CURVPYUTILS)/src/curvpyutils/.package_publish_stamp.txt
+GIT_PRECOMMIT_HOOK_FILE := .git/hooks/pre-commit
 
 .PHONY: setup-sync
 setup-sync:
@@ -49,11 +56,20 @@ install-min: venv
 		echo "✓ Installed $(notdir $(PKG_CURVTOOLS))..."; \
 	fi;
 
-.PHONY: setup
-setup: install-min
+.PHONY: fetch-latest-tags
+fetch-latest-tags:
 	@echo "🤔 Fetching latest tags from remote '$(REMOTE)'..."
-	@git fetch $(REMOTE) --tags
-	@SETUPTOOLS_SCM_PRETEND_VERSION=$$($(SCRIPT_CHK_LATEST_VER) curvtools -Gb) $(UV) tool install --editable $(PKG_CURVTOOLS)
+	@git fetch $(REMOTE) --tags --quiet
+
+.PHONY:  setup-precommit
+setup-precommit:
+	@echo "🔄 Installing pre-commit hooks for this repo..."
+	@$(UV) run pre-commit install
+
+.PHONY: setup
+setup: install-min fetch-latest-tags setup-precommit
+	@#SETUPTOOLS_SCM_PRETEND_VERSION=$$($(SCRIPT_CHK_LATEST_VER) curvtools -Gb) $(UV) tool install --editable $(PKG_CURVTOOLS)
+	@$(UV) tool install --editable $(PKG_CURVTOOLS)
 	@echo "✓ All CLI tools (editable) available on PATH"
 	@# Edit shell's rc file to keep the PATH update persistent
 	@$(UV) tool update-shell -q || true
@@ -86,10 +102,6 @@ unsetup: unsetup-editable-installs clean-venv clean
 
 .PHONY: build
 build:
-# for p in $(PACKAGES); do \
-# 	pbasename=$$(basename $$p); \
-# 	( cd $$p && SETUPTOOLS_SCM_PRETEND_VERSION=$$(../../scripts/chk-pypi-latest-ver.py $$pbasename -Gb) $(UV) run -m build --sdist --wheel ) \
-# done
 	for p in $(PACKAGES); do \
 		$(UV) run -m build --sdist --wheel $$p; \
 	done
@@ -111,21 +123,31 @@ clean-venv: clean
 check-git-clean:
 	@test -z "$$(git status --porcelain)" || (echo "Error: git working tree is not clean. Commit/stash first."; exit 1)
 
-readme.md: build
-	@echo "🔄 Checking $@ for out-of-date version numbers...";
-	@cp $@ $@.tmp
-	@CURV_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curv -L) \
-		CURVTOOLS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvtools -L) \
-		CURVPYUTILS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L) \
-		$(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) $@.tmp
-	@if ! cmp -s $@ $@.tmp; then \
-		mv $@.tmp $@; \
-		echo "✔️ Updated readme with new version numbers; please run your make command again"; \
-		exit 1; \
-	else \
-		echo "✔️ No change needed for $@"; \
-		rm -f $@.tmp; \
-	fi
+# # Default value for README_VERSION_SRC (when readme.md is built directly)
+# # Set README_VERSION_SRC to -V when building advance-readme-to-next-version
+# README_VERSION_SRC ?= -L
+# .PHONY: advance-readme-to-next-version
+# advance-readme-to-next-version: README_VERSION_SRC=-V
+# advance-readme-to-next-version: readme.md
+
+# readme.md: build
+# 	@echo "🔄 Checking $@ for out-of-date version numbers...";
+# 	@CURV_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curv $(README_VERSION_SRC)) \
+# 		CURVTOOLS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvtools $(README_VERSION_SRC)) \
+# 		CURVPYUTILS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvpyutils $(README_VERSION_SRC)) \
+# 		$(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) $@ \
+# 			&& echo "✔️ No change needed for $@" \
+# 			|| { echo "❌ Updated $@ with new version numbers"; \
+# 				commit_msg="chore(release): update readme.md to next version numbers before publishing"; \
+# 				git add $@; \
+# 				git commit -m "$$commit_msg" || { echo "❌ Failed to commit changes"; exit 1; }; \
+# 				git push $(REMOTE) HEAD || { echo "❌ Failed to push commit; please do it manually"; exit 1; }; \
+# 				echo "🔄 Waiting for CI to pass on '$$commit_msg'..."; \
+# 				$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
+# 				echo "✅ Pushed commit to update $@ with new version numbers before publishing"; \
+# 				echo "🔄 Please re-run your make command again and it will now succeed"; \
+# 				exit 1; };
+
 
 #
 # make publish [PKG=curv|curvpyutils|curvtools|all] [LEVEL=patch|minor|major]
@@ -133,12 +155,15 @@ readme.md: build
 # - defaults: PKG=all, LEVEL=patch
 #
 .PHONY: publish
-publish: check-git-clean readme.md test
+publish: check-git-clean advance-readme-to-next-version test
 	@set -euo pipefail; \
 	echo "🤔 Fetching latest tags from remote '$(REMOTE)'..."; \
 	git fetch $(REMOTE) --tags; \
 	LEVEL=$${LEVEL:-patch}; \
 	: "$${PKG:?Set PKG to one of: curvpyutils|curv|curvtools|all}"; \
+	CURV_VER_MAJMINPTCH=$${CURV_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curv -L)}; \
+	CURVTOOLS_VER_MAJMINPTCH=$${CURVTOOLS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvtools -L)}; \
+	CURVPYUTILS_VER_MAJMINPTCH=$${CURVPYUTILS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L)}; \
 	case "$$PKG" in \
 	  all) ORDER="curvpyutils curv curvtools" ;; \
 	  curv|curvtools|curvpyutils) ORDER="$$PKG" ;; \
@@ -162,6 +187,12 @@ publish: check-git-clean readme.md test
 	    | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1); \
 	  [ -z "$$last" ] && last="0.0.0"; \
 	  ver=$$(bump "$$last" "$$lvl"); \
+	  case "$$pfx" in \
+	    curv-v) CURV_VER_MAJMINPTCH=$${$$ver:-$${CURV_VER_MAJMINPTCH}} ;; \
+	    curvtools-v) CURVTOOLS_VER_MAJMINPTCH=$${$$ver:-$${CURVTOOLS_VER_MAJMINPTCH}} ;; \
+	    curvpyutils-v) CURVPYUTILS_VER_MAJMINPTCH=$${$$ver:-$${CURVPYUTILS_VER_MAJMINPTCH}} ;; \
+	    *) echo "Unknown package prefix: $$pfx"; exit 1 ;; \
+	  esac; \
 	  printf '%s%s\n' "$$pfx" "$$ver"; \
 	}; \
 	\
@@ -175,20 +206,37 @@ publish: check-git-clean readme.md test
 	  fi; \
 	  lvl="$$LEVEL"; \
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
-	  git commit --allow-empty -m "chore(release): prepare $$name for $$tag release" && git push $(REMOTE) HEAD; \
-	  echo "🔄 Waiting for CI to pass on 'chore(release): prepare $$name for $$tag release'..."; \
-	  $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on 'chore(release): prepare $$name for $$tag release'"; exit 1; }; \
+	  echo "🔄 Checking readme.md for out-of-date version numbers..."; \
+	  CURV_VER_MAJMINPTCH=$${CURV_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curv -V)}; \
+		CURVTOOLS_VER_MAJMINPTCH=$${CURVTOOLS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvtools -V)}; \
+		CURVPYUTILS_VER_MAJMINPTCH=$${CURVPYUTILS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -V)}; \
+		$(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) readme.md \
+			&& echo "✔️ No change needed to readme.md for $$tag release" \
+			|| { echo "✅ Updated readme.md with new version numbers for $$tag release"; \
+				readme_commit_msg="chore(release): update readme.md to next version numbers before publishing $$tag release"; \
+				git add readme.md; \
+				git commit -m "$$readme_commit_msg" || { echo "❌ Failed to commit changes"; exit 1; }; \
+				git push $(REMOTE) HEAD || { echo "❌ Failed to push commit; please do it manually"; exit 1; }; \
+				echo "🔄 Waiting for CI to pass on '$$readme_commit_msg'..."; \
+				$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$readme_commit_msg'"; exit 1; }; \
+				echo "✅ Pushed commit to update readme.md with new version numbers before publishing $$tag release"; \
+				}; \
+	  echo "🔄 Committing and pushing empty commit to trigger CI for $$tag release..."; \
+	  commit_msg="chore(release): prepare $$name for $$tag release"; \
+	  git commit --allow-empty -m "$$commit_msg" && git push $(REMOTE) HEAD; \
+	  echo "🔄 Waiting for CI to pass on '$$commit_msg'..."; \
+	  $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
 	  echo "🔥 Tagging $$name → $$tag"; \
 	  git tag -a "$$tag" -m "Release ($$name): $$tag" && git push $(REMOTE) "$$tag"; \
 	  echo "📣 Published PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
 	done; \
-	git push $(REMOTE) --tags
+	git push $(REMOTE) --tags; \
 
+# This is just a temporary rule that I've been using to test ./scripts/wait_ci.py...
 .PHONY: push
 push: readme.md
 	@git push $(REMOTE) HEAD
-	@$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on 'chore(release): prepare $$name for $$tag release'"; exit 1; };
-	@echo "🔥 Done with CI - success!";
+	@$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed"; exit 1; };
 
 #
 # make untag PKG=curvtools [VER=0.0.6]
