@@ -233,13 +233,13 @@ packages/%/.package_published_stamp.stamp: packages/%/.package_changed_stamp.sta
 	@$(MAKE) publish PKG=$(notdir $*) LEVEL=patch
 
 .PHONY: publish-curv-patch
-publish-curv-patch:
+publish-curv-patch: publish-curvpyutils-patch
 	@$(MAKE) packages/curv/src/curv/.package_published_stamp.stamp PKG=curv LEVEL=patch
 .PHONY: publish-curvpyutils-patch
 publish-curvpyutils-patch:
 	@$(MAKE) packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp PKG=curvpyutils LEVEL=patch
 .PHONY: publish-curvtools-patch
-publish-curvtools-patch:
+publish-curvtools-patch: publish-curvpyutils-patch publish-curv-patch
 	@$(MAKE) packages/curvtools/src/curvtools/.package_published_stamp.stamp PKG=curvtools LEVEL=patch
 
 # This is just a temporary rule that I've been using to test ./scripts/wait_ci.py...
