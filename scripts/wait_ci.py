@@ -3,12 +3,16 @@
 import argparse
 import os
 import subprocess
+from enum import Enum, IntEnum
 import sys
 import time
 from wait_ci_lib.gh_run import GhRun, GhJob, GhStatus, get_gh_jobs_json, get_gh_run_json, DEFAULT_INTERVALS
 from curvpyutils.multi_progress import DisplayOptions, MessageLineOpt, SizeOpt, StackupOpt, BoundingRectOpt, BarColors, WorkerProgressGroup
 from curvpyutils.multi_progress.display_options import Style
+from rich.console import Console
+from rich.text import Text
 
+console = Console()
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -51,21 +55,37 @@ def parse_args() -> argparse.Namespace:
 
     return args
 
+class PrintSeverity(IntEnum):
+    NORMAL = 0
+    WARNING = (1 << 0)
+    ERROR = (1 << 1)
+
+class PrintVerbosityLevel(IntEnum):
+    NORMAL = 0
+    VERBOSE = 1
+    DEBUG = 2
 
 def main() -> None:
     args = parse_args()
     prog_name = os.path.basename(sys.argv[0])
     run_id = int(args.GH_ACTION_RUN_ID)
 
-    def print_out(message: str) -> None:
-        if args.verbosity >= 0:
-            print(f"[{prog_name}] {message}")
+    def print_out(message: str, severity: PrintSeverity = PrintSeverity.NORMAL, verbosity: PrintVerbosityLevel = PrintVerbosityLevel.NORMAL) -> None:
+        if args.verbosity >= verbosity.value or severity.value >= PrintSeverity.WARNING.value:
+            print_args = []
+            prog_name_text = Text(f"[{prog_name}] ", style=Style(color="dark_blue", bold=False))
+            print_args.append(prog_name_text)
+            if severity.value >= PrintSeverity.ERROR.value:
+                prefix_text = Text(f"{severity.name}: ", style=Style(color="red", bold=False))
+                print_args.append(prefix_text)
+            elif severity.value >= PrintSeverity.WARNING.value:
+                prefix_text = Text(f"{severity.name}: ", style=Style(color="yellow", bold=False))
+                print_args.append(prefix_text)
+            message_text = Text(message, style=Style(color="white", bold=False))
+            print_args.append(message_text)
+            console.print(*print_args)
 
-    def print_verbose(message: str) -> None:
-        if args.verbosity >= 1:
-            print(f"[{prog_name}] {message}")
-
-    print_out(f"watching github action run {run_id}...")
+    print_out(f"watching github action run {run_id}...", verbosity=PrintVerbosityLevel.NORMAL)
 
     def get_worker_name(x: int) -> str:
         return run.get_child_job(x).name
@@ -76,7 +96,7 @@ def main() -> None:
 
     display_options = DisplayOptions(
         Message=MessageLineOpt(message="Waiting for CI...", message_style=Style(color="red", bold=True)),
-        Transient=False,
+        Transient=True,
         FnWorkerIdToName=get_worker_name,
         OverallNameStr=f"{run.name}",
         OverallNameStrStyle=Style(color="dark_blue", bold=True),
@@ -120,14 +140,34 @@ def main() -> None:
             if run.status == GhStatus.COMPLETED:
                 break
 
-    print_verbose("----------------------------------------")
+    print_out("----------------------------------------", verbosity=PrintVerbosityLevel.VERBOSE)
 
     cmd = ["gh", "run", "watch", "--interval", "10", "--exit-status", str(run_id)]
 
-    result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
-    print_verbose(result.stdout)
-    print_verbose(result.stderr)
-    sys.exit(result.returncode)
+    try:
+        result = subprocess.run(
+            cmd, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            text=True, 
+            check=True,
+            timeout=10*60    # 10 minutes timeout
+        )
+    except subprocess.TimeoutExpired as e:
+        print_out("CI run timed out", severity=PrintSeverity.ERROR)
+        sys.exit(1)
+    except subprocess.CalledProcessError as e:
+        print_out(f"stdout: {e.stdout}", verbosity=PrintVerbosityLevel.DEBUG)
+        print_out(f"stderr: {e.stderr}", verbosity=PrintVerbosityLevel.DEBUG)
+        if e.returncode == 143:
+            print_out("CI run was cancelled by user", severity=PrintSeverity.WARNING)
+            sys.exit(0)
+        elif e.returncode == 1:
+            print_out("CI run failed", severity=PrintSeverity.ERROR)
+            sys.exit(1)
+        else:
+            raise e
+    sys.exit(0)
 
 if __name__ == "__main__":
     main()

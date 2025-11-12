@@ -46,6 +46,7 @@ class GhConclusion(Enum):
     SUCCESS = "success"
     FAILURE = "failure"
     SKIPPED = "skipped"
+    CANCELLED = "cancelled"
     NULL = None
 
 LONGEST_CONCLUSION_NAME_LEN = max(len(conclusion.value) if conclusion.value else 0 for conclusion in GhConclusion)
