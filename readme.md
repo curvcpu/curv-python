@@ -52,7 +52,6 @@ curv-cfg --help
 curv-cache-tool --help
 curv-subst --help
 curv-memmap2 --help
-curv-clog2 --help
 ```
 
 These tools are called automatically by the build process for the [Curv CPU](https://github.com/curvcpu/curv).  To simply get the CPU working, you really don't need to know anything about them.  Just make sure they are in your `PATH` and you're good to go.
