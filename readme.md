@@ -8,7 +8,7 @@
   <a href="https://github.com/curvcpu/curv-python/releases/tag/curvtools-v0.0.12"><img src="https://img.shields.io/badge/v0.0.12-blue?label=curvtools" alt="curvtools version 0.0.12"></a>
   <!-- @endsubst -->
   <!-- @subst[`printf '<a href="https://github.com/curvcpu/curv-python/releases/tag/curvpyutils-v$CURVPYUTILS_VER_MAJMINPTCH"><img src="https://img.shields.io/badge/v$CURVPYUTILS_VER_MAJMINPTCH-blue?label=curvpyutils" alt="curvpyutils version $CURVPYUTILS_VER_MAJMINPTCH"></a>\n'`] -->
-  <a href="https://github.com/curvcpu/curv-python/releases/tag/curvpyutils-v0.0.36"><img src="https://img.shields.io/badge/v0.0.36-blue?label=curvpyutils" alt="curvpyutils version 0.0.36"></a>
+  <a href="https://github.com/curvcpu/curv-python/releases/tag/curvpyutils-v0.0.37"><img src="https://img.shields.io/badge/v0.0.37-blue?label=curvpyutils" alt="curvpyutils version 0.0.37"></a>
   <!-- @endsubst -->
 </p>
 
