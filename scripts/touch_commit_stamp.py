@@ -17,7 +17,10 @@ PKGS = {
     "packages/curvtools/":   "packages/curvtools/src/curvtools/.package_changed_stamp.txt",
 }
 
-def list_changed_in_head():
+# don't re-touch stamps if the only thing that changed was the stamp itself
+EXCLUDED_FILES = [stamp for stamp in PKGS.values()]
+
+def list_changed_in_head() -> list[str]:
     # robust for initial commits, merges, etc.
     out = subprocess.check_output(
         ["git", "diff-tree", "--no-commit-id", "--name-only", "-r", "HEAD"],
@@ -25,7 +28,7 @@ def list_changed_in_head():
     )
     return [p for p in out.splitlines() if p]
 
-def touch(path):
+def touch(path: str) -> None:
     os.makedirs(os.path.dirname(path), exist_ok=True)
     try:
         os.utime(path, None)          # update mtime only
@@ -37,6 +40,10 @@ def touch(path):
                 f.write("# *do* commit this to source control\n")
         except FileNotFoundError:
             raise
+    subprocess.run(
+        ["git", "add", path],
+        check=True
+    )
 
 def main(argv):
     # keep track of whether we've already touched the stamps
@@ -50,8 +57,11 @@ def main(argv):
             print(f"created {stamp} because it didn't exist yet")
     
     # normal operation: touch any stamps that are triggered by changes to files under the given package path
-    files = argv or list_changed_in_head()   # if run as pre-commit, filenames arrive in argv
-    
+    files: list[str] = argv or list_changed_in_head()      # if run as pre-commit, filenames arrive in argv
+    files = [f for f in files if not f in EXCLUDED_FILES]  # exclude files that we don't want to trigger on
+    console.print(f"[bold yellow]files:[/bold yellow] {files}")
+    console.print(f"[bold yellow]excluded_files:[/bold yellow] {EXCLUDED_FILES}")
+
     # example of to_touch:
     # {'packages/curv/.package_changed_stamp.txt': 
     #      {'triggered_by': ['packages/curv/src/curv/foo.py', 'packages/curv/src/curv/bar.py']}
