@@ -128,9 +128,6 @@ publish: fetch-latest-tags check-git-clean build test
 	set -euo pipefail; \
 	LEVEL=$${LEVEL:-patch}; \
 	: "$${PKG:?Set PKG to one of: curvpyutils|curv|curvtools|all}"; \
-	export CURV_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curv -L); \
-	export CURVTOOLS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvtools -L); \
-	export CURVPYUTILS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L); \
 	case "$$PKG" in \
 	  all) ORDER="curvpyutils curv curvtools" ;; \
 	  curv|curvtools|curvpyutils) ORDER="$$PKG" ;; \
@@ -154,15 +151,6 @@ publish: fetch-latest-tags check-git-clean build test
 	    | sort -t. -k1,1n -k2,2n -k3,3n | tail -n1); \
 	  [ -z "$$last" ] && last="0.0.0"; \
 	  ver=$$(bump "$$last" "$$lvl"); \
-	  case "$$pfx" in \
-	    curv-v) export CURV_VER_MAJMINPTCH=$$ver ;; \
-	    curvtools-v) export CURVTOOLS_VER_MAJMINPTCH=$$ver ;; \
-	    curvpyutils-v) export CURVPYUTILS_VER_MAJMINPTCH=$$ver ;; \
-	    *) echo "Unknown package prefix: $$pfx"; exit 1 ;; \
-	  esac; \
-	  echo "CURV_VER_MAJMINPTCH: $$CURV_VER_MAJMINPTCH" 1>&2; \
-	  echo "CURVTOOLS_VER_MAJMINPTCH: $$CURVTOOLS_VER_MAJMINPTCH" 1>&2; \
-	  echo "CURVPYUTILS_VER_MAJMINPTCH: $$CURVPYUTILS_VER_MAJMINPTCH" 1>&2; \
 	  printf '%s%s\n' "$$pfx" "$$ver"; \
 	}; \
 	\
@@ -176,8 +164,22 @@ publish: fetch-latest-tags check-git-clean build test
 	  fi; \
 	  lvl="$$LEVEL"; \
 	  tag=$$(next_tag "$$pfx" "$$lvl"); \
+	  # Extract version from tag and export to environment \
+	  ver=$$(printf '%s' "$$tag" | sed -E "s/^$${pfx}//"); \
+	  case "$$pfx" in \
+	    curv-v) export CURV_VER_MAJMINPTCH=$$ver ;; \
+	    curvtools-v) export CURVTOOLS_VER_MAJMINPTCH=$$ver ;; \
+	    curvpyutils-v) export CURVPYUTILS_VER_MAJMINPTCH=$$ver ;; \
+	    *) echo "Unknown package prefix: $$pfx"; exit 1 ;; \
+	  esac; \
+	  echo "CURV_VER_MAJMINPTCH: $$CURV_VER_MAJMINPTCH" 1>&2; \
+	  echo "CURVTOOLS_VER_MAJMINPTCH: $$CURVTOOLS_VER_MAJMINPTCH" 1>&2; \
+	  echo "CURVPYUTILS_VER_MAJMINPTCH: $$CURVPYUTILS_VER_MAJMINPTCH" 1>&2; \
 	  echo "🔄 Checking readme.md for out-of-date version numbers..."; \
-	  $(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) readme.md \
+	  CURV_VER_MAJMINPTCH=$$CURV_VER_MAJMINPTCH; \
+	  CURVTOOLS_VER_MAJMINPTCH=$$CURVTOOLS_VER_MAJMINPTCH; \
+	  CURVPYUTILS_VER_MAJMINPTCH=$$CURVPYUTILS_VER_MAJMINPTCH; \
+	    $(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) readme.md \
 			&& echo "✔️ No change needed to readme.md for $$tag release" \
 			|| { echo "✅ Updated readme.md with new version numbers for $$tag release"; \
 				readme_commit_msg="chore(release): update readme.md to next version numbers before publishing $$tag release"; \
