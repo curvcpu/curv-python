@@ -84,6 +84,7 @@ def main(argv):
         console.print("")
 
     if touched_stamps:
+        console.print(f"[bold red]Re-run your `git commit` command and it will work now with updated stamp file(s) added[/bold red]")
         sys.exit(1)
     else:
         sys.exit(0)
