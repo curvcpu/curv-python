@@ -124,7 +124,7 @@ check-git-clean:
 # - defaults: PKG=all, LEVEL=patch
 #
 .PHONY: publish
-publish: fetch-latest-tags check-git-clean test
+publish: fetch-latest-tags check-git-clean build test
 	@set -euo pipefail; \
 	LEVEL=$${LEVEL:-patch}; \
 	: "$${PKG:?Set PKG to one of: curvpyutils|curv|curvtools|all}"; \
@@ -198,7 +198,6 @@ publish: fetch-latest-tags check-git-clean test
 	  echo "📣 Published PKG=$$name (level=$$LEVEL, tag=$$tag)."; \
 	done; \
 	git push $(REMOTE) --tags;
-	@$(SCRIPT_TOUCH_STAMP_FILES)
 
 .PHONY: sync-published-stamps
 sync-published-stamps:
@@ -207,6 +206,7 @@ sync-published-stamps:
 packages/%/.package_published_stamp.stamp: packages/%/.package_changed_stamp.stamp | sync-published-stamps
 	@echo "🔄 Republishing $(notdir $*)"
 	@$(MAKE) publish PKG=$(notdir $*) LEVEL=patch
+	@touch $@
 
 .PHONY: publish-curv-patch
 publish-curv-patch: publish-curvpyutils-patch
