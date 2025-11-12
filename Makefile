@@ -160,6 +160,9 @@ publish: fetch-latest-tags check-git-clean build test
 	    curvpyutils-v) export CURVPYUTILS_VER_MAJMINPTCH=$$ver ;; \
 	    *) echo "Unknown package prefix: $$pfx"; exit 1 ;; \
 	  esac; \
+	  echo "CURV_VER_MAJMINPTCH: $$CURV_VER_MAJMINPTCH" 1>&2; \
+	  echo "CURVTOOLS_VER_MAJMINPTCH: $$CURVTOOLS_VER_MAJMINPTCH" 1>&2; \
+	  echo "CURVPYUTILS_VER_MAJMINPTCH: $$CURVPYUTILS_VER_MAJMINPTCH" 1>&2; \
 	  printf '%s%s\n' "$$pfx" "$$ver"; \
 	}; \
 	\
