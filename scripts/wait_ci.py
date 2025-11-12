@@ -140,13 +140,14 @@ def main() -> None:
                                                      border_style=Style(color="red", bold=True)),
                     ))
                     worker_group.update_all(latest=latest)
-                time.sleep(2)
                 break
             else:
                 if sleep_for_sec > 0.0:
                     time.sleep(0.1)
                     sleep_for_sec -= 0.1
                 worker_group.update_all(latest=latest)
+        # keep displaying in final state for a short time
+        time.sleep(2)
 
 
     print_out("----------------------------------------", verbosity=PrintVerbosityLevel.DEBUG)
