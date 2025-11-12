@@ -75,6 +75,7 @@ def parse_args(argv: list[str] = sys.argv[1:], override_paths: list[str] = None)
     control_opts.add_argument("--print-one-line", '-1', action="store_true", help="Print a single output line for each file processed (default: print nothing)")
     control_opts.add_argument("--force", '-f', action="store_true", help="Don't prompt for confirmation before overwriting a file (default: prompt for confirmation)")
     control_opts.add_argument("--colors", action=ColorReconfigureAction, help="Enable or disable colors in output (default: enabled)")
+    control_opts.add_argument("--exit-code-if-modified", '-m', action="store_true", help="Exit with code 1 if any files were modified")
     debug_opts = parser.add_argument_group("Debugging")
     debug_opts.add_argument("--dry-run", action="store_true", help="Just show the diff, don't change any files")
     debug_opts.add_argument("--verbose", '-v', action="count", default=0, help="Show verbose output")
@@ -186,7 +187,10 @@ def main():
                         debug_output_dir=args.debug_output_dir)
             print_one_line_result(path, ret_paths_result) if args.print_one_line else None
 
-    return 0
+    if args.exit_code_if_modified and any(ret_paths_result.values()):
+        sys.exit(1)
+    else:
+        sys.exit(0)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
