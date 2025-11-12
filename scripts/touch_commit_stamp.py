@@ -81,7 +81,7 @@ def main(argv):
         touched_stamps = True
         console.print(f"Touched [bold green]{stamp}[/bold green] because of changes to these files:")
         for f in data['triggered_by']:
-            console.print(f"    [bold yellow]● {f}[/bold yellow]")
+            console.print(f"    [bold yellow]• {f}[/bold yellow]")
         console.print("")
 
     sys.exit(0)
