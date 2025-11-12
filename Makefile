@@ -128,6 +128,9 @@ publish: fetch-latest-tags check-git-clean build test
 	set -euo pipefail; \
 	LEVEL=$${LEVEL:-patch}; \
 	: "$${PKG:?Set PKG to one of: curvpyutils|curv|curvtools|all}"; \
+	export CURV_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curv -L); \
+	export CURVTOOLS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvtools -L); \
+	export CURVPYUTILS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L); \
 	case "$$PKG" in \
 	  all) ORDER="curvpyutils curv curvtools" ;; \
 	  curv|curvtools|curvpyutils) ORDER="$$PKG" ;; \
