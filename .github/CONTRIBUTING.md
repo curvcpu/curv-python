@@ -16,6 +16,7 @@ To tweak the code and contribute to `curv-python`, you'll want to follow the ste
     git clone https://github.com/curvcpu/curv-python.git
     cd curv-python
     make setup
+    uv run pre-commit install
     ```
 
     This also installs the CLI tools (`curv-cfg`, `curv-memmap2`, etc.) into your shell via `uv`.
