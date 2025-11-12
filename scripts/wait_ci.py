@@ -114,41 +114,34 @@ def main() -> None:
     latest = {}
     worker_group.update_all(latest=None)
     with worker_group.with_live(console=console) as live:
-        run.update_run_status(get_gh_run_json(run_id))
-        for new_ghjob in GhJob.construct_from_job_json_element(get_gh_jobs_json(run_id)):
-            run.upsert_job(new_ghjob)
-            worker_group.add_worker(worker_id=new_ghjob.job_id)
-            latest[new_ghjob.job_id] = new_ghjob.get_progress().percent_complete
-            worker_group.update_all(latest=latest)
-        while True:
+        while not worker_group.is_finished():
             sleep_for_sec:float = float(DEFAULT_INTERVALS['JOBS_POLL'])
             run.update_run_status(get_gh_run_json(run_id))
-            while not worker_group.is_finished():
-                for new_ghjob in GhJob.construct_from_job_json_element(get_gh_jobs_json(run_id)):
-                    run.upsert_job(new_ghjob)
-                    if new_ghjob.job_id not in latest: latest[new_ghjob.job_id] = 0.0
-                    latest[new_ghjob.job_id] = max(latest[new_ghjob.job_id], min(100.0, max(0.0, new_ghjob.get_progress().percent_complete)))        
-                    worker_group.update_all(latest)
-                    if run.status == GhStatus.COMPLETED:
-                        # final update
-                        if run.conclusion == GhConclusion.SUCCESS:
-                            worker_group.complete_all()
-                        else:
-                            worker_group.update_display_options(new_display_options=DisplayOptions(
-                                Message=MessageLineOpt(message="CI run completed with failure", message_style=Style(color="red", bold=True)),
-                                OverallBarColors=BarColors.red(),
-                                WorkerBarColors=BarColors.red(),
-                                BoundingRect=BoundingRectOpt(title=f"FAILED: Run {run.run_id}", 
-                                                            border_style=Style(color="red", bold=True)),
-                            ))
-                        time.sleep(2)
-                        break
-                time.sleep(0.1)
-                sleep_for_sec -= 0.1
-                if (sleep_for_sec <= 0.0) or (run.status == GhStatus.COMPLETED):
-                    break
+            for new_ghjob in GhJob.construct_from_job_json_element(get_gh_jobs_json(run_id)):
+                run.upsert_job(new_ghjob)
+                worker_group.add_worker(worker_id=new_ghjob.job_id)
+                latest[new_ghjob.job_id] = new_ghjob.get_progress().percent_complete
+                worker_group.update_all(latest=latest)
             if run.status == GhStatus.COMPLETED:
+                # final update
+                if run.conclusion == GhConclusion.SUCCESS:
+                    worker_group.complete_all()
+                else:
+                    worker_group.update_display_options(new_display_options=DisplayOptions(
+                        Message=MessageLineOpt(message="CI run completed with failure", message_style=Style(color="red", bold=True)),
+                        OverallBarColors=BarColors.red(),
+                        WorkerBarColors=BarColors.red(),
+                        BoundingRect=BoundingRectOpt(title=f"FAILED: Run {run.run_id}", 
+                                                     border_style=Style(color="red", bold=True)),
+                    ))
+                time.sleep(2)
                 break
+            else:
+                while run.status != GhStatus.COMPLETED:
+                    time.sleep(0.1)
+                    sleep_for_sec -= 0.1
+                    if (sleep_for_sec <= 0.0):
+                        break
 
     print_out("----------------------------------------", verbosity=PrintVerbosityLevel.DEBUG)
 
