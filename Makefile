@@ -128,7 +128,7 @@ must-be-on-main:
 #
 .PHONY: publish
 publish: must-be-on-main check-git-clean fetch-latest-tags build test
-	set -euo pipefail; \
+	@set -euo pipefail; \
 	LEVEL=$${LEVEL:-patch}; \
 	: "$${PKG:?Set PKG to one of: curvpyutils|curv|curvtools|all}"; \
 	CURV_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curv -L); \
