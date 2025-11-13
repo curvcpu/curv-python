@@ -1,8 +1,4 @@
-#!/usr/bin/env -S uv run --script
-# /// script
-# requires-python = ">=3.10"
-# dependencies = ["rich>=13"]
-# ///
+#!/usr/bin/env -S uv run --script --all-packages
 from __future__ import annotations
 
 import argparse
@@ -19,6 +15,10 @@ from rich.table import Table
 from rich.text import Text
 import subprocess
 from datetime import datetime, timezone
+from rich.traceback import install, Traceback
+import pytest
+
+console = Console()
 
 class DateTime(datetime):
     class TsFormat(Enum):
@@ -70,7 +70,6 @@ def test_semver_re() -> None:
     assert SEMVER_RE.match("0.0.1-0-g49d7b59") is not None
     assert SEMVER_RE.match("0.1.5-0-g30ae0f3") is not None
     assert SEMVER_RE.match("0.0.0-0+g????????") is not None
-    print("✔️ semver-re test passed")
 
 # git-describe regex examples (prefix already stripped):
 # - 0.1.8-0-g2205bf8 -> major=0, minor=1, patch=8, prerelease=['0'], build='2205bf8'
@@ -95,7 +94,6 @@ def test_git_describe_re() -> None:
     assert GIT_DESCRIBE_RE.match("0.0.1-0-g49d7b59") is not None
     assert GIT_DESCRIBE_RE.match("0.1.5-0-g30ae0f3") is not None
     assert GIT_DESCRIBE_RE.match("0.0.0-0+g????????") is not None
-    print("✔️ git-describe-re test passed")
 
 @dataclass(frozen=True)
 class SemVer:
@@ -411,28 +409,66 @@ def get_pypi_semvers(pkg, args) -> List[SemVer]:
     semvers.sort()
     return semvers
 
-def get_version_py_semver(pkg: str) -> Optional[SemVer]:
+def get_version_py_semver(pkg: str, version_py_path: str = "packages/{pkg}/src/{pkg}/_version.py") -> Optional[SemVer]:
     """
     Get the version info from the package's _version.py file.
     """
-    version_py_path = f"packages/{pkg}/src/{pkg}/_version.py"
     import runpy, re
     try:
-        result = runpy.run_path(version_py_path)
+        result = runpy.run_path(version_py_path.format(pkg=pkg))
         vt = result["__version_tuple__"]
-        git_describe_str = (
-            ".".join(str(x) for x in vt[:3] if x is not None)
-            + ("-" + re.sub(r"[A-Za-z]+", "", str(vt[3])) if vt[3] is not None else "")
-            + ("+" + str(vt[4]) if len(vt) > 4 and vt[4] is not None else "")
-        )
-        mtime_epoch: float = os.path.getmtime(version_py_path)
-        mtime_dt: DateTime = DateTime.fromtimestamp(mtime_epoch, timezone.utc)
-        return SemVer.parse_git_describe(version_str=git_describe_str, pkg=pkg, dt=mtime_dt)
+        vt_element_count = len(vt)
+        if vt_element_count == 3:
+            vt_str = ".".join(str(x) for x in vt[:3] if x is not None)
+            return SemVer.parse(version_str=vt_str, pkg=pkg, dt=DateTime.now(timezone.utc))
+        elif vt_element_count == 5:
+            git_describe_str = (
+                ".".join(str(x) for x in vt[:3] if x is not None)
+                + ("-" + re.sub(r"[A-Za-z]+", "", str(vt[3])) if vt[3] is not None else "")
+                + ("+" + str(vt[4]) if len(vt) > 4 and vt[4] is not None else "")
+            )
+            mtime_epoch: float = os.path.getmtime(version_py_path.format(pkg=pkg))
+            mtime_dt: DateTime = DateTime.fromtimestamp(mtime_epoch, timezone.utc)
+            return SemVer.parse_git_describe(version_str=git_describe_str, pkg=pkg, dt=mtime_dt)
+        else:
+            raise ValueError(f"unexpected number of version tuple elements: {vt_element_count}")
     except Exception as e:
-        print(f"Couldn't get version info from {version_py_path}: {e}", file=sys.stderr)
+        print(f"Couldn't get version info from {version_py_path.format(pkg=pkg)}", file=sys.stderr)
+        console.print_exception(show_locals=True)
         return None
 
+def _test_get_version_py_semver_common(sample_version_py_file: str, package_name: str, expected_semver: SemVer, test_name: str) -> None:
+    import tempfile
+    delete_temp_file = True
+    try:
+        version_py_path = None
+        with tempfile.NamedTemporaryFile(delete=False, mode="w") as temp_file:
+            temp_file.write(sample_version_py_file)
+            temp_file.flush()
+            version_py_path = temp_file.name
+        semver = get_version_py_semver(pkg=package_name, version_py_path=version_py_path)
+        assert semver is not None
+        assert isinstance(semver.dt, DateTime)
+        assert abs(semver.dt.timestamp() - expected_semver.dt.timestamp()) <= 1, f"should be within 1 second of actual creation time"
+        assert semver.major == expected_semver.major
+        assert semver.minor == expected_semver.minor
+        assert semver.patch == expected_semver.patch
+        assert semver.prerelease == expected_semver.prerelease
+        assert semver.build == expected_semver.build
+        assert semver.pkg == expected_semver.pkg
+    except Exception as e:
+        console.print_exception(show_locals=True)
+        delete_temp_file = False
+        raise e
+    finally:
+        if version_py_path is not None:
+            if delete_temp_file:
+                os.unlink(version_py_path)
+            else:
+                console.print(f"keeping temp file for debugging:  '{version_py_path}'", style="bold yellow")
+
 def main() -> None:
+    install(show_locals=True)
 
     ap = argparse.ArgumentParser(description="List SemVer for PyPI releases, git tags or _version.py files in this repo")
     ap.add_argument("--include-yanked", action="store_true", help="include versions where all files are yanked")
@@ -541,8 +577,99 @@ def main() -> None:
             if ts_format != DateTime.TsFormat.NONE:
                 add_row_args.append(version_py_datetime_text)
             table.add_row(*add_row_args)
-        console = Console()
         console.print(table)
+
+class TestChkLatestVersion:
+    def setup_class(cls) -> None:
+        install(show_locals=True)
+
+    def test_get_version_py_semver_normal(self) -> None:
+        """
+        Tests a normal _version.py file with a 5-element tuple (major.minor.patch-prerelease+build).
+        """
+
+        sample_version_py_file_normal = """
+# file generated by setuptools-scm
+# don't change, don't track in version control
+
+__all__ = [
+    "__version__",
+    "__version_tuple__",
+    "version",
+    "version_tuple",
+    "__commit_id__",
+    "commit_id",
+]
+
+TYPE_CHECKING = False
+if TYPE_CHECKING:
+    from typing import Tuple
+    from typing import Union
+
+    VERSION_TUPLE = Tuple[Union[int, str], ...]
+    COMMIT_ID = Union[str, None]
+else:
+    VERSION_TUPLE = object
+    COMMIT_ID = object
+
+version: str
+__version__: str
+__version_tuple__: VERSION_TUPLE
+version_tuple: VERSION_TUPLE
+commit_id: COMMIT_ID
+__commit_id__: COMMIT_ID
+
+__version__ = version = '0.0.15.dev3+gf55455b'
+__version_tuple__ = version_tuple = (0, 0, 15, 'dev3', 'gf55455b')
+
+__commit_id__ = commit_id = None
+    """
+        expected_semver = SemVer(major=0, minor=0, patch=15, prerelease=["3"], build="f55455b", pkg="curvpyutils", dt=DateTime.now(timezone.utc))
+        _test_get_version_py_semver_common(sample_version_py_file_normal, "curvpyutils", expected_semver, "test_get_version_py_semver_normal")
+
+    def test_get_version_py_semver_3element_tuple(self) -> None:
+        """
+        Tests a _version.py file with only a 3-element tuple (major.minor.patch) and no prerelease or build.
+        """
+        
+        sample_version_py_file_3element_tuple = """
+# file generated by setuptools-scm
+# don't change, don't track in version control
+
+__all__ = [
+    "__version__",
+    "__version_tuple__",
+    "version",
+    "version_tuple",
+    "__commit_id__",
+    "commit_id",
+]
+
+TYPE_CHECKING = False
+if TYPE_CHECKING:
+    from typing import Tuple
+    from typing import Union
+
+    VERSION_TUPLE = Tuple[Union[int, str], ...]
+    COMMIT_ID = Union[str, None]
+else:
+    VERSION_TUPLE = object
+    COMMIT_ID = object
+
+version: str
+__version__: str
+__version_tuple__: VERSION_TUPLE
+version_tuple: VERSION_TUPLE
+commit_id: COMMIT_ID
+__commit_id__: COMMIT_ID
+
+__version__ = version = '0.0.15'
+__version_tuple__ = version_tuple = (0, 0, 15)
+
+__commit_id__ = commit_id = None
+    """
+        expected_semver = SemVer(major=0, minor=0, patch=15, prerelease=None, build=None, pkg="curv", dt=DateTime.now(timezone.utc))
+        _test_get_version_py_semver_common(sample_version_py_file_3element_tuple, "curv", expected_semver, "test_get_version_py_semver_3element_tuple")
 
 if __name__ == "__main__":
     main()

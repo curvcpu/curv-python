@@ -6,31 +6,38 @@ import subprocess
 from enum import Enum, IntEnum
 import sys
 import time
-from wait_ci_lib.gh_run import GhRun, GhJob, GhStatus, GhConclusion, get_gh_jobs_json, get_gh_run_json, DEFAULT_INTERVALS
-from curvpyutils.multi_progress import DisplayOptions, MessageLineOpt, SizeOpt, StackupOpt, BoundingRectOpt, BarColors, WorkerProgressGroup
-from curvpyutils.multi_progress.display_options import Style
+from wait_ci_lib.gh import GhRun, GhStatus, GhConclusion, DEFAULT_INTERVALS, GhPollingClient, GhApiFetcher
+from curvpyutils.multi_progress import DisplayOptions, MessageLineOpt, SizeOpt, SizeOptCustom, StackupOpt, BoundingRectOpt, BarColors, WorkerProgressGroup
 from rich.console import Console
 from rich.text import Text
+from rich.style import Style
+from rich.traceback import install, Traceback
 
 console = Console()
 
-def parse_args() -> argparse.Namespace:
-    parser = argparse.ArgumentParser(
-        prog=os.path.basename(sys.argv[0]),
-        description=(
-            "Use `gh` to repeatedly check the CI status for a GitHub Actions run. "
-            "Exits with the same status as `gh run watch`."
-        ),
-    )
+def make_parent_parser() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
+    """Create and configure the parent parser for common arguments.
 
-    group = parser.add_mutually_exclusive_group()
-    group.add_argument(
+    Purpose of parent parser is to initially detect whether -D/--debug-capture-file
+    was provided.  If that's the case, the main parser does not want GH_ACTION_RUN_ID,
+    which is otherwise normally a required positional argument.
+
+    Returns:
+        A tuple of (parent_parser, parsed_args) where parent_parser is the
+        configured ArgumentParser and parsed_args contains the parsed arguments
+        from parse_known_args().
+    """
+    parent_parser = argparse.ArgumentParser(add_help=False)
+
+    group = parent_parser.add_argument_group("Verbosity")
+    group_mutex = group.add_mutually_exclusive_group()
+    group_mutex.add_argument(
         "-q",
         "--quiet",
         action="store_true",
         help="Suppress all output (only exit status is returned).",
     )
-    group.add_argument(
+    group_mutex.add_argument(
         "-v",
         "--verbose",
         action="count",
@@ -38,10 +45,41 @@ def parse_args() -> argparse.Namespace:
         help="Increase verbosity (-v or -vv)",
     )
 
-    parser.add_argument(
-        "GH_ACTION_RUN_ID",
-        help="GitHub Actions run ID to watch.",
+    debug_group = parent_parser.add_argument_group("Debugging")
+    debug_group.add_argument(
+        "-D",
+        "--debug-capture-file",
+        metavar="DEBUG_CAPTURE_FILE",
+        type=str,
+        default=None,
+        help="Path to a capture file to use for debugging; in this case GH_ACTION_RUN_ID is ignored",
     )
+
+    # Parse known args first to check for debug-capture-file
+    args, remaining = parent_parser.parse_known_args()
+    return parent_parser, args
+
+
+def parse_args() -> argparse.Namespace:
+    # Get parent parser and its parsed args
+    parent_parser, parent_args = make_parent_parser()
+
+    # Main parser
+    parser = argparse.ArgumentParser(
+        prog=os.path.basename(sys.argv[0]),
+        description=(
+            "Use `gh` to repeatedly check the CI status for a GitHub Actions run. "
+            "Exits with the same status as `gh run watch`."
+        ),
+        parents=[parent_parser],
+    )
+
+    # Only add GH_ACTION_RUN_ID if debug-capture-file is not provided
+    if parent_args.debug_capture_file is None:
+        parser.add_argument(
+            "GH_ACTION_RUN_ID",
+            help="GitHub Actions run ID to watch.",
+        )
 
     args = parser.parse_args()
 
@@ -66,9 +104,9 @@ class PrintVerbosityLevel(IntEnum):
     DEBUG = 2
 
 def main() -> None:
+    install(show_locals=True)
     args = parse_args()
     prog_name = os.path.basename(sys.argv[0])
-    run_id = int(args.GH_ACTION_RUN_ID)
 
     def print_out(message: str|Text, severity: PrintSeverity = PrintSeverity.NORMAL, verbosity: PrintVerbosityLevel = PrintVerbosityLevel.NORMAL) -> None:
         if args.verbosity >= verbosity.value or severity.value >= PrintSeverity.WARNING.value:
@@ -88,64 +126,90 @@ def main() -> None:
             print_args.append(message_text)
             console.print(*print_args)
 
-    print_out(f"watching github action run {run_id}...", verbosity=PrintVerbosityLevel.NORMAL)
+    fetcher: GhApiFetcher | None = None
+    client: GhPollingClient | None = None
+    try:
+        if args.debug_capture_file is None:
+            fetcher = GhApiFetcher(run_id=args.GH_ACTION_RUN_ID)
+        else:
+            fetcher = GhApiFetcher(
+                run_id=None, 
+                capture_mode=GhApiFetcher.CaptureMode.USE_CAPTURED_JSON, 
+                capture_filename=args.debug_capture_file)
+        run_id = fetcher.run_id
+        print_out(f"watching github action run {run_id}...", verbosity=PrintVerbosityLevel.NORMAL)
+        client = GhPollingClient(fetcher)
 
-    def get_worker_name(x: int) -> str:
-        return run.get_child_job(x).name
-    
-    run: GhRun = GhRun.construct_from_run_json_query(run_id)
-    for new_ghjob in GhJob.construct_from_job_json_element(get_gh_jobs_json(run_id)):
-        run.upsert_job(new_ghjob)
+        run: GhRun = GhRun.construct_from_gh_poller(client)
 
-    display_options = DisplayOptions(
-        Message=MessageLineOpt(message="Waiting for CI...", message_style=Style(color="red", bold=True)),
-        Transient=False,
-        FnWorkerIdToName=get_worker_name,
-        OverallNameStr=f"{run.name}",
-        OverallNameStrStyle=Style(color="dark_blue", bold=True),
-        OverallBarColors=BarColors.default(),
-        WorkerBarColors=BarColors.default(),
-        Size=SizeOpt.MEDIUM,
-        Stackup=StackupOpt.OVERALL_WORKERS,
-        BoundingRect=BoundingRectOpt(title=f"GitHub Actions Run {run.run_id}", 
-                                     border_style=Style(color="blue", bold=True)),
-    )
-    worker_group = WorkerProgressGroup(display_options=display_options)
-    latest = {}
-    run.update_run_status(get_gh_run_json(run_id))
-    for new_ghjob in GhJob.construct_from_job_json_element(get_gh_jobs_json(run_id)):
-        run.upsert_job(new_ghjob)
-        worker_group.add_worker(worker_id=new_ghjob.job_id)
-        latest[new_ghjob.job_id] = new_ghjob.get_progress().percent_complete
-    worker_group.update_all(latest=latest)
-    with worker_group.with_live(console=console) as live:
-        while not worker_group.is_finished() and run.status != GhStatus.COMPLETED:
-            sleep_for_sec:float = float(DEFAULT_INTERVALS['JOBS_POLL'])
-            run.update_run_status(get_gh_run_json(run_id))
-            for new_ghjob in GhJob.construct_from_job_json_element(get_gh_jobs_json(run_id)):
-                run.upsert_job(new_ghjob)
-                worker_group.add_worker(worker_id=new_ghjob.job_id)
-                latest[new_ghjob.job_id] = new_ghjob.get_progress().percent_complete
-                worker_group.update_all(latest=latest)
-            if run.status == GhStatus.COMPLETED:
-                # final update
-                if run.conclusion == GhConclusion.SUCCESS:
-                    worker_group.complete_all()
-                else:
-                    worker_group.update_display_options(new_display_options=DisplayOptions(
-                        Message=MessageLineOpt(message="CI run completed with failure", message_style=Style(color="red", bold=True)),
-                        OverallBarColors=BarColors.red(),
-                        WorkerBarColors=BarColors.red(),
-                        BoundingRect=BoundingRectOpt(title=f"FAILED: Run {run.run_id}", 
-                                                     border_style=Style(color="red", bold=True)),
-                    ))
+        display_options = DisplayOptions(
+            Message=MessageLineOpt(message=f"https://github.com/curvcpu/curv-python/actions/runs/{run.run_id}", message_style=Style(color="dodger_blue1", bold=False, link=f"https://github.com/curvcpu/curv-python/actions/runs/{run.run_id}")),
+            Transient=False,
+            FnWorkerIdToName=lambda worker_id: f"{run.get_child_job(worker_id).name}",
+            OverallNameStr=f"{run.name}",
+            OverallNameStrStyle=Style(color="gray66", bold=True),
+            OverallBarColors=BarColors.default(),
+            WorkerBarColors=BarColors.default(),
+            Size=SizeOptCustom(
+                job_bar_args=SizeOptCustom.BarArgs(width=80, fn_elapsed=None, fn_remaining=None), 
+                overall_bar_args=SizeOptCustom.BarArgs(width=60, fn_elapsed=None),
+                max_names_length=-40,
+            ),
+            Stackup=StackupOpt.OVERALL_WORKERS_MESSAGE,
+            BoundingRect=BoundingRectOpt(title=f"GitHub Actions Run {run.run_id}", 
+                                         border_style=Style(color="cornflower_blue", bold=True)),
+        )
+        worker_group = WorkerProgressGroup(display_options=display_options)
+        latest = {}
+        changed: bool = run.update()
+        if changed:
+            for ghjob in run:
+                worker_group.add_worker(worker_id=ghjob.job_id)
+                latest[ghjob.job_id] = ghjob.get_progress().percent_complete
+            worker_group.update_all(latest=latest)
+        with worker_group.with_live(console=console) as live:
+            first_iteration = True
+            while first_iteration or run.status != GhStatus.COMPLETED:
+                first_iteration = False
+                sleep_for_sec:float = float(DEFAULT_INTERVALS['JOBS_POLL'])
+                changed: bool = run.update()
+                if changed:
+                    for ghjob in run:
+                        worker_group.add_worker(worker_id=ghjob.job_id)
+                        latest[ghjob.job_id] = ghjob.get_progress().percent_complete
                     worker_group.update_all(latest=latest)
-                break
-            else:
-                if sleep_for_sec > 0.0:
-                    time.sleep(0.1)
-                    sleep_for_sec -= 0.1
-                worker_group.update_all(latest=latest)
+                if run.status == GhStatus.COMPLETED:
+                    # final update
+                    if run.conclusion == GhConclusion.SUCCESS:
+                        worker_group.update_display_options(new_display_options=DisplayOptions(
+                            Message=MessageLineOpt(message="✅ CI completed successfully", message_style=Style(color="dodger_blue1", bold=True)),
+                            BoundingRect=BoundingRectOpt(title=f"SUCCESS: Run {run.run_id}", 
+                                                         border_style=Style(color="spring_green1", bold=True)),
+                        ))
+                        worker_group.complete_all()
+                    else:
+                        worker_group.update_display_options(new_display_options=DisplayOptions(
+                            Message=MessageLineOpt(message="CI run completed with failure", message_style=Style(color="red", bold=True)),
+                            OverallBarColors=BarColors.red(),
+                            WorkerBarColors=BarColors.red(),
+                            BoundingRect=BoundingRectOpt(title=f"FAILED: Run {run.run_id}", 
+                                                         border_style=Style(color="red", bold=True)),
+                        ))
+                        worker_group.update_all(latest=latest)
+                    time.sleep(sleep_for_sec)
+                    break
+                else:
+                    time.sleep(sleep_for_sec)
+                    worker_group.update_all(latest=latest)
+    except KeyboardInterrupt:
+        pass
+    except Exception as e:
+        print_out(f"Error: {e}", severity=PrintSeverity.ERROR)
+        console.print(Traceback.from_exception(type(e), e, e.__traceback__))
+        sys.exit(1)
+    finally:
+        if client is not None:
+            client.close()
 
     print_out("----------------------------------------", verbosity=PrintVerbosityLevel.DEBUG)
 

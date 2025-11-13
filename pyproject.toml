@@ -22,3 +22,4 @@ members = ["packages/*"]
 [tool.uv.sources]
 curv = { workspace = true }
 curvpyutils = { workspace = true }
+curvtools = { workspace = true }
