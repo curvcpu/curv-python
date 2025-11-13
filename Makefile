@@ -71,6 +71,7 @@ setup: install-min fetch-latest-tags setup-precommit
 .PHONY: test
 test: 
 	$(PYTEST) $(PYTEST_OPTS)
+	@pushd scripts && $(PYTEST) $(PYTEST_OPTS) && popd
 
 .PHONY: unsetup-editable-installs
 unsetup-editable-installs:
