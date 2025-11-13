@@ -69,15 +69,10 @@ class SizeOptCustom:
                 "fn_elapsed": self["fn_elapsed"],
                 "fn_remaining": self["fn_remaining"],
             }
-    def __init__(self, job_bar_args: "SizeOptCustom.BarArgs", overall_bar_args: "SizeOptCustom.BarArgs"):
+    def __init__(self, job_bar_args: "SizeOptCustom.BarArgs", overall_bar_args: "SizeOptCustom.BarArgs", max_names_length: int | None = None):
         self.job_bar_args = job_bar_args
         self.overall_bar_args = overall_bar_args
-    # @property
-    # def job_bar_args(self) -> dict[str, object]:
-    #     return self.job_bar_args.get_args_dict()
-    # @property
-    # def overall_bar_args(self) -> dict[str, object]:
-    #     return self.overall_bar_args.get_args_dict()
+        self.max_names_length = max_names_length
 
 @dataclass(slots=True)
 class BarColors:
@@ -185,6 +180,10 @@ class DisplayOptions:
                 self.MaxNamesLength = 40
             case SizeOpt.FULL_SCREEN:
                 self.MaxNamesLength = None
+            # HACK:  they can specify a negative number here to prevent truncation and
+            # instead flow to 2 lines; this should really be two separate fields...
+            case SizeOptCustom(max_names_length=max_names_length) as size_opt_custom:
+                self.MaxNamesLength = size_opt_custom.max_names_length
             case _:
                 self.MaxNamesLength = None
 

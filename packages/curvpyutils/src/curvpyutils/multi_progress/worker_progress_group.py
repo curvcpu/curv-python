@@ -70,7 +70,7 @@ class WorkerProgressGroup:
             self.stacked_progress_table.update_bounding_rect(bounding_rect=self.display_options.BoundingRect)
 
     def truncate_description_str(self, description: str|Callable[[int], str]) -> str|Callable[[int], str]:
-        if self.max_names_length is None:
+        if self.max_names_length is None or self.max_names_length < 0:
             return description
         if isinstance(description, str):
             return description[:self.max_names_length] if len(description) <= self.max_names_length else description[:self.max_names_length-1] + "…"

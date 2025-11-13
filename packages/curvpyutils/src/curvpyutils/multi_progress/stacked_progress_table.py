@@ -12,11 +12,13 @@ from rich.progress import (
     SpinnerColumn,
     TextColumn,
     TimeRemainingColumn,
+    RenderableColumn
 )
 from rich.style import Style
 from rich.table import Table
 from rich.text import Text
 from rich.align import Align
+from rich.table import Column
 
 from .display_options import DisplayOptions, SizeOpt, SizeOptCustom, StackupOpt
 
@@ -64,13 +66,17 @@ class StackedProgressTable:
 
     def _make_job_progress_columns(self, finished_text: str, job_bar_args: dict[str, object]) -> list[ProgressColumn]:
         job_progress_columns: list[ProgressColumn] = [
-            TextColumn("[dim]{task.description}[/dim]"),
+            # RenderableColumn(
+            #     Text("[dim]{task.description}[/dim]"),
+            #     table_column=Column(overflow="fold", width=self.display_options.MaxNamesLength),
+            # ),
+            TextColumn("{task.description}", style="gray66"),
             SpinnerColumn(finished_text=finished_text),
             BarColumn(
                 bar_width=job_bar_args["width"],
                 **self.display_options.WorkerBarColors.remap_bar_style_names(),
             ),
-            TextColumn("[dim]{task.percentage:>5.1f}%[/dim]"),
+            TextColumn("{task.percentage:>5.1f}%", style="gray66"),
         ]
         if job_bar_args.get("fn_remaining") is not None:
             job_progress_columns.append(job_bar_args["fn_remaining"]())
@@ -79,14 +85,18 @@ class StackedProgressTable:
     def _make_overall_progress_columns(self, finished_text: str, overall_bar_args: dict[str, object]) -> list[ProgressColumn]:
         overall_style = _resolve_style(self.display_options.OverallNameStrStyle) or Style()
         overall_bar_styles = self.display_options.OverallBarColors.remap_bar_style_names()
+        # HACK:  they can specify a negative number here to prevent truncation and instead 
+        # flow to 2 lines; this should really be two separate fields...
+        tc = Column(overflow="fold", width=abs(self.display_options.MaxNamesLength)) if self.display_options.MaxNamesLength is not None and self.display_options.MaxNamesLength < 0 else None
         overall_progress_columns: list[ProgressColumn] = [
-            TextColumn("{task.description}", style=overall_style),
+            TextColumn("{task.description}", style=overall_style, table_column=tc),
+            # TextColumn("{task.description}", style=overall_style),
             SpinnerColumn(finished_text="[bold green]:heavy_check_mark:[/bold green]"),
             BarColumn(
                 bar_width=overall_bar_args["width"],
                 **overall_bar_styles,
             ),
-            TextColumn("{task.percentage:>5.1f}%"),
+            TextColumn("{task.percentage:>5.1f}%", style="gray66"),
         ]
         if overall_bar_args.get("fn_elapsed") is not None:
             overall_progress_columns.append(overall_bar_args["fn_elapsed"]())
