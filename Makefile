@@ -131,9 +131,13 @@ publish: must-be-on-main check-git-clean fetch-latest-tags build test
 	@set -euo pipefail; \
 	LEVEL=$${LEVEL:-patch}; \
 	: "$${PKG:?Set PKG to one of: curvpyutils|curv|curvtools|all}"; \
-	CURV_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curv -L); \
-	CURVTOOLS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvtools -L); \
-	CURVPYUTILS_VER_MAJMINPTCH=$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L); \
+	CURV_VER_MAJMINPTCH=$$(CURV_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curv -L)); \
+	CURVTOOLS_VER_MAJMINPTCH=$$(CURVTOOLS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvtools -L)); \
+	CURVPYUTILS_VER_MAJMINPTCH=$$(CURVPYUTILS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L)); \
+	echo "🔄 Checking readme.md for out-of-date version numbers..."; \
+	echo "  👉 Initial value of CURV_VER_MAJMINPTCH: $$CURV_VER_MAJMINPTCH"; \
+	echo "  👉 Initial value of CURVTOOLS_VER_MAJMINPTCH: $$CURVTOOLS_VER_MAJMINPTCH"; \
+	echo "  👉 Initial value of CURVPYUTILS_VER_MAJMINPTCH: $$CURVPYUTILS_VER_MAJMINPTCH"; \
 	case "$$PKG" in \
 	  all) ORDER="curvpyutils curv curvtools" ;; \
 	  curv|curvtools|curvpyutils) ORDER="$$PKG" ;; \
@@ -178,10 +182,11 @@ publish: must-be-on-main check-git-clean fetch-latest-tags build test
 	    curvpyutils-v) CURVPYUTILS_VER_MAJMINPTCH=$$ver ;; \
 	    *) echo "Unknown package prefix: $$pfx"; exit 1 ;; \
 	  esac; \
-	  echo "CURV_VER_MAJMINPTCH: $$CURV_VER_MAJMINPTCH" 1>&2; \
-	  echo "CURVTOOLS_VER_MAJMINPTCH: $$CURVTOOLS_VER_MAJMINPTCH" 1>&2; \
-	  echo "CURVPYUTILS_VER_MAJMINPTCH: $$CURVPYUTILS_VER_MAJMINPTCH" 1>&2; \
+	  \
 	  echo "🔄 Checking readme.md for out-of-date version numbers..."; \
+	  echo "  👉 CURV_VER_MAJMINPTCH: $$CURV_VER_MAJMINPTCH" 1>&2; \
+	  echo "  👉 CURVTOOLS_VER_MAJMINPTCH: $$CURVTOOLS_VER_MAJMINPTCH" 1>&2; \
+	  echo "  👉 CURVPYUTILS_VER_MAJMINPTCH: $$CURVPYUTILS_VER_MAJMINPTCH" 1>&2; \
 	  CURV_VER_MAJMINPTCH=$$CURV_VER_MAJMINPTCH CURVTOOLS_VER_MAJMINPTCH=$$CURVTOOLS_VER_MAJMINPTCH CURVPYUTILS_VER_MAJMINPTCH=$$CURVPYUTILS_VER_MAJMINPTCH $(SCRIPT_SUBST) $(SCRIPT_SUBST_OPTS) readme.md \
 			&& { echo "✔️ No change needed to readme.md for $$tag release"; \
 				 echo "🔄 Committing and pushing empty commit to trigger CI for $$tag release..."; \
@@ -238,7 +243,7 @@ publish: must-be-on-main check-git-clean fetch-latest-tags build test
 sync-published-stamps:
 	@$(SCRIPT_TOUCH_STAMP_FILES) > /dev/null && echo "✅ Synced published stamps" || echo "❌ Failed to sync published stamps"
 
-packages/%/.package_published_stamp.stamp: packages/%/.package_changed_stamp.stamp | must-be-on-main sync-published-stamps
+packages/%/.package_published_stamp.stamp: packages/%/.package_changed_stamp.stamp must-be-on-main sync-published-stamps
 	@echo "🔄 Republishing $(notdir $*)"
 	@$(MAKE) publish PKG=$(notdir $*) LEVEL=$(LEVEL)
 	@touch $@
