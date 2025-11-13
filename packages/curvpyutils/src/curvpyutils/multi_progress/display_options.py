@@ -2,7 +2,9 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import Callable, Optional
+from typing import Callable, Optional, Union
+from functools import partial
+from rich.progress import ProgressColumn, TimeRemainingColumn
 
 from rich.style import Style
 
@@ -12,6 +14,7 @@ __all__ = [
     "DisplayOptions",
     "MessageLineOpt",
     "SizeOpt",
+    "SizeOptCustom",
     "StackupOpt",
     "Style",
     "get_default_display_options",
@@ -42,6 +45,39 @@ class SizeOpt(Enum):
     LARGE = auto()
     FULL_SCREEN = auto()
 
+class SizeOptCustom:
+    class BarArgs(dict[str, object]):
+        width: int = field(default=20)
+        fn_elapsed: Callable[[], ProgressColumn] = field(default=None)
+        fn_remaining: Callable[[], ProgressColumn] = field(default=None)
+        def __init__(
+            self, 
+            width: int, 
+            fn_elapsed: Callable[[], ProgressColumn] | None = None, 
+            fn_remaining: Callable[[], ProgressColumn] | None = partial(
+                TimeRemainingColumn,
+                compact=False,
+                elapsed_when_finished=True,
+        )) -> None:
+            self["width"] = width
+            self["fn_elapsed"] = fn_elapsed
+            self["fn_remaining"] = fn_remaining
+            super().__init__()
+        def get_args_dict(self) -> dict[str, object]:
+            return {
+                "width": self["width"],
+                "fn_elapsed": self["fn_elapsed"],
+                "fn_remaining": self["fn_remaining"],
+            }
+    def __init__(self, job_bar_args: "SizeOptCustom.BarArgs", overall_bar_args: "SizeOptCustom.BarArgs"):
+        self.job_bar_args = job_bar_args
+        self.overall_bar_args = overall_bar_args
+    # @property
+    # def job_bar_args(self) -> dict[str, object]:
+    #     return self.job_bar_args.get_args_dict()
+    # @property
+    # def overall_bar_args(self) -> dict[str, object]:
+    #     return self.overall_bar_args.get_args_dict()
 
 @dataclass(slots=True)
 class BarColors:
@@ -124,7 +160,7 @@ class DisplayOptions:
     BoundingRect: BoundingRectOpt = field(default_factory=BoundingRectOpt)
     Stackup: StackupOpt = StackupOpt.OVERALL_WORKERS_MESSAGE
     Message: MessageLineOpt = field(default_factory=MessageLineOpt)
-    Size: SizeOpt = SizeOpt.MEDIUM
+    Size: Union[SizeOpt, SizeOptCustom] = SizeOpt.MEDIUM
     Transient: bool = False
     OverallBarColors: BarColors = field(default_factory=BarColors.default)
     WorkerBarColors: BarColors = field(default_factory=BarColors.default)
@@ -148,6 +184,8 @@ class DisplayOptions:
             case SizeOpt.LARGE:
                 self.MaxNamesLength = 40
             case SizeOpt.FULL_SCREEN:
+                self.MaxNamesLength = None
+            case _:
                 self.MaxNamesLength = None
 
 

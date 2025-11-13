@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import partial
+from typing import Union
 
 from rich.box import SIMPLE
 from rich.panel import Panel
@@ -14,8 +15,10 @@ from rich.progress import (
 )
 from rich.style import Style
 from rich.table import Table
+from rich.text import Text
+from rich.align import Align
 
-from .display_options import DisplayOptions, SizeOpt, StackupOpt
+from .display_options import DisplayOptions, SizeOpt, SizeOptCustom, StackupOpt
 
 __all__ = ["StackedProgressTable"]
 
@@ -91,7 +94,7 @@ class StackedProgressTable:
             overall_progress_columns.append(overall_bar_args["fn_remaining"]())
         return overall_progress_columns
     
-    def _make_bar_args(self, size: SizeOpt, worker_bar_colors: BarColors, overall_bar_colors: BarColors) -> tuple[dict[str, object], dict[str, object]]:
+    def _make_bar_args(self, size: Union[SizeOpt, SizeOptCustom], worker_bar_colors: BarColors, overall_bar_colors: BarColors) -> tuple[dict[str, object], dict[str, object]]:
         job_bar_args: dict[str, object] = worker_bar_colors.get_args_dict()
         overall_bar_args: dict[str, object] = overall_bar_colors.get_args_dict()
         match size:
@@ -156,6 +159,9 @@ class StackedProgressTable:
                         ),
                     }
                 )
+            case SizeOptCustom(job_bar_args=job_bar_args, overall_bar_args=overall_bar_args) as size_opt_custom:
+                job_bar_args.update(**size_opt_custom.job_bar_args)
+                overall_bar_args.update(**size_opt_custom.overall_bar_args)
             case _:
                 raise ValueError(f"Invalid size option: {self.display_options.Size!r}")
         return job_bar_args, overall_bar_args
@@ -225,8 +231,11 @@ class StackedProgressTable:
             column_args["header"] = self.overall_progress
             if not self.display_options.Message.is_unused():
                 inner_table_args["show_footer"] = True
-                footer_args["footer"] = self.display_options.Message.message
-                footer_args["footer_style"] = self.display_options.Message.resolved_style()
+                footer_table = Table.grid(expand=False)
+                footer_table.add_column(justify="center")
+                footer_table.add_row(Align(Text(self.display_options.Message.message, style=self.display_options.Message.resolved_style()), align="center"))
+                footer_args["footer"] = Align(footer_table, align="center")
+                # footer_args["footer_style"] = self.display_options.Message.resolved_style()
             else:
                 inner_table_args["show_footer"] = False
         elif stackup in {StackupOpt.MESSAGE_WORKERS_OVERALL, StackupOpt.MESSAGE_OVERALL}:
@@ -235,8 +244,11 @@ class StackedProgressTable:
             footer_args["footer_style"] = Style(color="bright_white")
             if not self.display_options.Message.is_unused():
                 inner_table_args["show_header"] = True
-                column_args["header"] = self.display_options.Message.message
-                column_args["header_style"] = self.display_options.Message.resolved_style()
+                header_table = Table.grid(expand=False)
+                header_table.add_column(justify="center")
+                header_table.add_row(Align(Text(self.display_options.Message.message, style=self.display_options.Message.resolved_style()), align="center"))
+                column_args["header"] = Align(header_table, align="center")
+                # column_args["header_style"] = self.display_options.Message.resolved_style()
             else:
                 inner_table_args["show_header"] = False
         else:
@@ -269,14 +281,14 @@ class StackedProgressTable:
             inner_table.add_column(**column_args)
             if inner_table_args.get("show_header"):
                 inner_table.add_row(
-                    column_args.get("header", ""),
+                    Align(column_args.get("header", ""), align="center"),
                     style=column_args.get("header_style"),
                 )
             if show_workers:
                 inner_table.add_row(self.job_progress)
             if inner_table_args.get("show_footer"):
                 inner_table.add_row(
-                    footer_args.get("footer", ""),
+                    Align(footer_args.get("footer", ""), align="center"),
                     style=footer_args.get("footer_style"),
                 )
             progress_table.add_row(inner_table)

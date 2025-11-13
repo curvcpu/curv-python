@@ -152,7 +152,7 @@ class WorkerProgressGroup:
     def with_live(self, *, console: Optional[Console] = None) -> Live:
         return Live(
             #self.stacked_progress_table.get_progress_table(),
-            refresh_per_second=10,
+            refresh_per_second=4,
             transient=self.stacked_progress_table.transient,
             screen=self.is_full_screen,
             console=console,
