@@ -15,6 +15,7 @@ SCRIPT_SUBST := curv-subst
 SCRIPT_SUBST_OPTS := -f -1 -m
 SCRIPT_CHK_LATEST_VER := scripts/chk-latest-version.py
 SCRIPT_GET_CANONICAL_REMOTE := scripts/publish-tools/src/canonical_remote.py  # uses `git remote -v` to find user's local name for the github.com/curvcpu/curv-python repo
+SCRIPT_GET_PUBLISH_DEPS := scripts/publish-tools/src/get-publish-deps.py
 REMOTE ?= origin
 
 PUBLISH_HOSTNAME  := github.com
@@ -217,6 +218,24 @@ forbid-extra-local-commits:
 prepublish-checks: must-be-on-main must-have-publish-remote-set-correctly ensure-main-exact ensure-main-in-sync forbid-extra-local-commits check-git-clean
 
 #
+# make publish-advice [PKG=curv|curvpyutils|curvtools]
+# example: make publish-advice PKG=curvtools
+#
+# Just runs a script telling you which dependent packages are out of date
+# given that you want to publish the given package (e.g., curvtools in the
+# example above).
+#
+.PHONY: publish-advice
+publish-advice:
+	@set -euo pipefail; \
+	PKG=$${PKG:-}; \
+	if [ -z "$$PKG" ]; then \
+		echo "❌ [$(@)] error: PKG= must be specified (curv|curvtools|curvpyutils)"; \
+		exit 1; \
+	fi;
+	@$(SCRIPT_GET_PUBLISH_DEPS) $(PKG) -v
+
+#
 # make publish [PKG=curv|curvpyutils|curvtools|all] [LEVEL=patch|minor|major]
 # example: make publish PKG=curvpyutils LEVEL=minor
 # - defaults: PKG=all, LEVEL=patch
@@ -235,7 +254,7 @@ publish: prepublish-checks fetch-latest-tags build test
 	echo "  👉 Initial value of CURVPYUTILS_VER_MAJMINPTCH: $$CURVPYUTILS_VER_MAJMINPTCH"; \
 	case "$$PKG" in \
 	  all) ORDER="curvpyutils curv curvtools" ;; \
-	  curv|curvtools|curvpyutils) ORDER="$$PKG" ;; \
+	  curv|curvtools|curvpyutils) ORDER="$$($(SCRIPT_GET_PUBLISH_DEPS) $(PKG))" ;; \
 	  *) echo "Unknown PKG='$$PKG'"; exit 1 ;; \
 	esac; \
 	bump() { \
