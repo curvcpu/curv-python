@@ -310,7 +310,8 @@ def main() -> None:
                     time.sleep(sleep_for_sec)
                     worker_group.update_all(latest=latest)
     except KeyboardInterrupt:
-        pass
+        print_out("Keyboard interrupt received, exiting...", severity=PrintSeverity.NORMAL)
+        sys.exit(1)
     except Exception as e:
         print_out(f"Error: {e}", severity=PrintSeverity.ERROR)
         console.print(Traceback.from_exception(type(e), e, e.__traceback__))
