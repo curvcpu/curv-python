@@ -245,9 +245,9 @@ publish: prepublish-checks fetch-latest-tags build test
 	@set -euo pipefail; \
 	LEVEL=$${LEVEL:-patch}; \
 	: "$${PKG:?Set PKG to one of: curvpyutils|curv|curvtools|all}"; \
-	CURV_VER_MAJMINPTCH=$$(CURV_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curv -L)); \
-	CURVTOOLS_VER_MAJMINPTCH=$$(CURVTOOLS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvtools -L)); \
-	CURVPYUTILS_VER_MAJMINPTCH=$$(CURVPYUTILS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L)); \
+	CURV_VER_MAJMINPTCH=$${CURV_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curv -L)}; \
+	CURVTOOLS_VER_MAJMINPTCH=$${CURVTOOLS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvtools -L)}; \
+	CURVPYUTILS_VER_MAJMINPTCH=$${CURVPYUTILS_VER_MAJMINPTCH:-$$($(SCRIPT_CHK_LATEST_VER) curvpyutils -L)}; \
 	echo "🔄 Checking readme.md for out-of-date version numbers..."; \
 	echo "  👉 Initial value of CURV_VER_MAJMINPTCH: $$CURV_VER_MAJMINPTCH"; \
 	echo "  👉 Initial value of CURVTOOLS_VER_MAJMINPTCH: $$CURVTOOLS_VER_MAJMINPTCH"; \
