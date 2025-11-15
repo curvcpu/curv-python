@@ -8,10 +8,10 @@ dependencies = [
   "pytest-xdist>=3",
   "ruff>=0.6",
   "build>=1",
-  "pre-commit>=3.7",
+#  "pre-commit>=3.7",  # disabled for now because it's not needed for this repo
   "hatchling>=1.24",
   "hatch-vcs>=0.4",
-  "rich>=13",   # used by scripts/chk-pypi-latest-ver.py
+  "rich>=13",   # used by scripts/chk-latest-version.py
 ]
 
 [tool.uv.workspace]

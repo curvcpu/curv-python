@@ -7,7 +7,6 @@ VENVDIR ?= .venv
 PYTEST := uv run pytest
 PYTEST_OPTS := -q --numprocesses auto
 PACKAGES := packages/curv packages/curvtools packages/curvpyutils
-REMOTE ?= origin
 PKG_CURV := packages/curv
 PKG_CURVTOOLS := packages/curvtools
 PKG_CURVPYUTILS := packages/curvpyutils
@@ -16,7 +15,14 @@ SCRIPT_WAIT_CI := scripts/wait_ci.py
 SCRIPT_SUBST := curv-subst
 SCRIPT_SUBST_OPTS := -f -1 -m
 SCRIPT_CHK_LATEST_VER := scripts/chk-latest-version.py
-SCRIPT_TOUCH_STAMP_FILES := scripts/touch_stamp_files.py
+SCRIPT_GET_CANONICAL_REMOTE := scripts/publish-tools/src/canonical_remote.py  # uses `git remote -v` to find user's local name for the github.com/curvcpu/curv-python repo
+REMOTE ?= origin
+
+PUBLISH_HOSTNAME  := github.com
+PUBLISH_ORG       := curvcpu
+PUBLISH_REPO      := curv-python
+PUBLISH_BRANCH    := main
+PUBLISH_REMOTE    := $(shell $(SCRIPT_GET_CANONICAL_REMOTE) $(PUBLISH_HOSTNAME) $(PUBLISH_ORG) $(PUBLISH_REPO))
 
 .PHONY: setup-sync
 setup-sync:
@@ -52,13 +58,19 @@ install-min: venv
 
 .PHONY: fetch-latest-tags
 fetch-latest-tags:
-	@echo "🤔 Fetching latest tags from remote '$(REMOTE)'..."
-	@git fetch $(REMOTE) --tags --quiet
+	@[ -n "$(PUBLISH_REMOTE)" ] && { \
+		echo "🤔 Fetching latest tags from remote '$(PUBLISH_REMOTE)'..." && \
+		git fetch "$(PUBLISH_REMOTE)" --tags --quiet; \
+		echo "✓ Fetched latest tags from remote '$(PUBLISH_REMOTE)'"; \
+	} || { \
+		echo "❌ Failed to fetch latest tags from publish remote '$(PUBLISH_REMOTE)'"; \
+		exit 1; \
+	};
 
-.PHONY:  setup-precommit
-setup-precommit:
-	@echo "🔄 Installing pre-commit hooks for this repo..."
-	@$(UV) run pre-commit install
+# .PHONY: setup-precommit
+# setup-precommit:
+# 	@echo "🔄 Installing pre-commit hooks for this repo..."
+# 	@$(UV) run pre-commit install
 
 .PHONY: setup
 setup: install-min fetch-latest-tags setup-precommit
@@ -92,7 +104,7 @@ unsetup-editable-installs:
 .PHONY: unsetup
 unsetup: unsetup-editable-installs clean-venv clean
 	@$(UV) tool uninstall --all -q
-	@echo "✅ Removed CLI tools from uv tool environment"
+	@echo "✓ Removed CLI tools from uv tool environment"
 
 
 .PHONY: build
@@ -103,24 +115,107 @@ build:
 
 .PHONY: clean
 clean:
-	@find . -type d -name __pycache__ -prune -exec rm -rf {} +
-	@rm -rf build dist .pytest_cache .ruff_cache $(VENVDIR)
+	@find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
+	@find . -type d -name .pytest_cache -exec rm -rf {} + 2>/dev/null || true
+	@find . -type d -name .mypy_cache -exec rm -rf {} + 2>/dev/null || true
+	@find . -type d -name .ruff_cache -exec rm -rf {} + 2>/dev/null || true
+	@rm -rf build dist $(VENVDIR)
 	@for p in $(PACKAGES); do \
 		rm -rf $$p/dist $$p/build $$p/*.egg-info $$p/src/*.egg-info ; \
-	done
-
-.PHONY: clean-venv
-clean-venv: clean
-	@$(RM) -rf $(VENVDIR)/bin/python
-	@echo "✅ Removed $(VENVDIR)/bin/python"
+	done;
+	@[ -d "$(VENVDIR)" ] && { \
+		$(RM) -rf $(VENVDIR)/bin/python ; \
+		echo "✓ Removed $(VENVDIR)/bin/python"; \
+	} || { \
+		echo "✓ Skipping venv cleanup since $(VENVDIR) does not exist"; \
+	}
 
 .PHONY: check-git-clean
 check-git-clean:
-	@test -z "$$(git status --porcelain)" || (echo "Error: git working tree is not clean. Commit/stash first."; exit 1)
+	@test -z "$$(git status --porcelain)" || { \
+		echo "❌ [$(@)] error: git working tree is not clean. Commit/stash first."; \
+		exit 1; \
+	} || { \
+		echo "✓ [$(@)] git working tree is clean"; \
+	};
 
 .PHONY: must-be-on-main
 must-be-on-main:
-	@git branch --show-current | grep -q "^main$$" || (echo "Error: must be on main branch"; exit 1)
+	@current=$$(git branch --show-current); \
+	if [ "$$current" != $(PUBLISH_BRANCH) ]; then \
+		echo "❌ [$(@)] error: must be on $(PUBLISH_BRANCH) branch (currently $$current)"; \
+		exit 1; \
+	else \
+		echo "✓ [$(@)] currently on correct branch ($(PUBLISH_BRANCH) == $$current)"; \
+	fi;
+
+.PHONY: must-have-publish-remote-set-correctly
+must-have-publish-remote-set-correctly:
+	@[ -n "$(PUBLISH_REMOTE)" ] && { \
+		echo "✓ [$(@)] publish remote set correctly: $(PUBLISH_REMOTE)"; \
+	} || { \
+		echo "❌ [$(@)] error: must have publish remote set correctly"; \
+		exit 1; \
+	};
+
+.PHONY: ensure-main-in-sync
+ensure-main-in-sync:
+	@remote="$(PUBLISH_REMOTE)"; \
+	if [ -z "$$remote" ]; then \
+		echo "❌ [$(@)] error: PUBLISH_REMOTE is not set" >&2; \
+		exit 1; \
+	fi; \
+	local_head=$$(git rev-parse HEAD); \
+	remote_head=$$(git rev-parse "$$remote/main"); \
+	base=$$(git merge-base HEAD "$$remote/main"); \
+	if [ "$$local_head" = "$$remote_head" ]; then \
+		echo "✓ [$(@)] main is in sync with $$remote/main"; \
+	elif [ "$$base" = "$$local_head" ]; then \
+		echo "❌ [$(@)] error: local main is behind $$remote/main." >&2; \
+		echo "Hint: run:" >&2; \
+		echo "  git pull --ff-only $$remote main" >&2; \
+		exit 1; \
+	elif [ "$$base" = "$$remote_head" ]; then \
+		echo "❌ [$(@)] error: local main has commits not yet pushed to $$remote/main." >&2; \
+		echo "Hint: run:" >&2; \
+		echo "  git push $$remote main" >&2; \
+		exit 1; \
+	else \
+		echo "❌ [$(@)] error: local main and $$remote/main have diverged." >&2; \
+		echo "Resolve the divergence (rebase/merge/reset) before publishing." >&2; \
+		exit 1; \
+	fi
+
+.PHONY: ensure-main-exact
+ensure-main-exact:
+	@remote="$(PUBLISH_REMOTE)"; \
+	if [ -z "$$remote" ]; then \
+		echo "❌ [$(@)] error: PUBLISH_REMOTE is not set" >&2; \
+		exit 1; \
+	fi; \
+	local_head=$$(git rev-parse HEAD); \
+	remote_head=$$(git rev-parse "$$remote/main"); \
+	if [ "$$local_head" != "$$remote_head" ]; then \
+		echo "❌ [$(@)] error: local main ($$local_head) is not $$remote/main ($$remote_head)" >&2; \
+		exit 1; \
+	fi; \
+	echo "✓ [$(@)] local main is exactly in sync with $$remote/main";
+
+.PHONY: forbid-extra-local-commits
+forbid-extra-local-commits:
+	@remote="$(PUBLISH_REMOTE)"; \
+	if [ -z "$$remote" ]; then \
+		echo "❌ [$(@)] error: PUBLISH_REMOTE is not set" >&2; \
+		exit 1; \
+	fi; \
+	if git log "$$remote/main"..HEAD --oneline | grep -q .; then \
+		echo "❌ [$(@)] error: you have local commits not on $$remote/main" >&2; \
+		exit 1; \
+	fi; \
+	echo "✓ [$(@)] no extra local commits on $$remote/main";
+
+.PHONY: prepublish-checks
+prepublish-checks: must-be-on-main must-have-publish-remote-set-correctly ensure-main-exact ensure-main-in-sync forbid-extra-local-commits check-git-clean
 
 #
 # make publish [PKG=curv|curvpyutils|curvtools|all] [LEVEL=patch|minor|major]
@@ -128,7 +223,7 @@ must-be-on-main:
 # - defaults: PKG=all, LEVEL=patch
 #
 .PHONY: publish
-publish: must-be-on-main check-git-clean fetch-latest-tags build test
+publish: prepublish-checks fetch-latest-tags build test
 	@set -euo pipefail; \
 	LEVEL=$${LEVEL:-patch}; \
 	: "$${PKG:?Set PKG to one of: curvpyutils|curv|curvtools|all}"; \
@@ -196,7 +291,7 @@ publish: must-be-on-main check-git-clean fetch-latest-tags build test
 				 echo "🔄 Waiting for CI to pass on '$$commit_msg'..."; \
 				 $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
 			   } \
-			|| { echo "✅ Updated readme.md with new version numbers for $$tag release"; \
+			|| { echo "✓ Updated readme.md with new version numbers for $$tag release"; \
 				readme_commit_msg="chore(release): update readme.md to next version numbers before publishing $$tag release"; \
 				git add readme.md; \
 				git commit -m "$$readme_commit_msg" || { echo "❌ Failed to commit changes"; exit 1; }; \
@@ -240,39 +335,6 @@ publish: must-be-on-main check-git-clean fetch-latest-tags build test
 	wait_for_pypi_update curvtools "$$CURVTOOLS_VER_MAJMINPTCH"; \
 	echo "✅ All PyPI packages are now at the expected versions";
 
-.PHONY: sync-published-stamps
-sync-published-stamps:
-	@$(SCRIPT_TOUCH_STAMP_FILES) > /dev/null && echo "✅ Synced published stamps" || echo "❌ Failed to sync published stamps"
-
-packages/%/.package_published_stamp.stamp: packages/%/.package_changed_stamp.stamp must-be-on-main sync-published-stamps
-	@echo "🔄 Republishing $(notdir $*)"
-	@$(MAKE) publish PKG=$(notdir $*) LEVEL=$(LEVEL)
-	@touch $@
-
-.PHONY: publish-curv-patch
-publish-curv-patch: LEVEL=patch
-publish-curv-patch: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp packages/curv/src/curv/.package_published_stamp.stamp
-
-.PHONY: publish-curvpyutils-patch
-publish-curvpyutils-patch: LEVEL=patch
-publish-curvpyutils-patch: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp
-
-.PHONY: publish-curvtools-patch
-publish-curvtools-patch: LEVEL=patch
-publish-curvtools-patch: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp packages/curv/src/curv/.package_published_stamp.stamp packages/curvtools/src/curvtools/.package_published_stamp.stamp
-
-.PHONY: publish-curv-minor
-publish-curv-minor: LEVEL=minor
-publish-curv-minor: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp packages/curv/src/curv/.package_published_stamp.stamp
-
-.PHONY: publish-curvpyutils-minor
-publish-curvpyutils-minor: LEVEL=minor
-publish-curvpyutils-minor: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp
-
-.PHONY: publish-curvtools-minor
-publish-curvtools-minor: LEVEL=minor
-publish-curvtools-minor: packages/curvpyutils/src/curvpyutils/.package_published_stamp.stamp packages/curv/src/curv/.package_published_stamp.stamp packages/curvtools/src/curvtools/.package_published_stamp.stamp
-
 # This is just a temporary rule that I've been using to test ./scripts/wait_ci.py...
 .PHONY: push
 push: fetch-latest-tags
@@ -292,7 +354,7 @@ untag: check-git-clean
 	@set -e; \
 	PKG=$${PKG:-}; \
 	if [ -z "$$PKG" ]; then \
-		echo "Error: PKG= must be specified (curv|curvtools|curvpyutils)"; \
+		echo "❌ [$(@)] error: PKG= must be specified (curv|curvtools|curvpyutils)"; \
 		exit 1; \
 	fi; \
 	# Always get the latest published version for safety \
@@ -352,10 +414,8 @@ untag: check-git-clean
 # Show all PyPI published versions and local tags for each package which may or may not have succeeded in publishing
 #
 .PHONY: show
-show:
+show: fetch-latest-tags
 	@set -e; \
-	echo "Fetching all remote tags to make sure we're up to date..."; \
-	git fetch origin --tags; \
 	echo "Showing all versions for each package..."; \
 	echo ""; \
 	for p in curv curvtools curvpyutils; do \

@@ -16,7 +16,6 @@ To tweak the code and contribute to `curv-python`, you'll want to follow the ste
     git clone https://github.com/curvcpu/curv-python.git
     cd curv-python
     make setup
-    uv run pre-commit install
     ```
 
     This also installs the CLI tools (`curv-cfg`, `curv-memmap2`, etc.) into your shell via `uv`.
@@ -56,23 +55,40 @@ Thus, to upgrade `curvtools` you may also need to publish the latest versions of
     $ make test
     ```
 
-2.  Push a commit to the main branch to see if tests pass in CI.
+2.  Run this tool to see which dependent packages need to be republished.
+
+For example, if you want to publish `curvtools`:
 
     ```shell
-    # change something in a file...
-    $ git add .
-    $ git commit -m "whatever"
-    $ git push
+    $ ./scripts/publish-tools/src/get-publish-deps.py curvtools -v
     ```
 
-3. Bump version and publish:
-
-    `make publish` automatically bumps the version based on the `LEVEL` argument you provide (meaning whether to bump the major, minor, or patch version).
+Output will look something like this:
 
     ```shell
-    $ make publish PKG=curv LEVEL=patch
-    $ make publish PKG=curvtools LEVEL=patch
-    $ make publish PKG=curvpyutils LEVEL=patch
+    $ ./scripts/publish-tools/src/get-publish-deps.py curvtools -v
+
+                        If you want to publish curvtools...                        
+    ┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┓
+    ┃ Package     ┃ Latest Commit Time     ┃ Latest Tag Time        ┃ Needs Publish? ┃
+    ┡━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━┩
+    │ curvpyutils │ 2025-11-13 11:18:35am  │ 2025-11-12 09:18:18am  │ ⚠️ Yes         │
+    │ curvtools   │ 2025-11-12 10:13:05am  │ 2025-11-12 10:18:07am  │ 🚫 No          │
+    └─────────────┴────────────────────────┴────────────────────────┴────────────────┘
+
+    ╭──────── Recommended make command for publishing `curvtools` ─────────╮
+    │                                                                      │
+    │  make publish PKG="curvpyutils curvtools" LEVEL=<patch|minor|major>  │
+    │                                                                      │
+    ╰──────────────────────────────────────────────────────────────────────╯
+    ```
+
+3. Publish the package(s) by running the recommended `make` command from Step 2
+
+Example:
+
+    ```shell
+    $ make publish PKG="curvpyutils curvtools" LEVEL=patch
     ```
 
 4.  Watch the CI status of the publish:
@@ -81,9 +97,9 @@ Thus, to upgrade `curvtools` you may also need to publish the latest versions of
     $ make show-publish-status
     ```
 
-    or, obviously, just browse to [https://github.com/curvcpu/curv-python/actions](https://github.com/curvcpu/curv-python/actions).
+    or, just browse to [https://github.com/curvcpu/curv-python/actions](https://github.com/curvcpu/curv-python/actions) to see the CI status of the publish.
 
-5.  If the publish fails, you can undo the tag by deleting it locally and pushing the delete:
+5.  If the publish fails, you can undo the tag by deleting it locally and pushing the tag deletion to the remote repository:
 
     ```shell
     $ make untag PKG=PKG VER=X.Y.Z
@@ -108,33 +124,4 @@ Thus, to upgrade `curvtools` you may also need to publish the latest versions of
 
     ```shell
     $ make show
-    ```
-
-### Undo a Tag (`git tag`) When the Publish Failed
-
- - You can delete any tag (both local and remote) if it's newer than some version number for a given package.
-
-    ```shell
-    # delete failed publish tags by deleting any tag newer than VER for PKG=curvtools
-    $ make untag PKG=curvtools VER=0.0.6
-    ```
-
- - Or a simple alternative to clean up all local/remote tags that failed to publish:
-
-    ```shell
-    # Clean up any tags newer than what's published
-    make untag PKG=curvpyutils
-    ```
-
- - Safety features of the `make untag` command:
-
-    ```shell
-    # You must specify a package name:
-    make untag  # → Error: PKG= must be specified
-    ```
-
-    ```shell
-    # ❌ ERROR: Cannot delete tags older than published version
-    $ make untag PKG=curvtools VER=0.0.1
-    # Output: "Error: Cannot delete tags older than or equal to published version 0.0.6"
     ```

@@ -15,12 +15,69 @@ from rich.traceback import install, Traceback
 
 console = Console()
 
+def get_latest_commit_gh_run_id(RETRY_TIMEOUT_SEC: float = 30) -> int:
+    """
+    Get the latest commit's Github Actions CI run id. We retry once per second until RETRY_TIMEOUT_SEC is reached.
+
+    Args:
+        RETRY_TIMEOUT_SEC: The number of seconds to retry before timing out
+                     (default: 30)
+    Returns:
+        The run id for the latest commit's Github Actions CI run
+    
+    Raises:
+        subprocess.CalledProcessError: if any subprocess command exists non-zero
+        RuntimeError: If the run id for the latest commit's Github Actions CI run cannot be found after MAX_ATTEMPTS attempts
+    """
+
+    DELAY_BETWEEN_ATTEMPTS_SEC: float = 1.0
+    MAX_ATTEMPTS: int = RETRY_TIMEOUT_SEC // DELAY_BETWEEN_ATTEMPTS_SEC
+
+    attempts = 0
+    run_id = None
+    while attempts < MAX_ATTEMPTS:
+        # get the latest commit sha pushed to Github
+        cmd = ["git", "rev-parse", "HEAD"]
+        latest_commit_sha_result = subprocess.run(
+            cmd,
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            text=True, 
+            check=True)
+        if latest_commit_sha_result.returncode != 0:
+            raise subprocess.CalledProcessError(latest_commit_sha_result.returncode, cmd)
+        latest_commit_sha = latest_commit_sha_result.stdout.strip()
+
+        # get the run id for latest_commit_sha
+        cmd = [ "gh", 
+                "run", 
+                "list", 
+                "--json", "createdAt,headSha,name,status,conclusion,databaseId", 
+                "-L10", 
+                "--jq", 
+                f"map(select(.headSha==\"{latest_commit_sha}\")) | max_by(.createdAt)? | .databaseId? // empty"
+            ]
+        run_id_result = subprocess.run(
+            cmd, 
+            stdout=subprocess.PIPE, 
+            stderr=subprocess.PIPE, 
+            text=True, 
+            check=True)
+        if run_id_result.returncode != 0:
+            raise subprocess.CalledProcessError(run_id_result.returncode, cmd)
+        run_id = run_id_result.stdout.strip()
+        if run_id:
+            return int(run_id)
+        time.sleep(DELAY_BETWEEN_ATTEMPTS_SEC)
+        attempts += 1
+    raise TimeoutError(f"Could not get run id for latest commit after {RETRY_TIMEOUT_SEC} seconds of retries")
+
 def make_parent_parser() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
     """Create and configure the parent parser for common arguments.
 
     Purpose of parent parser is to initially detect whether -D/--debug-capture-file
     was provided.  If that's the case, the main parser does not want GH_ACTION_RUN_ID,
-    which is otherwise normally a required positional argument.
+    which is otherwise normally an optional positional argument.
 
     Returns:
         A tuple of (parent_parser, parsed_args) where parent_parser is the
@@ -78,7 +135,10 @@ def parse_args() -> argparse.Namespace:
     if parent_args.debug_capture_file is None:
         parser.add_argument(
             "GH_ACTION_RUN_ID",
-            help="GitHub Actions run ID to watch.",
+            nargs="?",
+            default=None,
+            help="GitHub Actions run ID to watch (default: latest commit's Github Actions CI run)",
+            type=int,
         )
 
     args = parser.parse_args()
@@ -91,6 +151,13 @@ def parse_args() -> argparse.Namespace:
         verbosity = min(args.verbose, 2)
     args.verbosity = verbosity
 
+    # if they don't provide a GH_ACTION_RUN_ID, try to get it from the latest commit
+    if args.GH_ACTION_RUN_ID is None:
+        try:
+            args.GH_ACTION_RUN_ID = get_latest_commit_gh_run_id()
+        except Exception as e:
+            print_out(f"Error getting latest commit's Github Actions CI run ID: {e}", severity=PrintSeverity.ERROR)
+            sys.exit(1)
     return args
 
 class PrintSeverity(IntEnum):
@@ -126,8 +193,16 @@ def main() -> None:
             print_args.append(message_text)
             console.print(*print_args)
 
+    def get_live_console(verbosity: int) -> Console:
+        if verbosity >= PrintVerbosityLevel.NORMAL.value:
+            return console
+        else:
+            # this will never be displayed to stdout
+            return Console(quiet=True)
+
     fetcher: GhApiFetcher | None = None
     client: GhPollingClient | None = None
+    run: GhRun | None = None
     try:
         if args.debug_capture_file is None:
             fetcher = GhApiFetcher(run_id=args.GH_ACTION_RUN_ID)
@@ -140,7 +215,7 @@ def main() -> None:
         print_out(f"watching github action run {run_id}...", verbosity=PrintVerbosityLevel.NORMAL)
         client = GhPollingClient(fetcher)
 
-        run: GhRun = GhRun.construct_from_gh_poller(client)
+        run = GhRun.construct_from_gh_poller(client)
 
         display_options = DisplayOptions(
             Message=MessageLineOpt(message=f"https://github.com/curvcpu/curv-python/actions/runs/{run.run_id}", message_style=Style(color="dodger_blue1", bold=False, link=f"https://github.com/curvcpu/curv-python/actions/runs/{run.run_id}")),
@@ -167,7 +242,7 @@ def main() -> None:
                 worker_group.add_worker(worker_id=ghjob.job_id)
                 latest[ghjob.job_id] = ghjob.get_progress().percent_complete
             worker_group.update_all(latest=latest)
-        with worker_group.with_live(console=console) as live:
+        with worker_group.with_live(console=get_live_console(args.verbosity)) as live:
             first_iteration = True
             while first_iteration or run.status != GhStatus.COMPLETED:
                 first_iteration = False
@@ -211,48 +286,59 @@ def main() -> None:
         if client is not None:
             client.close()
 
-    print_out("----------------------------------------", verbosity=PrintVerbosityLevel.DEBUG)
-
-    cmd = ["gh", "run", "watch", "--interval", "10", "--exit-status", str(run_id)]
-
-    try:
-        result = subprocess.run(
-            cmd, 
-            stdout=subprocess.PIPE, 
-            stderr=subprocess.PIPE, 
-            text=True, 
-            check=True,
-            timeout=10*60    # 10 minutes timeout
-        )
-    except subprocess.TimeoutExpired as e:
-        print_out("CI run timed out", severity=PrintSeverity.ERROR)
-        sys.exit(1)
-    except subprocess.CalledProcessError as e:
-        print_out(f"stdout: {e.stdout}", verbosity=PrintVerbosityLevel.DEBUG)
-        print_out(f"stderr: {e.stderr}", verbosity=PrintVerbosityLevel.DEBUG)
-        if e.returncode == 143:
-            print_out("CI run was cancelled by user", severity=PrintSeverity.WARNING)
+    if run is not None:
+        if run.conclusion == GhConclusion.SUCCESS:
+            print_out("✓ CI run completed successfully", severity=PrintSeverity.NORMAL)
             sys.exit(0)
-        elif e.returncode == 1:
-            import re
-            find_status_match = re.search(r"completed with '(.*)'", e.stdout)
-            ci_run_failed_text = Text('CI run failed', Style(color="red", bold=True))
-            if find_status_match:
-                out_text = Text.assemble(
-                    ci_run_failed_text, 
-                    ' (',
-                    Text(f'{find_status_match.group(1)}', Style(color="dark_red", bold=True)),
-                    ')'
-                )
-            else:
-                out_text = Text.assemble(
-                    ci_run_failed_text, 
-                )
-            print_out(out_text, severity=PrintSeverity.ERROR)
-            sys.exit(1)
         else:
-            raise e
-    sys.exit(0)
+            print_out("✗ CI run completed with failure", severity=PrintSeverity.ERROR)
+            sys.exit(1)
+    else:
+        print_out("fatal: no Github Actions CI run found", severity=PrintSeverity.ERROR)
+        sys.exit(1)
+
+    # print_out("----------------------------------------", verbosity=PrintVerbosityLevel.DEBUG)
+
+    # cmd = ["gh", "run", "watch", "--interval", "10", "--exit-status", str(run_id)]
+
+    # try:
+    #     result = subprocess.run(
+    #         cmd, 
+    #         stdout=subprocess.PIPE, 
+    #         stderr=subprocess.PIPE, 
+    #         text=True, 
+    #         check=True,
+    #         timeout=10*60    # 10 minutes timeout
+    #     )
+    # except subprocess.TimeoutExpired as e:
+    #     print_out("CI run timed out", severity=PrintSeverity.ERROR)
+    #     sys.exit(1)
+    # except subprocess.CalledProcessError as e:
+    #     print_out(f"stdout: {e.stdout}", verbosity=PrintVerbosityLevel.DEBUG)
+    #     print_out(f"stderr: {e.stderr}", verbosity=PrintVerbosityLevel.DEBUG)
+    #     if e.returncode == 143:
+    #         print_out("CI run was cancelled by user", severity=PrintSeverity.WARNING)
+    #         sys.exit(0)
+    #     elif e.returncode == 1:
+    #         import re
+    #         find_status_match = re.search(r"completed with '(.*)'", e.stdout)
+    #         ci_run_failed_text = Text('CI run failed', Style(color="red", bold=True))
+    #         if find_status_match:
+    #             out_text = Text.assemble(
+    #                 ci_run_failed_text, 
+    #                 ' (',
+    #                 Text(f'{find_status_match.group(1)}', Style(color="dark_red", bold=True)),
+    #                 ')'
+    #             )
+    #         else:
+    #             out_text = Text.assemble(
+    #                 ci_run_failed_text, 
+    #             )
+    #         print_out(out_text, severity=PrintSeverity.ERROR)
+    #         sys.exit(1)
+    #     else:
+    #         raise e
+    # sys.exit(0)
 
 if __name__ == "__main__":
     main()
