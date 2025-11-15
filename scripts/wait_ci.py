@@ -60,7 +60,7 @@ print_out = mk_print_out_fn()
 # helper functions
 ################################################################################
 
-def get_latest_commit_gh_run_id(RETRY_TIMEOUT_SEC: int = 3, DELAY_BETWEEN_ATTEMPTS_SEC: int = 1) -> int:
+def get_latest_commit_gh_run_id(RETRY_TIMEOUT_SEC: int = 30, DELAY_BETWEEN_ATTEMPTS_SEC: int = 1) -> int:
     """
     Get the latest commit's Github Actions CI run id. We retry once per second until RETRY_TIMEOUT_SEC is reached.
 
