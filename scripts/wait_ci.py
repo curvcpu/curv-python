@@ -12,16 +12,64 @@ from rich.console import Console
 from rich.text import Text
 from rich.style import Style
 from rich.traceback import install, Traceback
+from typing import Optional, Callable
 
 console = Console()
 
-def get_latest_commit_gh_run_id(RETRY_TIMEOUT_SEC: float = 30) -> int:
+################################################################################
+# console logger
+################################################################################
+
+class PrintSeverity(IntEnum):
+    NORMAL = 0
+    WARNING = (1 << 0)
+    ERROR = (1 << 1)
+
+class PrintVerbosityLevel(IntEnum):
+    NORMAL = 0
+    VERBOSE = 1
+    DEBUG = 2
+
+def mk_print_out_fn(args: Optional[argparse.Namespace] = None) -> Callable[[str|Text, PrintSeverity, PrintVerbosityLevel], None]:
+    if args is None:
+        args = argparse.Namespace()
+        args.verbosity = 0
+    def print_out(message: str|Text, severity: PrintSeverity = PrintSeverity.NORMAL, verbosity: PrintVerbosityLevel = PrintVerbosityLevel.NORMAL) -> None:
+        prog_name = os.path.basename(sys.argv[0])
+        if args.verbosity >= verbosity.value or severity.value >= PrintSeverity.WARNING.value:
+            print_args = []
+            prog_name_text = Text(f"[{prog_name}] ", style=Style(color="dark_blue", bold=False))
+            print_args.append(prog_name_text)
+            if severity.value >= PrintSeverity.ERROR.value:
+                prefix_text = Text(f"{severity.name}: ", style=Style(color="red", bold=False))
+                print_args.append(prefix_text)
+            elif severity.value >= PrintSeverity.WARNING.value:
+                prefix_text = Text(f"{severity.name}: ", style=Style(color="yellow", bold=False))
+                print_args.append(prefix_text)
+            if isinstance(message, str):
+                message_text = Text(message, style=Style(color="white", bold=False))
+            else:
+                message_text = message
+            print_args.append(message_text)
+            console.print(*print_args)
+    return print_out
+
+print_out = mk_print_out_fn()
+
+################################################################################
+# helper functions
+################################################################################
+
+def get_latest_commit_gh_run_id(RETRY_TIMEOUT_SEC: int = 3, DELAY_BETWEEN_ATTEMPTS_SEC: int = 1) -> int:
     """
     Get the latest commit's Github Actions CI run id. We retry once per second until RETRY_TIMEOUT_SEC is reached.
 
     Args:
         RETRY_TIMEOUT_SEC: The number of seconds to retry before timing out
-                     (default: 30)
+        DELAY_BETWEEN_ATTEMPTS_SEC: The number of seconds to wait between attempts
+    
+    Together, these determine how many attempts will be made before timing out.
+
     Returns:
         The run id for the latest commit's Github Actions CI run
     
@@ -30,7 +78,6 @@ def get_latest_commit_gh_run_id(RETRY_TIMEOUT_SEC: float = 30) -> int:
         RuntimeError: If the run id for the latest commit's Github Actions CI run cannot be found after MAX_ATTEMPTS attempts
     """
 
-    DELAY_BETWEEN_ATTEMPTS_SEC: float = 1.0
     MAX_ATTEMPTS: int = RETRY_TIMEOUT_SEC // DELAY_BETWEEN_ATTEMPTS_SEC
 
     attempts = 0
@@ -68,9 +115,15 @@ def get_latest_commit_gh_run_id(RETRY_TIMEOUT_SEC: float = 30) -> int:
         run_id = run_id_result.stdout.strip()
         if run_id:
             return int(run_id)
-        time.sleep(DELAY_BETWEEN_ATTEMPTS_SEC)
+        
+        print_out(f"Could not get run id for latest commit yet (attempt {attempts + 1} of {MAX_ATTEMPTS})", severity=PrintSeverity.WARNING)
+        time.sleep(float(DELAY_BETWEEN_ATTEMPTS_SEC))
         attempts += 1
     raise TimeoutError(f"Could not get run id for latest commit after {RETRY_TIMEOUT_SEC} seconds of retries")
+
+################################################################################
+# cli argument parsing
+################################################################################
 
 def make_parent_parser() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
     """Create and configure the parent parser for common arguments.
@@ -116,7 +169,6 @@ def make_parent_parser() -> tuple[argparse.ArgumentParser, argparse.Namespace]:
     args, remaining = parent_parser.parse_known_args()
     return parent_parser, args
 
-
 def parse_args() -> argparse.Namespace:
     # Get parent parser and its parsed args
     parent_parser, parent_args = make_parent_parser()
@@ -151,47 +203,28 @@ def parse_args() -> argparse.Namespace:
         verbosity = min(args.verbose, 2)
     args.verbosity = verbosity
 
+    # set the global print_out function to the one that was just created
+    global print_out
+    print_out = mk_print_out_fn(args)
+
     # if they don't provide a GH_ACTION_RUN_ID, try to get it from the latest commit
     if args.GH_ACTION_RUN_ID is None:
         try:
             args.GH_ACTION_RUN_ID = get_latest_commit_gh_run_id()
         except Exception as e:
-            print_out(f"Error getting latest commit's Github Actions CI run ID: {e}", severity=PrintSeverity.ERROR)
+            print_out(f"Unable to get latest commit's Github Actions CI run ID:", severity=PrintSeverity.ERROR)
+            print_out(f"  {e}", severity=PrintSeverity.ERROR)
+            print_out(f"Hint: either provide a GH_ACTION_RUN_ID as a positional argument and/or make sure you actually pushed your last commit to Github", severity=PrintSeverity.ERROR)
             sys.exit(1)
     return args
 
-class PrintSeverity(IntEnum):
-    NORMAL = 0
-    WARNING = (1 << 0)
-    ERROR = (1 << 1)
-
-class PrintVerbosityLevel(IntEnum):
-    NORMAL = 0
-    VERBOSE = 1
-    DEBUG = 2
+################################################################################
+# main function
+################################################################################
 
 def main() -> None:
     install(show_locals=True)
     args = parse_args()
-    prog_name = os.path.basename(sys.argv[0])
-
-    def print_out(message: str|Text, severity: PrintSeverity = PrintSeverity.NORMAL, verbosity: PrintVerbosityLevel = PrintVerbosityLevel.NORMAL) -> None:
-        if args.verbosity >= verbosity.value or severity.value >= PrintSeverity.WARNING.value:
-            print_args = []
-            prog_name_text = Text(f"[{prog_name}] ", style=Style(color="dark_blue", bold=False))
-            print_args.append(prog_name_text)
-            if severity.value >= PrintSeverity.ERROR.value:
-                prefix_text = Text(f"{severity.name}: ", style=Style(color="red", bold=False))
-                print_args.append(prefix_text)
-            elif severity.value >= PrintSeverity.WARNING.value:
-                prefix_text = Text(f"{severity.name}: ", style=Style(color="yellow", bold=False))
-                print_args.append(prefix_text)
-            if isinstance(message, str):
-                message_text = Text(message, style=Style(color="white", bold=False))
-            else:
-                message_text = message
-            print_args.append(message_text)
-            console.print(*print_args)
 
     def get_live_console(verbosity: int) -> Console:
         if verbosity >= PrintVerbosityLevel.NORMAL.value:

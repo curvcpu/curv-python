@@ -10,7 +10,6 @@ PACKAGES := packages/curv packages/curvtools packages/curvpyutils
 PKG_CURV := packages/curv
 PKG_CURVTOOLS := packages/curvtools
 PKG_CURVPYUTILS := packages/curvpyutils
-SCRIPT_GH_RUN_ID := scripts/get_gh_run_id_for_last_commit.sh
 SCRIPT_WAIT_CI := scripts/wait_ci.py
 SCRIPT_SUBST := curv-subst
 SCRIPT_SUBST_OPTS := -f -1 -m
@@ -289,7 +288,7 @@ publish: prepublish-checks fetch-latest-tags build test
 				 commit_msg="chore(release): prepare $$name for $$tag release"; \
 				 git commit --allow-empty -m "$$commit_msg" && git push $(REMOTE) HEAD; \
 				 echo "🔄 Waiting for CI to pass on '$$commit_msg'..."; \
-				 $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
+				 $(SCRIPT_WAIT_CI) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
 			   } \
 			|| { echo "✓ Updated readme.md with new version numbers for $$tag release"; \
 				readme_commit_msg="chore(release): update readme.md to next version numbers before publishing $$tag release"; \
@@ -300,7 +299,7 @@ publish: prepublish-checks fetch-latest-tags build test
 				git commit --allow-empty -m "$$commit_msg" && git push $(REMOTE) HEAD; \
 				git push $(REMOTE) HEAD || { echo "❌ Failed to push commit; please do it manually"; exit 1; }; \
 				echo "🔄 Waiting for CI to pass on '$$commit_msg'..."; \
-				$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
+				$(SCRIPT_WAIT_CI) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
 				}; \
 	  \
 	  echo "🔥 Tagging $$name → $$tag"; \
@@ -311,7 +310,7 @@ publish: prepublish-checks fetch-latest-tags build test
 	echo "🔄 Tagged all packages and pushing to remote with CI waiting for success..."; \
 	git push $(REMOTE) --tags || { echo "Error: Failed to push tags"; exit 1; }; \
 	sleep 5; \
-	$(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed on push of tags"; exit 1; }; \
+	$(SCRIPT_WAIT_CI) || { echo "Error: CI failed on push of tags"; exit 1; }; \
 	\
 	echo "🔄 Waiting for PyPI to update showing latest versions..."; \
 	wait_for_pypi_update() { \
@@ -340,7 +339,7 @@ publish: prepublish-checks fetch-latest-tags build test
 push: fetch-latest-tags
 	@set -euo pipefail; \
 	  git push $(REMOTE) HEAD || { echo "Error: Failed to push commit"; exit 1; }; \
-	  $(SCRIPT_WAIT_CI) $$($(SCRIPT_GH_RUN_ID)) || { echo "Error: CI failed"; exit 1; };
+	  $(SCRIPT_WAIT_CI) || { echo "Error: CI failed"; exit 1; };
 
 #
 # make untag PKG=curvtools [VER=0.0.6]
