@@ -232,6 +232,9 @@ def main(argv):
     if not verbose:
         console.print(f"{publish_order_str}")
     else:
+        yes_text = Text.from_markup(":p_button: (yes)")
+        no_text = Text.from_markup("(no)")
+
         table = Table(title=f"If you want to publish [bold magenta3]{pkg}[/bold magenta3]...")
         table.add_column("Package")
         table.add_column("Latest Commit Time")
@@ -241,9 +244,9 @@ def main(argv):
             table.add_row(p, 
                 PackageInfo(p).get_latest_commit_ts(), 
                 PackageInfo(p).get_latest_tag_ts(), 
-                "⚠️ Yes" if PackageInfo(p).needs_publish() else "🚫 No")
+                yes_text if PackageInfo(p).needs_publish() else no_text)
         console.print(f"")
-        console.print(table)
+        console.print(table, emoji=True)
         console.print("")
         panel = Panel.fit(
             Text.assemble(
