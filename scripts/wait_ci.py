@@ -330,49 +330,6 @@ def main() -> None:
         print_out("fatal: no Github Actions CI run found", severity=PrintSeverity.ERROR)
         sys.exit(1)
 
-    # print_out("----------------------------------------", verbosity=PrintVerbosityLevel.DEBUG)
-
-    # cmd = ["gh", "run", "watch", "--interval", "10", "--exit-status", str(run_id)]
-
-    # try:
-    #     result = subprocess.run(
-    #         cmd, 
-    #         stdout=subprocess.PIPE, 
-    #         stderr=subprocess.PIPE, 
-    #         text=True, 
-    #         check=True,
-    #         timeout=10*60    # 10 minutes timeout
-    #     )
-    # except subprocess.TimeoutExpired as e:
-    #     print_out("CI run timed out", severity=PrintSeverity.ERROR)
-    #     sys.exit(1)
-    # except subprocess.CalledProcessError as e:
-    #     print_out(f"stdout: {e.stdout}", verbosity=PrintVerbosityLevel.DEBUG)
-    #     print_out(f"stderr: {e.stderr}", verbosity=PrintVerbosityLevel.DEBUG)
-    #     if e.returncode == 143:
-    #         print_out("CI run was cancelled by user", severity=PrintSeverity.WARNING)
-    #         sys.exit(0)
-    #     elif e.returncode == 1:
-    #         import re
-    #         find_status_match = re.search(r"completed with '(.*)'", e.stdout)
-    #         ci_run_failed_text = Text('CI run failed', Style(color="red", bold=True))
-    #         if find_status_match:
-    #             out_text = Text.assemble(
-    #                 ci_run_failed_text, 
-    #                 ' (',
-    #                 Text(f'{find_status_match.group(1)}', Style(color="dark_red", bold=True)),
-    #                 ')'
-    #             )
-    #         else:
-    #             out_text = Text.assemble(
-    #                 ci_run_failed_text, 
-    #             )
-    #         print_out(out_text, severity=PrintSeverity.ERROR)
-    #         sys.exit(1)
-    #     else:
-    #         raise e
-    # sys.exit(0)
-
 if __name__ == "__main__":
     main()
 
