@@ -9,6 +9,7 @@ from curvtools.cli.curvcfg.lib.util import get_config_values
 from curvtools.cli.curvcfg.lib.globals.console import console
 from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
 from curvtools.cli.curvcfg.lib.util.draw_tables import display_toml_tree, display_merged_toml_table, display_dep_file_contents
+from curvtools.cli.curvcfg.lib.globals.constants import DEFAULT_OVERLAY_TOML_NAME
 
 ###############################################################################
 #
@@ -37,7 +38,6 @@ def _make_overlay_matcher(
     sub_dir: Path,
     overlay_toml_name: str,
     overlay_prefix: str,
-    combine_overlays: bool,
     no_ascend_dir_hierarchy: bool,
 ) -> Callable[[Path, List[str], str], bool]:
     """Create a matcher for overlay files honoring CLI semantics.
@@ -47,32 +47,16 @@ def _make_overlay_matcher(
     """
     sub_dir_resolved = sub_dir.resolve()
     default_name = overlay_toml_name
-    prefixed_name = f"{overlay_prefix}.{overlay_toml_name}" if overlay_prefix else None
+
+    assert overlay_prefix=="", "overlay_prefix must be empty"
+    assert overlay_toml_name==DEFAULT_OVERLAY_TOML_NAME, "overlay_toml_name must be " + DEFAULT_OVERLAY_TOML_NAME + " but was " + overlay_toml_name
 
     def matcher(dir_path: Path, entries: List[str], name: str) -> bool:
         # Restrict to the starting directory when no ascending is requested
         if no_ascend_dir_hierarchy and Path(dir_path).resolve() != sub_dir_resolved:
             return False
-
-        # No prefix: accept only the default name
-        if not overlay_prefix:
-            return name == default_name
-
-        # With prefix
-        has_prefixed = prefixed_name in entries if prefixed_name else False
-        has_default = default_name in entries
-
-        if combine_overlays:
-            # Accept both when prefixed exists; otherwise accept default if present
-            if has_prefixed:
-                return name in {prefixed_name, default_name}
-            return name == default_name
         else:
-            # Prefer prefixed if present; otherwise default
-            if has_prefixed:
-                return name == prefixed_name
             return name == default_name
-
     return matcher
 
 def _resolve_base_config_path(base_config_arg: str) -> Path:
@@ -95,7 +79,6 @@ def _mk_tomls_list(
     overlay_dir: str,
     overlay_toml_name: str,
     overlay_prefix: str,
-    combine_overlays: bool,
     no_ascend_dir_hierarchy: bool
 ) -> list[str]:
     """
@@ -106,7 +89,6 @@ def _mk_tomls_list(
         overlay_dir: the overlay directory path
         overlay_toml_name: the name of the overlay TOML file
         overlay_prefix: the prefix for overlay files
-        combine_overlays: whether to combine overlays
         no_ascend_dir_hierarchy: whether to not ascend directory hierarchy
 
     Returns:
@@ -121,7 +103,6 @@ def _mk_tomls_list(
         sub_dir=overlay_dir_path,
         overlay_toml_name=overlay_toml_name,
         overlay_prefix=overlay_prefix,
-        combine_overlays=combine_overlays,
         no_ascend_dir_hierarchy=no_ascend_dir_hierarchy,
     )
 
@@ -152,7 +133,6 @@ def get_tomls_list(
     overlay_dir: str = ".",
     overlay_toml_name: str = "overlay.toml",
     overlay_prefix: str = "",
-    combine_overlays: bool = False,
     no_ascend_dir_hierarchy: bool = False
 ) -> list[str]:
     """
@@ -162,8 +142,8 @@ def get_tomls_list(
         base_config: the base config file path
         overlay_dir: the overlay directory path
         overlay_toml_name: the name of the overlay TOML file
-        overlay_prefix: the prefix for overlay files
-        combine_overlays: whether to combine overlays
+        overlay_prefix: the prefix for overlay files (ALWAYS "" now)
+        # combine_overlays: whether to combine overlays
         no_ascend_dir_hierarchy: whether to not ascend directory hierarchy
 
     Returns:
@@ -178,7 +158,6 @@ def get_tomls_list(
         overlay_dir,
         overlay_toml_name,
         overlay_prefix,
-        combine_overlays,
         no_ascend_dir_hierarchy
     )
     
@@ -348,12 +327,13 @@ def merge(args: CurvCliArgs) -> int:
     verbosity = int(args.get("verbosity", 0) or 0)
 
     # get the list of TOML files to merge
+    assert args.get("overlay_toml_name")==DEFAULT_OVERLAY_TOML_NAME, "overlay_toml_name must be " + DEFAULT_OVERLAY_TOML_NAME + " but was " + args.get("overlay_toml_name")
+    assert args.get("overlay_prefix")=="", "overlay_prefix must be empty but was " + args.get("overlay_prefix")
     tomls_list = get_tomls_list(
         base_config=args.get("base_config_file"),
         overlay_dir=str(args.get("overlay_dir", ".")),
         overlay_toml_name=str(args.get("overlay_toml_name", "overlay.toml")),
         overlay_prefix=str(args.get("overlay_prefix", "")),
-        combine_overlays=bool(args.get("combine_overlays", True)),
         no_ascend_dir_hierarchy=not bool(args.get("ascend_dir_hierarchy", True))
     )
 

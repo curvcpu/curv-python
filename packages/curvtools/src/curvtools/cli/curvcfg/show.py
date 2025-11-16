@@ -2,7 +2,7 @@ import os
 import sys
 from typing import Dict, Union
 from curvtools.cli.curvcfg.lib.globals.console import console
-from curvtools.cli.curvcfg.lib.globals.profiles import get_all_profiles, get_active_profile_name
+from curvtools.cli.curvcfg.lib.globals.profiles import get_all_profiles #, get_active_profile_name
 from rich.table import Table
 from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
 from curvtools.cli.curvcfg.lib.util import get_config_values
@@ -12,6 +12,7 @@ from curvtools.cli.curvcfg.lib.util.draw_tables import (
     display_merged_toml_table
 )
 from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
+from curvtools.cli.curvcfg.lib.globals.constants import DEFAULT_OVERLAY_TOML_NAME
 
 def show_profiles(args: CurvCliArgs) -> int:
     """
@@ -34,10 +35,8 @@ def show_profiles(args: CurvCliArgs) -> int:
     table.add_column("File Path")
     table.add_column("Description")
     for name,profile in profiles.items():
-        # get profile path and description
         profile_description = profile["description"].strip() if "description" in profile else "(no description)"
-        active_str = f" [green]*[/green]" if profile.is_active() else ""
-        table.add_row(f"[bright_blue]{name}{active_str}[/bright_blue]", get_curv_paths().mk_rel_to_curv_root(profile.toml_file()), profile_description)
+        table.add_row(f"[bright_blue]{name}[/bright_blue]", "$CURV_ROOT_DIR/" + get_curv_paths().mk_rel_to_curv_root(profile.toml_file()), profile_description)
     console.print(table)
     if len(profiles) == 0:
         print("no profiles found", file=sys.stderr)
@@ -53,25 +52,17 @@ def show_overlays(args: CurvCliArgs) -> int:
 
     verbosity = int(args.get("verbosity", 0) or 0)
     
-    active_profile_name = get_active_profile_name(get_curv_paths().get_config_dir())
-    base_config_abs_path = str(args.get("base_config_file"))
-    if not base_config_abs_path:
-        if not active_profile_name:
-            console.print(f"no active profile found in '{get_curv_paths().get_config_dir()}'; you will need to supply --base-config")
-            return 1
-        else:
-            base_config = active_profile_name
-    else:
-        base_config = base_config_abs_path
+    base_config = str(args.get("base_config_file"))
     
+    assert args.get("overlay_toml_name")==DEFAULT_OVERLAY_TOML_NAME, "overlay_toml_name must be " + DEFAULT_OVERLAY_TOML_NAME + " but was " + args.get("overlay_toml_name")
+    assert args.get("overlay_prefix")=="", "overlay_prefix must be empty but was " + args.get("overlay_prefix")
     tomls_list = get_tomls_list(
         base_config=base_config,
         overlay_dir=str(args.get("overlay_dir", ".")),
         overlay_toml_name=str(args.get("overlay_toml_name", "overlay.toml")),
         overlay_prefix=str(args.get("overlay_prefix", "")),
-        combine_overlays=bool(args.get("combine_overlays", False)),
         no_ascend_dir_hierarchy=bool(args.get("no_ascend_dir_hierarchy", False)))
-    
+
     # +1 because it only displays if verbosity is at least 1
     display_toml_tree(tomls_list, verbosity=verbosity+1)
     

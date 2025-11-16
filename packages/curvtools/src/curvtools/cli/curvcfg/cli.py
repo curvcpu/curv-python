@@ -11,7 +11,7 @@ from curvtools.cli.curvcfg.cli_helpers.help_formatter import CurvcfgGroup, Curvc
 from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
 from curvtools.cli.curvcfg.lib.util.draw_tables import display_args_table, display_curvcfg_settings_table
-from curvtools.cli.curvcfg.lib.globals.constants import DEFAULT_MERGED_TOML_NAME, PROGRAM_NAME
+from curvtools.cli.curvcfg.lib.globals.constants import DEFAULT_MERGED_TOML_NAME, PROGRAM_NAME, DEFAULT_OVERLAY_TOML_NAME
 from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
 from curvtools.cli.curvcfg.cli_helpers import (
     BaseConfigAndSchemaMode,
@@ -60,10 +60,6 @@ merge command options:
   --dep-file-outfile=<dep-file-outfile>        Where to write the Makefile dependency file. Default is "<build-dir>/make.deps/config.mk.d".
   --overlay-no-ascend-dirs                     Do not ascend directories when searching for overlay toml files; only consider the overlay directory. Default is False.
   --overlay-dir=<overlay-dir>                  The lowest directory that contains an overlay.toml file. Default is cwd. May be relative to cwd, or absolute.
-  --overlay-toml-name=<overlay-toml-name>      The base name of overlay toml files. Default is "overlay.toml".
-  --overlay-prefix=<overlay-prefix>            A prefix that can be used to select between different overlay toml files. Default is empty.
-  --overlay-combine                            If a directory contains both a `<prefix>.overlay.toml` and an `overlay.toml` file, use both, with the prefixed file taking precedence. Default is True.
-  --include-out-toml-in-deps                   Include the output merged.toml in the dependencies listed in the Makefile dependency file. Default is True.
 
 completions command options:
   --shell=<shell>  Shell to generate completions for. Defaults to current shell.
@@ -148,7 +144,7 @@ def cli(
 @merged_toml_opt(name="out_toml", outfile=True)
 @output_dep_opt()
 @click.option(
-    "--include-out-toml-in-deps",
+    "--include-out-toml-in-deps/--no-include-out-toml-in-deps",
     "include_out_toml_in_deps",
     is_flag=True,
     default=True,
@@ -162,9 +158,6 @@ def merge(
     schema_file: FsPathType,
     build_dir: str,
     overlay_dir: str,
-    overlay_toml_base_name: str,
-    overlay_prefix: str,
-    combine_overlays: bool,
     ascend_dir_hierarchy: bool,
     out_toml: Optional[str],
     out_dep: Optional[str],
@@ -177,9 +170,8 @@ def merge(
         "schema_file": schema_file,
         "build_dir": build_dir,
         "overlay_dir": overlay_dir,
-        "overlay_toml_name": overlay_toml_base_name,
-        "overlay_prefix": overlay_prefix,
-        "combine_overlays": combine_overlays,
+        "overlay_toml_name": DEFAULT_OVERLAY_TOML_NAME,
+        "overlay_prefix": "",
         "ascend_dir_hierarchy": ascend_dir_hierarchy,
         "out_toml": out_toml,
         "out_dep": out_dep,
@@ -289,14 +281,18 @@ def show_active_variables(ctx: click.Context, build_dir: str, base_config_file: 
 @overlay_opts()
 @verbosity_opts(include_verbose=True)
 @click.pass_context
-def show_overlays(ctx: click.Context, base_config_file: FsPathType, overlay_dir: str, overlay_toml_base_name: str, overlay_prefix: str, combine_overlays: bool, ascend_dir_hierarchy: bool, verbose: int) -> None:
+def show_overlays(
+    ctx: click.Context, 
+    base_config_file: FsPathType, 
+    overlay_dir: str, 
+    ascend_dir_hierarchy: bool, 
+    verbose: int) -> None:
     show_args: CurvCliArgs = {
         "curv_root_dir": ctx.obj.get("curv_root_dir"),
         "base_config_file": base_config_file,
         "overlay_dir": overlay_dir,
-        "overlay_toml_name": overlay_toml_base_name,
-        "overlay_prefix": overlay_prefix,
-        "combine_overlays": combine_overlays,
+        "overlay_toml_name": DEFAULT_OVERLAY_TOML_NAME,
+        "overlay_prefix": "",
         "no_ascend_dir_hierarchy": not ascend_dir_hierarchy,
         "verbosity": max(ctx.obj["verbosity"], min(verbose, 3)),
     }
@@ -329,10 +325,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     """
     This is the curvcfg CLI program's true entry point.
     """
-    install(show_locals=True)
+    import click
+    install(show_locals=True, word_wrap=True, width=get_console_width(), suppress=[click])
 
     try:
-        cli.main(args=argv, standalone_mode=False)
+        cli.main(args=argv, standalone_mode=True)
     except click.exceptions.ClickException as e:
         Traceback.from_exception(type(e), e, e.__traceback__, show_locals=True)
         return e.exit_code
