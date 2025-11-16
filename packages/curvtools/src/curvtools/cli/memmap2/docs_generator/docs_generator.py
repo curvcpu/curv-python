@@ -117,7 +117,7 @@ def create_markdown_slave_tables(detailed_ranges: Dict[str, List[Dict]]) -> str:
             sections.append("|---------|----------|--------|------|")
 
             for reg in sorted(regs, key=lambda x: x['start']):
-                sections.append(f"| {format_address(reg['start'])} - {format_address(reg['end'])} | {reg['name']} | {format_access(reg['access'])} | {format_size(reg['size'])} |")
+                sections.append(f"| {format_address(reg['start'])} | {reg['name']} | {format_access(reg['access'])} | {format_size(reg['size'])} |")
 
             sections.append("")  # Empty line
 

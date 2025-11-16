@@ -35,7 +35,7 @@ class Range:
             return ' - '
         return (self.access or '').upper()
     def format_cacheable(self) -> str:
-        return "Yes" if self.cacheable else "-"
+        return "Yes" if self.cacheable else "No"
     def format_size(self) -> str:
         size_bytes = self.end - self.start + 1
         if size_bytes > 1024*1024:
