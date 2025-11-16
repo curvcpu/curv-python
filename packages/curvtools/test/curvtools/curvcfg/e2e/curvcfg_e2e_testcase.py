@@ -35,6 +35,9 @@ class CurvCfgE2ETestCase(unittest.TestCase):
 
     def _cleanup_temp_paths(self) -> None:
         # If the test failed or errored, keep temp paths for debugging
+        if self._force_keep_temps:
+            print(f"📣 keeping temp paths for debugging: {self._temp_paths}")
+            return
         try:
             outcome = getattr(self, "_outcome", None)
             failed = False
@@ -80,7 +83,7 @@ class CurvCfgE2ETestCase(unittest.TestCase):
         except Exception:
             repo_root = os.getcwd()
         rel = env.get("CURV_FAKE_ROOT_REL", "packages/curvtools/test/curvtools/curvcfg/fake_curv_root")
-        env.setdefault("CURV_ROOT_DIR", os.path.join(repo_root, rel))
+        env["CURV_ROOT_DIR"] = os.path.join(repo_root, rel)
         # # Ensure workspace packages are importable in subprocesses
         # # Prepend so local sources take precedence over any installed versions
         # workspace_paths = [
@@ -96,17 +99,14 @@ class CurvCfgE2ETestCase(unittest.TestCase):
             # Mark to keep temps and print current temp paths for quick access
             self._force_keep_temps = True
             # Try to detect a --build-dir <path> in the invoked command and keep it explicitly
-            try:
-                if "--build-dir" in cmd:
-                    idx = cmd.index("--build-dir")
-                    if idx + 1 < len(cmd):
-                        bd = cmd[idx + 1]
-                        if isinstance(bd, str):
-                            self._keep_paths.add(bd)
-            except Exception:
-                pass
-            try:
-                print(f"📣 subprocess failed; keeping temp paths for debugging: {self._temp_paths}")
-            except Exception:
-                pass
+            if "--build-dir" in cmd:
+                print(f"❤️ build-dir in cmd: {cmd}")
+                idx = cmd.index("--build-dir")
+                if idx + 1 < len(cmd):
+                    bd = cmd[idx + 1]
+                    if isinstance(bd, str):
+                        self._keep_paths.add(bd)
+            else:
+                print(f"📣 build-dir not in cmd: {cmd}")
+            print(f"📣 subprocess failed; keeping temp paths for debugging: {self._temp_paths}")
         return res

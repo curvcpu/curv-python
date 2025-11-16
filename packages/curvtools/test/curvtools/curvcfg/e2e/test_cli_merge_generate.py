@@ -77,11 +77,17 @@ class TestCliMergeGenerate(CurvCfgE2ETestCase):
 
         # 1) Run merge (no overlays)
         res_merge = self.run_cmd(self.base_cmd + merge_args, cwd=str(base_dir))
+        if res_merge.returncode != 0:
+            self._force_keep_temps = True
         self.assertEqual(res_merge.returncode, 0, f"merge failed: {res_merge.returncode}\nstdout:\n{res_merge.stdout}\nstderr:\n{res_merge.stderr}")
+        if res_merge.returncode != 0:
+            self._force_keep_temps = True
         self.assertTrue(os.path.isfile(merged_toml_path), f"merged.toml not found at {merged_toml_path}")
 
         # 2) Run generate using the merged.toml we just produced
         res_gen = self.run_cmd(self.base_cmd + generate_args, cwd=str(base_dir))
+        if res_gen.returncode != 0:
+            self._force_keep_temps = True
         self.assertEqual(res_gen.returncode, 0, f"generate failed: {res_gen.returncode}\nstdout:\n{res_gen.stdout}\nstderr:\n{res_gen.stderr}")
 
         # 3) Compare outputs with expected
@@ -137,6 +143,7 @@ class TestCliMergeGenerate(CurvCfgE2ETestCase):
             cmp_ok = filecmp.cmp(final_generated_path, expected_path, shallow=False)
             # Try to display diffs if the files differ before we die on the assertion
             if not cmp_ok:
+                self._force_keep_temps = True
                 if shutil.which("delta"):
                     subprocess.run(["delta", final_generated_path, expected_path], check=False)
                 elif shutil.which("diff"):
