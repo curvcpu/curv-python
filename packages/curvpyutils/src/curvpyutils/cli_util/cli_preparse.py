@@ -44,6 +44,12 @@ class EarlyArg:
   def set_value(self, value: str, source: ParameterSource):
     self.value = value
     self.source = source
+  
+  def __str__(self):
+    return f"EarlyArg(value={str(self.value)}, source={str(self.source)}, param_decls={str(self.param_decls)}, env_var_fallback={str(self.env_var_fallback)}, default_value_fallback={str(self.default_value_fallback)})"
+
+  def __repr__(self):
+    return self.__str__()
 
 def preparse(early_args: list[EarlyArg], argv: Optional[list[str]] = sys.argv[1:]) -> None:
   """
