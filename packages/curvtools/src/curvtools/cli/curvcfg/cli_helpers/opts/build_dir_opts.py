@@ -11,7 +11,7 @@ from curvtools.cli.curvcfg.lib.globals.constants import DEFAULT_DEP_FILE_PATH, D
 
 def merged_toml_opt(name: str|None=None, outfile: bool=False):
     """
-    Make a merged toml option, which can be an input file --merged-toml or an output file --out-toml.
+    Make a merged toml option, which can be an input file --merged-file or an output file --out-toml.
     """
     def get_merged_toml_abs_path(merged_toml_arg: str|None, ctx: click.Context) -> str:
         """
@@ -41,21 +41,21 @@ def merged_toml_opt(name: str|None=None, outfile: bool=False):
         return get_merged_toml_abs_path(value, ctx)
 
     merged_toml_option_input_file =click.option(
-        "--merged-toml",
+        "--merged-file",
         name,
-        metavar="<merged-toml>",
+        metavar="<merged-toml-file-in>",
         default=DEFAULT_MERGED_TOML_PATH,
         show_default=True,
-        help="Path to merged config TOML", #  Default is <build-dir>/config/merged.toml.
+        help="Path to merged config TOML input file", #  Default is <build-dir>/config/merged.toml.
         callback=input_merged_toml_callback,
     )
     merged_toml_option_output_file = click.option(
-        "--out-toml",
+        "--merged-file",
         name,
-        metavar="<out-toml-name>",
+        metavar="<merged-toml-file-out>",
         default=DEFAULT_MERGED_TOML_PATH,
         show_default=True,
-        help="Output merged TOML files",
+        help="Path to merged config TOML output file",
         callback=output_merged_toml_callback,
     )
 

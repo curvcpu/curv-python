@@ -59,10 +59,10 @@ def _make_overlay_matcher(
             return name == default_name
     return matcher
 
-def _resolve_base_config_path(base_config_arg: str) -> Path:
-    if not os.path.isfile(base_config_arg):
-        raise FileNotFoundError(f"Base config {base_config_arg} not found")
-    return Path(base_config_arg).resolve()
+def _resolve_profile_file_path(profile_file_arg: str) -> Path:
+    if not os.path.isfile(profile_file_arg):
+        raise FileNotFoundError(f"Profile file {profile_file_arg} not found")
+    return Path(profile_file_arg).resolve()
 
 def _resolve_schema_path(schema_toml_arg: str) -> Path:
     if not os.path.isfile(schema_toml_arg):
@@ -75,7 +75,7 @@ def _resolve_overlay_dir(overlay_dir_arg: str) -> Path:
     return Path(overlay_dir_arg).resolve()
 
 def _mk_tomls_list(
-    base_config: Path, 
+    profile_file: Path, 
     overlay_dir: str,
     overlay_toml_name: str,
     overlay_prefix: str,
@@ -85,7 +85,7 @@ def _mk_tomls_list(
     Make the complete list of TOML files to merge.
 
     Args:
-        base_config: the base config file path
+        profile_file: the profile file path
         overlay_dir: the overlay directory path
         overlay_toml_name: the name of the overlay TOML file
         overlay_prefix: the prefix for overlay files
@@ -119,7 +119,7 @@ def _mk_tomls_list(
     )
 
     # Build final tomls list: base first (lowest precedence), then overlays in order
-    final_tomls_list: list[str] = [str(base_config)] + [str(p) for p in overlay_files]
+    final_tomls_list: list[str] = [str(profile_file)] + [str(p) for p in overlay_files]
     return final_tomls_list
 
 ###############################################################################
@@ -129,7 +129,7 @@ def _mk_tomls_list(
 ###############################################################################
 
 def get_tomls_list(
-    base_config: str,
+    profile_file: str,
     overlay_dir: str = ".",
     overlay_toml_name: str = "overlay.toml",
     overlay_prefix: str = "",
@@ -139,7 +139,7 @@ def get_tomls_list(
     Get the list of TOML files to merge.
 
     Args:
-        base_config: the base config file path
+        profile_file: the profile file path
         overlay_dir: the overlay directory path
         overlay_toml_name: the name of the overlay TOML file
         overlay_prefix: the prefix for overlay files (ALWAYS "" now)
@@ -149,12 +149,12 @@ def get_tomls_list(
     Returns:
         A list of TOML file paths
     """
-    # get the base config
-    base_config_path = base_config
+    # get the profile file
+    profile_file_path = profile_file
 
     # make the list of TOML files to merge
     tomls_list = _mk_tomls_list(
-        base_config_path,
+        profile_file_path,
         overlay_dir,
         overlay_toml_name,
         overlay_prefix,
@@ -330,7 +330,7 @@ def merge(args: CurvCliArgs) -> int:
     assert args.get("overlay_toml_name")==DEFAULT_OVERLAY_TOML_NAME, "overlay_toml_name must be " + DEFAULT_OVERLAY_TOML_NAME + " but was " + args.get("overlay_toml_name")
     assert args.get("overlay_prefix")=="", "overlay_prefix must be empty but was " + args.get("overlay_prefix")
     tomls_list = get_tomls_list(
-        base_config=args.get("base_config_file"),
+        profile_file=args.get("profile_file"),
         overlay_dir=str(args.get("overlay_dir", ".")),
         overlay_toml_name=str(args.get("overlay_toml_name", "overlay.toml")),
         overlay_prefix=str(args.get("overlay_prefix", "")),
@@ -356,35 +356,35 @@ def merge(args: CurvCliArgs) -> int:
 
     # get output dir path
     build_dir = args.get("build_dir")
-    merged_toml_output_dir = os.path.dirname(args.get("out_toml"))
+    merged_toml_output_dir = os.path.dirname(args.get("merged_file"))
     dep_file_output_dir = os.path.dirname(args.get("out_dep"))
     os.makedirs(merged_toml_output_dir, exist_ok=True)
     os.makedirs(dep_file_output_dir, exist_ok=True)
 
     # If schema file and base config file are the same file, then we don't want to append the schema data to
     # the end of the merged TOML so we can use it during the generate step.
-    if args.get("schema_file") != args.get("base_config_file"):
+    if args.get("schema_file") != args.get("profile_file"):
         schema_append_path = args.get("schema_file")
     else:
         schema_append_path = None
 
     # Unconditionally write output TOML
     merged_toml_overwritten = merged.write_to_file(
-        args.get("out_toml"), 
+        args.get("merged_file"), 
         write_only_if_changed=True, 
         append_contents_of_file=schema_append_path)
 
     if verbosity >= 1:
-        display_merged_toml_table(config_values, get_curv_paths().mk_rel_to_cwd(args.get("out_toml")), use_ascii_box=False, verbosity=verbosity)
+        display_merged_toml_table(config_values, get_curv_paths().mk_rel_to_cwd(args.get("merged_file")), use_ascii_box=False, verbosity=verbosity)
 
     # Unconditionally write dep fragment file
-    s = mk_dep_file_contents(args.get("out_toml"), build_dir, tomls_list, verbosity, include_out_toml_in_deps=True)
+    s = mk_dep_file_contents(args.get("merged_file"), build_dir, tomls_list, verbosity, include_out_toml_in_deps=True)
     dep_file_overwritten = _write_dep_file(args.get("out_dep"), s, write_only_if_changed=True)
     if verbosity >= 2:
         display_dep_file_contents(s, args.get("out_dep"), use_ascii_box=False)
     
     if verbosity >= 1:
-        rel_path_out_toml = get_curv_paths().mk_rel_to_cwd(args.get("out_toml"))
+        rel_path_out_toml = get_curv_paths().mk_rel_to_cwd(args.get("merged_file"))
         rel_path_out_dep = get_curv_paths().mk_rel_to_cwd(args.get("out_dep"))
         if merged_toml_overwritten:
             console.print(f"[bright_yellow]wrote:[/bright_yellow] {rel_path_out_toml}")

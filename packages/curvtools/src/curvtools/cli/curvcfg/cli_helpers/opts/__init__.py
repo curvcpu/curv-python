@@ -11,8 +11,8 @@ from .expand_special_vars import (
     expand_build_dir_vars,
 )
 from .curv_root_dir_opt import shell_complete_curv_root_dir
-from .base_config_opt import base_config_file_opt
-from .schema_opt import schema_file_opt
+from .profile_file_opt import profile_file_opt
+from .schema_file_opt import schema_file_opt
 
 __all__ = [
     "overlay_opts",
@@ -20,9 +20,8 @@ __all__ = [
     "merged_toml_opt",
     "verbosity_opts",
     "output_dep_opt",
-    "base_config_file_opt",
+    "profile_file_opt",
     "schema_file_opt",
-
     "expand_build_dir_vars",
     "shell_complete_curv_root_dir",
     "expand_curv_root_dir_vars",

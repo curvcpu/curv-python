@@ -7,7 +7,6 @@ import subprocess
 import re
 from pathlib import Path
 import pytest
-from curvtools.cli.curvcfg.cli_helpers.base_config_and_schema_mode import BaseConfigAndSchemaMode, get_base_config_and_schema_mode
 
 pytestmark = pytest.mark.e2e
 
@@ -31,49 +30,29 @@ def _write_filtered_copy(src_path: str, regex_prefixes: list[str], replacement_c
 
 class TestCliMergeGenerate(CurvCfgE2ETestCase):
     def test_cli_merge_generate(self) -> None:
-        from curvtools.cli.curvcfg.cli_helpers.base_config_and_schema_mode import get_base_config_and_schema_mode as get_base_config_and_schema_mode
         # Create temporary build directory and ensure cleanup
         build_dir = tempfile.mkdtemp(prefix="curvcfg_e2e_build_")
         self.register_temp_path(build_dir)
 
         # Paths (expected depends on mode for some files)
-        bs_mode = get_base_config_and_schema_mode()
-        if bs_mode == BaseConfigAndSchemaMode.BASE_CONFIG_AND_SCHEMA_IN_SINGLE_DIRECTORY:
-            expected_build_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "expected", "good", "single_file_base_schema"))
-        else:
-            expected_build_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "expected", "good", "seperate_base_schema_dirs"))
+        expected_build_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "expected", "good", "seperate_base_schema_dirs"))
         merged_toml_path = os.path.join(build_dir, "config", "merged.toml")
 
         # 0) Setup args depending on mode
         base_dir = Path(__file__).resolve().parent.parent
-        if bs_mode == BaseConfigAndSchemaMode.BASE_CONFIG_AND_SCHEMA_IN_SEPARATE_DIRECTORIES:
-            merge_args = [
-                "-vvv",
-                "merge",
-                "--base-config-file", str(base_dir / "inputs/good/seperate_base_schema_dirs/config/default.toml"),
-                "--schema-file", str(base_dir / "inputs/good/seperate_base_schema_dirs/schema/schema.toml"),
-                "--build-dir", build_dir,
-            ]
-            generate_args = [
-                "-vvv",
-                "generate",
-                "--merged-toml", merged_toml_path,
-                "--build-dir", build_dir,
-            ]
-        else:
-            merge_args = [
-                "-vvv",
-                "merge",
-                "--base-config-file", str(base_dir / "inputs/good/single_file_base_schema/default.toml"),
-                "--schema-file", str(base_dir / "inputs/good/single_file_base_schema/default.toml"),
-                "--build-dir", build_dir,
-            ]
-            generate_args = [
-                "-vvv",
-                "generate",
-                "--merged-toml", merged_toml_path,
-                "--build-dir", build_dir,
-            ]
+        merge_args = [
+            "-vvv",
+            "merge",
+            "--profile-file", str(base_dir / "inputs/good/seperate_base_schema_dirs/config/default.toml"),
+            "--schema-file", str(base_dir / "inputs/good/seperate_base_schema_dirs/schema/schema.toml"),
+            "--build-dir", build_dir,
+        ]
+        generate_args = [
+            "-vvv",
+            "generate",
+            "--merged-file", merged_toml_path,
+            "--build-dir", build_dir,
+        ]
 
         # 1) Run merge (no overlays)
         res_merge = self.run_cmd(self.base_cmd + merge_args, cwd=str(base_dir))

@@ -52,12 +52,12 @@ def show_overlays(args: CurvCliArgs) -> int:
 
     verbosity = int(args.get("verbosity", 0) or 0)
     
-    base_config = str(args.get("base_config_file"))
+    profile_file = str(args.get("profile_file"))
     
     assert args.get("overlay_toml_name")==DEFAULT_OVERLAY_TOML_NAME, "overlay_toml_name must be " + DEFAULT_OVERLAY_TOML_NAME + " but was " + args.get("overlay_toml_name")
     assert args.get("overlay_prefix")=="", "overlay_prefix must be empty but was " + args.get("overlay_prefix")
     tomls_list = get_tomls_list(
-        base_config=base_config,
+        profile_file=profile_file,
         overlay_dir=str(args.get("overlay_dir", ".")),
         overlay_toml_name=str(args.get("overlay_toml_name", "overlay.toml")),
         overlay_prefix=str(args.get("overlay_prefix", "")),
@@ -84,7 +84,7 @@ def show_active_variables(args: CurvCliArgs, use_ascii_box: bool = False) -> int
     verbosity = 1 + int(args.get("verbosity", 0) or 0)
 
     # Resolve inputs
-    merged_toml_path = args.get("merged_toml")
+    merged_toml_path = args.get("merged_file")
     
     # Validate readable inputs
     if not (os.path.isfile(merged_toml_path) and os.access(merged_toml_path, os.R_OK)):
@@ -101,7 +101,7 @@ def show_active_variables(args: CurvCliArgs, use_ascii_box: bool = False) -> int
 
     # for high verbosity, we also show the tomls hierarchy if possible
     if verbosity >= 3:
-        tomls_list = get_tomls_list(base_config=args.get("base_config_file"))
+        tomls_list = get_tomls_list(profile_file=args.get("profile_file"))
         display_toml_tree(tomls_list, verbosity=verbosity)
 
     return 0

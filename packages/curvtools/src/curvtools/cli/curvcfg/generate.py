@@ -21,7 +21,7 @@ def generate(args: CurvCliArgs) -> int:
     get_curv_paths(args)
 
     # Resolve inputs
-    merged_toml_path = args.get("merged_toml")
+    merged_toml_path = args.get("merged_file")
     
 
     # Validate readable input

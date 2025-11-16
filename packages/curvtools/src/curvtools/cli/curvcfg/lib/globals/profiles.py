@@ -12,10 +12,10 @@ from pathlib import Path
 
 class Profile(dict[str, Any]):
     def __init__(self, cfg_dir: str, profile_name: str, profile_dict: dict[str, Any]):
-        self.profile_toml_file = Path(cfg_dir) / "profiles" / f"{profile_name}.toml"
+        self.profile_file = Path(cfg_dir) / "profiles" / f"{profile_name}.toml"
         super().__init__(profile_dict)
     def toml_file(self) -> str:
-        return self.profile_toml_file
+        return self.profile_file
 
 ################################################################################
 #
@@ -34,10 +34,10 @@ class _ProfileRetriever():
     
     def _get_profile_dict_by_name(self, profile_name: str) -> dict[str, Any]:
         if not profile_name.endswith(".toml"):
-            profile_toml_filename = profile_name + ".toml"
+            profile_file_filename = profile_name + ".toml"
         else:
-            profile_toml_filename = profile_name
-        merged_toml_dict = MergedTomlDict.from_toml_files(Path(self.profiles_dir) / profile_toml_filename)
+            profile_file_name = profile_name
+        merged_toml_dict = MergedTomlDict.from_toml_files(Path(self.profiles_dir) / profile_file_name)
         return merged_toml_dict
 
     def get_all_profiles(self, sort_with_default_first: bool = True) -> dict[str, Profile]:

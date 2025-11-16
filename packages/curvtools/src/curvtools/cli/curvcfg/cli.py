@@ -14,15 +14,13 @@ from curvtools.cli.curvcfg.lib.util.draw_tables import display_args_table, displ
 from curvtools.cli.curvcfg.lib.globals.constants import DEFAULT_MERGED_TOML_NAME, PROGRAM_NAME, DEFAULT_OVERLAY_TOML_NAME
 from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
 from curvtools.cli.curvcfg.cli_helpers import (
-    BaseConfigAndSchemaMode,
-    get_base_config_and_schema_mode,
     build_dir_opt,
     merged_toml_opt,
     verbosity_opts,
     overlay_opts,
     output_dep_opt,
-    base_config_file_opt,
     schema_file_opt,
+    profile_file_opt,
 )
 from .generate import generate as _generate_impl
 from .show import (
@@ -39,11 +37,11 @@ from curvtools.cli.curvcfg.lib.globals.console import console
 
 """
 Usage:
-  curvcfg [--curv-root-dir=<curv-root-dir>] merge    --base-config-file=<base-config-file> [--schema-file=<schema-file>] [--overlay-dir=<overlay-dir>] [--build-dir=<build-dir>] [--merged-toml-outfile=<merged-toml-outfile>] [--dep-file-outfile=<dep-file-outfile>] [--no-ascend-dir-hierarchy] [--overlay-prefix=<overlay-prefix>] [--combine-overlays]
-  curvcfg [--curv-root-dir=<curv-root-dir>] generate --build-dir=<build-dir>               [--merged-toml-infile=<merged-toml-infile>]
+  curvcfg [--curv-root-dir=<curv-root-dir>] merge    --profile-file=<profile-toml-file> [--schema-file=<schema-toml-file>] [--overlay-dir=<overlay-dir>] [--build-dir=<build-dir>] [--merged-file=<merged-toml-file-out>] [--dep-file-outfile=<dep-file-outfile>] [--no-ascend-dir-hierarchy] [--overlay-prefix=<overlay-prefix>] [--combine-overlays]
+  curvcfg [--curv-root-dir=<curv-root-dir>] generate --build-dir=<build-dir>               [--merged-file=<merged-toml-file-in>]
   curvcfg                                   completions                                    [--shell=<shell>] [--install|--print] [--path=<path>]
   curvcfg [--curv-root-dir=<curv-root-dir>] show profiles
-  curvcfg [--curv-root-dir=<curv-root-dir>] show vars --build-dir=<build-dir>              [--merged-toml-infile=<merged-toml-infile>]
+  curvcfg [--curv-root-dir=<curv-root-dir>] show vars --build-dir=<build-dir>              [--merged-file=<merged-toml-file-in>]
 
 General options (apply to all commands):
   --curv-root-dir=<curv-root-dir> Normally, we use CURV_ROOT_DIR from the environment, but this option will override it. (Default: use CURV_ROOT_DIR from the environment)
@@ -53,10 +51,10 @@ General options (apply to all commands):
 
 merge command options:
   Base options:
-  --base-config-file=<base-config-file>        (required) Path to the base config file to merge.  Default is either <curv-root-dir>/config/default.toml or <curv-root-dir>/config/profiles/default.toml, depending on the base config and schema mode.
-  --schema-file=<schema-file>                  (required) Path to schema TOML file. Default is $CURV_ROOT_DIR/config/schema/schema.toml or <curv-root-dir>/config/schema.toml, depending on the base config and schema mode.
+  --profile-file=<profile-toml-file>        (required) Path to the profile file to merge.  Default is either <curv-root-dir>/config/default.toml or <curv-root-dir>/config/profiles/default.toml, depending on the base config and schema mode.
+  --schema-file=<schema-toml-file>                  (required) Path to schema TOML file. Default is $CURV_ROOT_DIR/config/schema/schema.toml or <curv-root-dir>/config/schema.toml, depending on the base config and schema mode.
   --build-dir=<build-dir>                      Base build directory. Outputs are written under this directory. Default is "build/" relative to the cwd.
-  --merged-toml-outfile=<merged-toml-outfile>  Where to write merged.toml output file. Default is "<build-dir>/config/merged.toml".
+  --merged-file=<merged-toml-file-out>  Where to write merged.toml output file. Default is "<build-dir>/config/merged.toml".
   --dep-file-outfile=<dep-file-outfile>        Where to write the Makefile dependency file. Default is "<build-dir>/make.deps/config.mk.d".
   --overlay-no-ascend-dirs                     Do not ascend directories when searching for overlay toml files; only consider the overlay directory. Default is False.
   --overlay-dir=<overlay-dir>                  The lowest directory that contains an overlay.toml file. Default is cwd. May be relative to cwd, or absolute.
@@ -68,7 +66,7 @@ completions command options:
 
 generate command options:
   --build-dir=<build-dir>                      Base build directory. Outputs are written under "<build-dir>/generated". Default is "build/" relative to the cwd.
-  --merged-toml-infile=<merged-toml-infile>    The merged config TOML filename to read from. Default is "<build-dir>/config/merged.toml" if not provided.
+  --merged-file=<merged-toml-file-in>    The merged config TOML filename to read from. Default is "<build-dir>/config/merged.toml" if not provided.
 
 show command options:
   --repo-root-dir=<repo-root-dir>               Override the repository folder location (must exist). Default is git-rev-parse root relative to the cwd.
@@ -76,7 +74,7 @@ show command options:
         show vars command options
         ------------------------------------------------------------
         --build-dir=<build-dir>          Base build directory. Used to locate active merged config TOML by default, unless --config-toml is provided. Default is "build/" relative to the cwd.
-        --config-toml=<config-toml>      Path to merged config TOML; if relative, resolved against CWD. Default is "<build-dir>/config/merged.toml".
+        --merged-file=<merged-toml-file-in>      Path to merged config TOML; if relative, resolved against CWD. Default is "<build-dir>/config/merged.toml".
 
 Environment variables:
   CURV_ROOT_DIR  The root of the curv project. If set, it must exist. Otherwise, it defaults to <repo-root-dir>/my-designs/riscv-soc (repo-root-dir from --repo-root-dir or git repo root).
@@ -137,11 +135,11 @@ def cli(
     short_help="Merge base config and overlays",
     help="Merge base config and overlays into a merged TOML (in <build-dir>/config/merged.toml by default) and a Makefile dependency file (in <build-dir>/make.deps/config.mk.d by default)"
 )
-@base_config_file_opt(required=True)
+@profile_file_opt(required=True)
 @schema_file_opt(required=True)
 @build_dir_opt(help="Base build directory; outputs written under this directory")
 @overlay_opts()
-@merged_toml_opt(name="out_toml", outfile=True)
+@merged_toml_opt(name="merged_file", outfile=True)
 @output_dep_opt()
 @click.option(
     "--include-out-toml-in-deps/--no-include-out-toml-in-deps",
@@ -154,26 +152,26 @@ def cli(
 @click.pass_context
 def merge(
     ctx: click.Context,
-    base_config_file: FsPathType,
+    profile_file: FsPathType,
     schema_file: FsPathType,
     build_dir: str,
     overlay_dir: str,
     ascend_dir_hierarchy: bool,
-    out_toml: Optional[str],
+    merged_file: Optional[str],
     out_dep: Optional[str],
     include_out_toml_in_deps: bool,
     verbose: int,
 ) -> None:
     merge_args: CurvCliArgs = {
         "curv_root_dir": ctx.obj.get("curv_root_dir"),
-        "base_config_file": base_config_file,
+        "profile_file": profile_file,
         "schema_file": schema_file,
         "build_dir": build_dir,
         "overlay_dir": overlay_dir,
         "overlay_toml_name": DEFAULT_OVERLAY_TOML_NAME,
         "overlay_prefix": "",
         "ascend_dir_hierarchy": ascend_dir_hierarchy,
-        "out_toml": out_toml,
+        "merged_file": merged_file,
         "out_dep": out_dep,
         "include_out_toml_in_deps": include_out_toml_in_deps,
         "verbosity": max(ctx.obj["verbosity"], min(verbose, 2)),
@@ -190,16 +188,16 @@ def merge(
     epilog=None,
 )
 @build_dir_opt(help="Base build directory; outputs written to this directory.  Also used to locate <merged-toml> by default, unless --merged-toml overrides with a specific path.")
-@merged_toml_opt(name="merged_toml", outfile=False)
+@merged_toml_opt(name="merged_file", outfile=False)
 @schema_file_opt(required=True)
 @verbosity_opts(include_verbose=True)
 @click.pass_context
-def generate(ctx: click.Context, build_dir: str, merged_toml: Optional[str], schema_file: FsPathType, verbose: int) -> None:
+def generate(ctx: click.Context, build_dir: str, merged_file: Optional[str], schema_file: FsPathType, verbose: int) -> None:
     """Generate output files from a merged TOML and schema."""
     generate_args: CurvCliArgs = {
         "curv_root_dir": ctx.obj.get("curv_root_dir"),
         "build_dir": os.path.abspath(build_dir),
-        "merged_toml": merged_toml,
+        "merged_file": merged_file,
         "schema_file": schema_file,
         "verbosity": max(ctx.obj["verbosity"], min(verbose, 2)),
     }
@@ -252,17 +250,17 @@ def show(ctx: click.Context, verbose: int) -> None:
     "by default, unless --merged-toml overrides with a specific "
     "path."
 ))
-@base_config_file_opt(required=True)
-@merged_toml_opt(name="merged_toml", outfile=False)
+@profile_file_opt(required=True)
+@merged_toml_opt(name="merged_file", outfile=False)
 @verbosity_opts(include_verbose=True)
 @click.pass_context
-def show_active_variables(ctx: click.Context, build_dir: str, base_config_file: FsPathType, merged_toml: Optional[str], verbose: int) -> None:
+def show_active_variables(ctx: click.Context, build_dir: str, profile_file: FsPathType, merged_file: Optional[str], verbose: int) -> None:
     
     show_args: CurvCliArgs = {
         "curv_root_dir": ctx.obj.get("curv_root_dir"),
         "build_dir": build_dir,
-        "base_config_file": base_config_file,
-        "merged_toml": merged_toml,
+        "profile_file": profile_file,
+        "merged_file": merged_file,
         "verbosity": max(ctx.obj["verbosity"], min(verbose, 3)),
     }
         
@@ -277,19 +275,19 @@ def show_active_variables(ctx: click.Context, build_dir: str, base_config_file: 
     name="overlays", 
     short_help=f"Shows the hierarchy of base config + overlays",
     help=f"Shows the hierarchy of base config + overlays that generate the {DEFAULT_MERGED_TOML_NAME} in the current build environment")
-@base_config_file_opt(required=True)
+@profile_file_opt(required=True)
 @overlay_opts()
 @verbosity_opts(include_verbose=True)
 @click.pass_context
 def show_overlays(
     ctx: click.Context, 
-    base_config_file: FsPathType, 
+    profile_file: FsPathType, 
     overlay_dir: str, 
     ascend_dir_hierarchy: bool, 
     verbose: int) -> None:
     show_args: CurvCliArgs = {
         "curv_root_dir": ctx.obj.get("curv_root_dir"),
-        "base_config_file": base_config_file,
+        "profile_file": profile_file,
         "overlay_dir": overlay_dir,
         "overlay_toml_name": DEFAULT_OVERLAY_TOML_NAME,
         "overlay_prefix": "",
@@ -304,7 +302,6 @@ def show_overlays(
 @show.command(name="profiles", context_settings=CONTEXT_SETTINGS,
     short_help="Show available base configurations (profiles)",
     help="Show available base configurations in $CURV_ROOT_DIR/config/profiles directory",
-    hidden=(get_base_config_and_schema_mode() == BaseConfigAndSchemaMode.BASE_CONFIG_AND_SCHEMA_IN_SINGLE_DIRECTORY),
 )
 @verbosity_opts(include_verbose=True)
 @click.pass_context
