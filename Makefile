@@ -98,7 +98,7 @@ unsetup-editable-installs:
 	fi
 
 .PHONY: unsetup
-unsetup: unsetup-editable-installs clean-venv clean
+unsetup: unsetup-editable-installs clean
 	@$(UV) tool uninstall --all -q
 	@echo "✓ Removed CLI tools from uv tool environment"
 
