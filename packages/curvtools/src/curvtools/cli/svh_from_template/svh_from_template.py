@@ -20,9 +20,10 @@ def gen_from_template(vars, template_file, output_file):
     with open(template_file, 'r') as f:
         template = f.read()
     
-    # Replace the placeholder with the actual base directory
+    content = template
+    # Replace placeholders with provided variables
     for key, value in vars.items():
-        content = template.replace(f'{{{key}}}', value)
+        content = content.replace(f'{{{key}}}', value)
     
     # Write the content to the file
     if (output_file=="-"):
