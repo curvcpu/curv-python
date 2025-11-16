@@ -7,30 +7,13 @@ for arg in "$@"; do
 done
 if [[ $# -eq 0 ]]; then show_help=true; fi
 
-printf "arg1: %s\n" "$1"
-printf "arg2: %s\n" "$2"
-printf "arg3: %s\n" "$3"
-printf "arg4: %s\n" "$4"
-printf "arg5: %s\n" "$5"
-printf "arg6: %s\n" "$6"
-printf "arg7: %s\n" "$7"
-printf "arg8: %s\n" "$8"
-printf "arg9: %s\n" "$9"
-printf "arg10: %s\n" "$10"
-printf "arg11: %s\n" "$11"
-printf "arg12: %s\n" "$12"
-printf "arg13: %s\n" "$13"
-printf "arg14: %s\n" "$14"
-printf "arg15: %s\n" "$15"
-printf "arg16: %s\n" "$16"
-
 # if invoked as `git branch-off` or similar, construct the program name as that
 # and then mutate $@ in place to remove first two args
 if [[ "$0" == "git" ]]; then
 	prog="$0 $1"
 	shift
 else
-	prog=$(basename "${BASH_SOURCE[0]}")
+	prog=$(basename "$0")
 fi
 
 if [[ "$show_help" == "true" ]]; then
