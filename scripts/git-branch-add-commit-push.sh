@@ -5,18 +5,46 @@ show_help=false
 for arg in "$@"; do
 	if [[ "$arg" == "-h" || "$arg" == "--help" ]] ; then show_help=true; break; fi
 done
-if [[ $# -eq 0 || "$show_help" == "true" ]]; then
+if [[ $# -eq 0 ]]; then show_help=true; fi
+
+printf "arg1: %s\n" "$1"
+printf "arg2: %s\n" "$2"
+printf "arg3: %s\n" "$3"
+printf "arg4: %s\n" "$4"
+printf "arg5: %s\n" "$5"
+printf "arg6: %s\n" "$6"
+printf "arg7: %s\n" "$7"
+printf "arg8: %s\n" "$8"
+printf "arg9: %s\n" "$9"
+printf "arg10: %s\n" "$10"
+printf "arg11: %s\n" "$11"
+printf "arg12: %s\n" "$12"
+printf "arg13: %s\n" "$13"
+printf "arg14: %s\n" "$14"
+printf "arg15: %s\n" "$15"
+printf "arg16: %s\n" "$16"
+
+# if invoked as `git branch-off` or similar, construct the program name as that
+# and then mutate $@ in place to remove first two args
+if [[ "$0" == "git" ]]; then
+	prog="$0 $1"
+	shift
+else
+	prog=$(basename "${BASH_SOURCE[0]}")
+fi
+
+if [[ "$show_help" == "true" ]]; then
 	cat <<EOF
 Takes all unstaged/unstaged changes and commits them onto a NEW branch and
 optionally pushes them to the remote.
 
 usage:
-  $(basename $0) [feat|fix] <new-branch> [commit message]
+  ${prog} [feat|fix] <new-branch> [commit message]
 
 examples:
-  $(basename $0) fix bug-in-script "my commit message"
-  $(basename $0) feat new-feature "add new feature"
-  $(basename $0) feat new-feature
+  ${prog} fix bug-in-script "my commit message"
+  ${prog} feat new-feature "add new feature"
+  ${prog} feat new-feature
 
 notes:
   Starts from current HEAD (whatever branch you're on).
@@ -89,7 +117,7 @@ git-branch-add-commit-push() {
 	fi
 
 	# creates & checks out new branch
-	git feature -a "$feat_or_fix" -r "$new_branch" || { echo "error: failed to create new branch '$new_branch'" >&2; return 1; }
+	git feature -a "$feat_or_fix" "$new_branch" -r || { echo "error: failed to create new branch '$new_branch'" >&2; return 1; }
 
 	# stage all unstaged + commit
 	git magic -a -m "$msg" || { echo "error: failed to commit" >&2; return 1; }
