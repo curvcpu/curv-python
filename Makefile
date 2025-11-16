@@ -59,7 +59,7 @@ install-min: venv
 .PHONY: fetch-latest-tags
 fetch-latest-tags:
 	@[ -n "$(PUBLISH_REMOTE)" ] && { \
-		echo "🤔 Fetching latest tags from remote '$(PUBLISH_REMOTE)'..." && \
+		echo "Fetching latest tags from remote '$(PUBLISH_REMOTE)'..." && \
 		git fetch "$(PUBLISH_REMOTE)" --tags --quiet; \
 		echo "✓ Fetched latest tags from remote '$(PUBLISH_REMOTE)'"; \
 	} || { \
@@ -340,10 +340,10 @@ publish: prepublish-checks fetch-latest-tags build test
 		while true; do \
 			local current_ver=$$($$script_cmd 2>/dev/null || echo "error"); \
 			if [ "$$current_ver" = "$$expected_ver" ]; then \
-				echo "✅ PyPI $$pkg_name is now at expected version $$expected_ver"; \
+				echo "✓ PyPI $$pkg_name is now at expected version $$expected_ver"; \
 				break; \
 			else \
-				echo "⏳ PyPI $$pkg_name currently shows: $$current_ver (expecting: $$expected_ver)"; \
+				echo "✗ PyPI $$pkg_name currently shows: $$current_ver (expecting: $$expected_ver)"; \
 				sleep 5; \
 			fi; \
 		done; \
@@ -352,13 +352,6 @@ publish: prepublish-checks fetch-latest-tags build test
 	wait_for_pypi_update curv "$$CURV_VER_MAJMINPTCH"; \
 	wait_for_pypi_update curvtools "$$CURVTOOLS_VER_MAJMINPTCH"; \
 	echo "✅ All PyPI packages are now at the expected versions";
-
-# This is just a temporary rule that I've been using to test ./scripts/wait_ci.py...
-.PHONY: push
-push: fetch-latest-tags
-	@set -euo pipefail; \
-	  git push $(REMOTE) HEAD || { echo "Error: Failed to push commit"; exit 1; }; \
-	  $(SCRIPT_WAIT_CI) || { echo "Error: CI failed"; exit 1; };
 
 #
 # make untag PKG=curvtools [VER=0.0.6]
