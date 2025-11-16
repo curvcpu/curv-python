@@ -67,13 +67,8 @@ fetch-latest-tags:
 		exit 1; \
 	};
 
-# .PHONY: setup-precommit
-# setup-precommit:
-# 	@echo "🔄 Installing pre-commit hooks for this repo..."
-# 	@$(UV) run pre-commit install
-
 .PHONY: setup
-setup: install-min fetch-latest-tags setup-precommit
+setup: install-min fetch-latest-tags
 	@SETUPTOOLS_SCM_PRETEND_VERSION=$$($(SCRIPT_CHK_LATEST_VER) curvtools -Gb) $(UV) tool install --editable $(PKG_CURVTOOLS)
 	@#$(UV) tool install --editable $(PKG_CURVTOOLS)
 	@echo "✓ All CLI tools (editable) available on PATH"
@@ -83,7 +78,6 @@ setup: install-min fetch-latest-tags setup-precommit
 .PHONY: test
 test: 
 	$(PYTEST) $(PYTEST_OPTS)
-	@pushd scripts && $(PYTEST) $(PYTEST_OPTS) && popd
 
 .PHONY: unsetup-editable-installs
 unsetup-editable-installs:

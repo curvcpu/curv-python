@@ -22,9 +22,11 @@ class TestIntegration:
         cls.expected_file_first_41_lines = cls.test_dir / "test_vectors" / "expected" / "expetected_memmap_comment.txt"
         with tempfile.NamedTemporaryFile(mode='w', suffix='.sv', delete=False) as tmp_file:
             cls.tmp_output = tmp_file.name
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as tmp_file:
+            cls.tmp_output_markdown = tmp_file.name
         cls.expected_file_with_inside = cls.test_dir / "test_vectors" / "expected" / "expected_memmappkg_with_inside.sv"
         cls.expected_file_without_inside = cls.test_dir / "test_vectors" / "expected" / "expected_memmappkg_without_inside.sv"
-        cls.expected_file_first_41_lines = cls.test_dir / "test_vectors" / "expected" / "expetected_memmap_comment.txt"
+        cls.expected_file_markdown = cls.test_dir / "test_vectors" / "expected" / "expected_markdown.md"
     
     def _generate_sv_pkg_file(self, use_inside: bool = False):
         """Generate the SV package file"""
@@ -35,6 +37,27 @@ class TestIntegration:
             "--config", str(self.toml_file),
             "--output", self.tmp_output,
             "--use-inside" if use_inside else "--no-use-inside",
+        ]
+        repo_root = Path(__file__).resolve().parents[5]
+        env = dict(os.environ)
+        pfx = str(repo_root / "packages")
+        py_path = [
+            str(repo_root / "packages" / "curvtools" / "src"),
+            str(repo_root / "packages" / "curvpyutils" / "src"),
+            str(repo_root / "packages" / "curv" / "src"),
+        ]
+        env["PYTHONPATH"] = ":".join(py_path + [env.get("PYTHONPATH", "")])
+        result = subprocess.run(cmd, capture_output=True, text=True, check=True, cwd=str(self.test_dir), env=env)
+        assert result.returncode == 0, f"Command failed: {result.stderr}"
+
+    def _generate_markdown_file(self):
+        """Generate the markdown file"""
+        cmd = [
+            sys.executable,
+            "-m",
+            "curvtools.cli.memmap2",
+            "--config", str(self.toml_file),
+            "--generate-docs", str(self.tmp_output_markdown)
         ]
         repo_root = Path(__file__).resolve().parents[5]
         env = dict(os.environ)
@@ -80,6 +103,15 @@ class TestIntegration:
         finally:
             # Clean up temp file
             os.unlink(self.tmp_output)
+
+    def test_markdown_generation(self):
+        """Test that markdown generation produces expected output"""
+        try:
+            self._generate_markdown_file()
+            assert test_helpers.compare_files(self.tmp_output_markdown, str(self.expected_file_markdown), verbose=True, show_delta=True), \
+                "Generated markdown file does not match expected output"
+        finally:
+            os.unlink(self.tmp_output_markdown)
 
     def test_validation_passes(self):
         """Test that validation passes on the example TOML"""

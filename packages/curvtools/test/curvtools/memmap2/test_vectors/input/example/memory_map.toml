@@ -43,7 +43,7 @@ ranges = [
   # another example of a range that does not have any registers or buffers within it
   { name = "Flash ROM", start = 0x0200_0000, end = 0x02FF_FFFF, access = "ro", cacheable = true },
   # this range has registers and bufferswithin it, so it has no `access` key. 
-  # `cacheable` is still set because it applies to ranges, not regions or registers.
+  # `cacheable` is still set because it applies to ranges, not registers or buffers.
   { name = "Flash Control", start = 0x0600_0000, end = 0x0600_10FF, cacheable = false },
 ]
 
