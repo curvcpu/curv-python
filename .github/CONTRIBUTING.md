@@ -18,9 +18,17 @@ To tweak the code and contribute to `curv-python`, you'll want to follow the ste
     make setup
     ```
 
-    This also installs the CLI tools (`curv-cfg`, `curv-memmap2`, etc.) into your shell via `uv`.
+    This also installs the CLI tools (`curvcfg`, `curv-memmap2`, etc.) into your shell via `uv`.
 
     If `curvcfg` is not immediately available in your PATH, try closing and reopening your terminal window to see the changes. The PATH change made by `make setup` persists for new shells.
+
+5.  Make sure to append the following line to your `~/.bashrc`, `~/.zprofile`, or similar shell init file to make the editable install work correctly:
+
+    ```shell
+    echo 'eval "$(curvtools shellenv)"' >> ~/.bashrc
+    ```
+
+    Then restart your shell.
 
 5. To undo the effects of `make setup`, you can run `make unsetup` to remove the editable installs and CLI tools from your shell. (`make setup` has no other system-wide effects.)
 
