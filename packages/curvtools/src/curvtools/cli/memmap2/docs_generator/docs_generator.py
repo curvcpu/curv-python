@@ -3,13 +3,33 @@
 Documentation generator for memory maps using rich tables
 """
 from curvpyutils.toml_utils import read_toml_file
-from typing import Dict, List, Tuple, Any
+from typing import Dict, List, Tuple, Any, Callable
 from rich.table import Table
 from rich.console import Console
 from rich.text import Text
 from pathlib import Path
 import re
-from .make_tower import make_tower
+import sys
+import os
+
+def from_make_tower_import_make_tower() -> Callable[[List[Dict[str, Any]]], str]:
+    """Import make_tower() from the correct path and return it as a callable"""
+    if (Path(os.getcwd()) != Path(os.path.dirname(__file__))):
+        from .make_tower import make_tower
+    else:
+        sys.path.insert(0, Path(os.path.dirname(__file__)).parent)
+        from make_tower import make_tower
+    return make_tower
+
+def from_collect_all_ranges_import_collect_all_ranges() -> Callable[[Dict, int, bool], List[Dict[str, Any]]]:
+    """Import collect_all_ranges() from the correct path and return it as a callable"""
+    if (Path(os.getcwd()) != Path(os.path.dirname(__file__))):
+        from ..collect_all_ranges import collect_all_ranges
+    else:
+        new_import_path = Path(os.path.dirname(__file__)).parent
+        sys.path.insert(0, str(new_import_path))
+        from collect_all_ranges import collect_all_ranges
+    return collect_all_ranges
 
 def format_address(addr: int) -> str:
     """Format address as 8-digit hex"""
@@ -36,13 +56,12 @@ def format_access(access: str) -> str:
 
 def collect_register_ranges(memory_map: Dict, xlen: int) -> Dict[str, List[Dict]]:
     """Collect registers and buffers organized by slave using nested structure"""
-    from ..collect_all_ranges import collect_all_ranges
-
+    collect_all_ranges = from_collect_all_ranges_import_collect_all_ranges()
     registers = {}
     buffers = {}
 
     # Get all slaves with their ranges
-    slaves = collect_all_ranges(memory_map.get('slaves', {}), xlen, debug_print_ranges=False)
+    slaves = collect_all_ranges(memory_map.get('slaves', {}), xlen, debug_print_ranges=not False)
 
     for slave_info in slaves:
         slave_name = slave_info['name']
@@ -55,13 +74,14 @@ def collect_register_ranges(memory_map: Dict, xlen: int) -> Dict[str, List[Dict]
         for range_info in slave_ranges:
             # Add registers from this range
             if 'registers' in range_info:
+                print("registers: ", range_info['registers'])
                 for reg_info in range_info['registers']:
                     slave_regs.append({
                         'name': reg_info['full_name'],  # Use dotted name for docs
-                        'start': reg_info['start'],
-                        'end': reg_info['end'],
+                        'start': reg_info['addr'],
+                        'end': reg_info['addr'] + xlen // 8 - 1,
                         'access': reg_info['access'],
-                        'size': reg_info['end'] - reg_info['start'] + 1,
+                        'size': xlen // 8,
                         'range': range_info['name']  # Add parent range info
                     })
 
@@ -126,7 +146,7 @@ def generate_memory_map_markdown(toml_file: str, output_file: str, xlen: int):
     detailed_ranges = collect_register_ranges(memory_map, xlen)
 
     # Get processed structure for tower visualization
-    from ..collect_all_ranges import collect_all_ranges
+    collect_all_ranges = from_collect_all_ranges_import_collect_all_ranges()
     processed_slaves = collect_all_ranges(memory_map.get('slaves', {}), xlen, debug_print_ranges=False)
 
     # Generate markdown content
@@ -138,6 +158,7 @@ def generate_memory_map_markdown(toml_file: str, output_file: str, xlen: int):
 
     # Add tower visualization
     # tower = create_address_tower_table(ranges)
+    make_tower = from_make_tower_import_make_tower()
     tower = make_tower(processed_slaves)
     content.append("```text")
     content.append(tower)
@@ -156,9 +177,9 @@ def generate_memory_map_markdown(toml_file: str, output_file: str, xlen: int):
 
 def test_docs_generation():
     """Test function for development"""
-    toml_file = "test/example_memory_map.toml"
+    toml_file = "../../../../../test/curvtools/memmap2/test_vectors/input/example/memory_map.toml"
     if Path(toml_file).exists():
-        generate_memory_map_markdown(toml_file, "test_memory_map.md")
+        generate_memory_map_markdown(toml_file, "test_memory_map.md", 32)
 
 if __name__ == '__main__':
     test_docs_generation()
