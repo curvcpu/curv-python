@@ -60,13 +60,13 @@ Thus, to upgrade `curvtools` you may also need to publish the latest versions of
 For example, if you want to publish `curvtools`:
 
     ```shell
-    $ ./scripts/publish-tools/src/get-publish-deps.py curvtools -v
+    $ make publish-advice PKG=curvtools
     ```
 
 Output will look something like this:
 
     ```shell
-    $ ./scripts/publish-tools/src/get-publish-deps.py curvtools -v
+    $ make publish-advice PKG=curvtools -v
 
                         If you want to publish curvtools...                        
     ┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┓
@@ -124,4 +124,30 @@ Example:
 
     ```shell
     $ make show
+    ```
+
+### CI and PR Automation Scripts
+
+- Optional:  add these scripts to `.git/config`:
+
+    ```shell
+    [alias]
+            # `git gci` - wait for current CI to complete; exit 0 on success, non-zero on failure
+            gci = "!REPO_ROOT=$(git rev-parse --show-toplevel); ${REPO_ROOT}/scripts/wait_ci.py"
+
+            # `git branch-off` - moves all unstaged changes to a new branch, commits and pushes; run with no args for help
+            branch-off = "!REPO_ROOT=$(git rev-parse --show-toplevel); ${REPO_ROOT}/scripts/git-branch-add-commit-push.sh"
+
+            # `git pr-[open,mergeable,merge]` - sequence of 3 commands to open, test and merge from the cli
+            pr-open = "!json=$(~/scripts/ollama-pr-message.py); \
+            title=$(printf '%s' \"$json\" | jq -r '.title'); \
+            body=$(printf '%s' \"$json\" | jq -r '.body'); \
+                    gh pr create --web --title \"$title\" --body \"$body\""
+            pr-mergeable = "!gh pr view --json mergeable | \
+                    jq -e '.mergeable == \"MERGEABLE\"' 1>&2 \
+                    && git gci"
+            pr-merge = "!json=$(gh pr view --json number,title); \
+                    number=$(printf '%s' \"$json\" | jq -r '.number'); \
+                    title=$(printf '%s' \"$json\" | jq -r '.title'); \
+                    gh pr merge --squash -d -t \"PR #${number}: ${title}\""
     ```
