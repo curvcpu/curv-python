@@ -34,6 +34,8 @@ from .merge import merge as _merge_impl
 from .completions import completions as _completions_impl, determine_program_name
 from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
+from rich.traceback import install, Traceback
+from curvtools.cli.curvcfg.lib.globals.console import console
 
 """
 Usage:
@@ -214,15 +216,7 @@ def generate(ctx: click.Context, build_dir: str, merged_toml: Optional[str], sch
     rc = _generate_impl(generate_args)
     raise SystemExit(rc)
 
-def main(argv: Optional[list[str]] = None) -> int:
-    try:
-        cli.main(args=argv, standalone_mode=False)
-    except click.exceptions.ClickException as exc:
-        exc.show()
-        return exc.exit_code
-    except SystemExit as exc:
-        return int(exc.code)
-    return 0
+
 
 @cli.command(name="completions", context_settings=CONTEXT_SETTINGS)
 @click.option("--shell", "shell", type=click.Choice(["bash", "zsh", "fish", "powershell"]), default=None,
@@ -330,5 +324,23 @@ def show_profiles(ctx: click.Context, verbose: int) -> None:
     rc = _show_profiles_impl(show_args)
     raise SystemExit(rc)
 
+# entry point
+def main(argv: Optional[list[str]] = None) -> int:
+    """
+    This is the curvcfg CLI program's true entry point.
+    """
+    install(show_locals=True)
+
+    try:
+        cli.main(args=argv, standalone_mode=False)
+    except click.exceptions.ClickException as e:
+        Traceback.from_exception(type(e), e, e.__traceback__, show_locals=True)
+        return e.exit_code
+    except SystemExit as e:
+        Traceback.from_exception(type(e), e, e.__traceback__, show_locals=True)
+        return int(e.code)
+    return 0
+
+# never executes
 if __name__ == "__main__":
     sys.exit(main())

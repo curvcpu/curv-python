@@ -74,6 +74,8 @@ setup: install-min fetch-latest-tags
 	@echo "✓ All CLI tools (editable) available on PATH"
 	@# Edit shell's rc file to keep the PATH update persistent
 	@$(UV) tool update-shell -q || true
+	@$(UV) run curvtools instructions
+	@eval "$$($(UV) run curvtools shellenv)"
 
 .PHONY: test
 test: 

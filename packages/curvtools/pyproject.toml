@@ -53,12 +53,12 @@ curv-verilog-hex-generate = "curvtools.cli.verilog_hex_generate.verilog_hex_gene
 curv-verilog-hex-reformat = "curvtools.cli.verilog_hex_reformat.verilog_hex_reformat:main"
 curv-svh-from-plusargs = "curvtools.cli.svh_from_plusargs.svh_from_plusargs:main"
 curv-svh-from-template = "curvtools.cli.svh_from_template.svh_from_template:main"
-
+curvtools = "curvtools.cli.curvtools_main:main"
 # Legacy alias preserved
 curvcfg = "curvtools.cli.curvcfg:main"
 
 [project.urls]
-homepage = "https://github.com/curvcpu/curv/tree/main/tools/curvcfg/readme.md"
-repository = "https://github.com/curvcpu/curv"
-documentation = "https://github.com/curvcpu/curv/tree/main/tools/curvcfg/readme.md"
-issues = "https://github.com/curvcpu/curv/issues"
+homepage = "https://github.com/curvcpu/curv-python/tree/main/packages/curvtools/readme.md"
+repository = "https://github.com/curvcpu/curv-python"
+documentation = "https://github.com/curvcpu/curv-python/tree/main/packages/curvtools/readme.md"
+issues = "https://github.com/curvcpu/curv-python/issues"
