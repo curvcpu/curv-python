@@ -5,18 +5,29 @@ show_help=false
 for arg in "$@"; do
 	if [[ "$arg" == "-h" || "$arg" == "--help" ]] ; then show_help=true; break; fi
 done
-if [[ $# -eq 0 || "$show_help" == "true" ]]; then
+if [[ $# -eq 0 ]]; then show_help=true; fi
+
+# if invoked as `git branch-off` or similar, construct the program name as that
+# and then mutate $@ in place to remove first two args
+if [[ "$0" == "git" ]]; then
+	prog="$0 $1"
+	shift
+else
+	prog=$(basename "$0")
+fi
+
+if [[ "$show_help" == "true" ]]; then
 	cat <<EOF
 Takes all unstaged/unstaged changes and commits them onto a NEW branch and
 optionally pushes them to the remote.
 
 usage:
-  $(basename $0) [feat|fix] <new-branch> [commit message]
+  ${prog} [feat|fix] <new-branch> [commit message]
 
 examples:
-  $(basename $0) fix bug-in-script "my commit message"
-  $(basename $0) feat new-feature "add new feature"
-  $(basename $0) feat new-feature
+  ${prog} fix bug-in-script "my commit message"
+  ${prog} feat new-feature "add new feature"
+  ${prog} feat new-feature
 
 notes:
   Starts from current HEAD (whatever branch you're on).
@@ -89,7 +100,7 @@ git-branch-add-commit-push() {
 	fi
 
 	# creates & checks out new branch
-	git feature -a "$feat_or_fix" -r "$new_branch" || { echo "error: failed to create new branch '$new_branch'" >&2; return 1; }
+	git feature -a "$feat_or_fix" "$new_branch" -r || { echo "error: failed to create new branch '$new_branch'" >&2; return 1; }
 
 	# stage all unstaged + commit
 	git magic -a -m "$msg" || { echo "error: failed to commit" >&2; return 1; }
