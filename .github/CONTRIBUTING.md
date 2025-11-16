@@ -151,7 +151,10 @@ This is completely optional, but here are some git aliases you may or may not fi
             pr-merge = "!json=$(gh pr view --json number,title); \
                     number=$(printf '%s' \"$json\" | jq -r '.number'); \
                     title=$(printf '%s' \"$json\" | jq -r '.title'); \
-                    gh pr merge --squash -d -t \"Merge PR #${number}: ${title}\""
+                    gh pr merge --squash -d \
+                            --subject \"Merge PR #${number}: ${title}\" \
+                            --body \"\" \
+                    && git gci"
     ```
 
 - Open a new `feat/` or `fix/` branch:
@@ -173,6 +176,8 @@ This is completely optional, but here are some git aliases you may or may not fi
     When ready to merge:
     
     ```sh
-    # wait for verified mergeable -> merge -> wait for merge CI to pass
-    $ git pr-mergeable && git pr-merge && git gci && "success!"
+    # wait for verified mergeable
+    $ git pr-mergeable && echo "ready to merge"
+    # merge and wait for merge CI to complete
+    $ git pr-merge && echo "success!"
     ```
