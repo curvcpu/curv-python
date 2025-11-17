@@ -1,0 +1,3 @@
+[cpu]
+reset_vector = "0x0000_00ab"
+mtvec_base = "0x00ff_abcd"

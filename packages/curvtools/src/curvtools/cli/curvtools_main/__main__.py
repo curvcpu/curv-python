@@ -5,8 +5,14 @@ import click
 from rich.console import Console
 from curvtools import get_curvtools_version_str
 from curvpyutils.file_utils.repo_utils import get_git_repo_root
+from curvpyutils.system import UserConfigFile
+from rich.console import Console
+from rich.traceback import install, Traceback
+
+install(show_locals=True, width=120, word_wrap=True)
 
 console = Console()
+err_console = Console(file=sys.stderr)
 
 CONTEXT_SETTINGS = {
     "help_option_names": ["-h", "--help"],
@@ -58,7 +64,19 @@ def shellenv(
 ) -> None:
     """Print the shell environment variables to set"""
     ctx.ensure_object(dict)
-    console.print(f"export CURV_PYTHON_REPO_PATH={get_git_repo_root()}", highlight=False, style=None)
+    user_config_file = UserConfigFile(app_name="curvtools", app_author="curv", filename="config.toml", initial_dict={
+        "CURV_PYTHON_REPO_PATH": get_git_repo_root()
+    })
+    try:
+        if user_config_file.is_readable():
+            curv_python_repo_path = user_config_file.read().get("CURV_PYTHON_REPO_PATH")
+            console.print(f"export CURV_PYTHON_REPO_PATH={curv_python_repo_path}", highlight=False, style=None)
+            return
+    except Exception as e:
+        err_console.print(f"error: failed reading config file: {e}", highlight=True, style="red")
+        err_console.print(Traceback.from_exception(type(e), e, e.__traceback__), highlight=False, style=None)
+        raise SystemExit(1)    
+    return
 
 @cli.command()
 @click.pass_context

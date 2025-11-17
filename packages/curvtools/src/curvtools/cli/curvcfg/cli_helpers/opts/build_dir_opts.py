@@ -124,12 +124,12 @@ def output_dep_opt():
         return os.path.abspath(value)
 
     output_dep_option = click.option(
-        "--out-dep",
-        "out_dep",
-        metavar="<out-dep-name>",
+        "--dep-file",
+        "dep_file",
+        metavar="<dep-file-out>",
         default=DEFAULT_DEP_FILE_PATH,
         show_default=True,
-        help="Path to Makefile dependency file to generate",
+        help="Makefile dependency file output path",
         callback=output_dep_callback,
     )
     def _wrap(f):

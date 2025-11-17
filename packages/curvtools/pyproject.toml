@@ -41,6 +41,7 @@ dependencies = [
   "rich",
   "python-dotenv>=1.1.0",
   "importlib-metadata>=6.0.0",
+  "platformdirs>=4",
 ]
 
 [project.scripts]

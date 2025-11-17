@@ -1,0 +1,6 @@
+description = """
+Default configuration for the Curv RISCV SoC
+"""
+
+[cpu]
+xlen = 32

@@ -58,7 +58,7 @@ def show_overlays(args: CurvCliArgs) -> int:
     assert args.get("overlay_prefix")=="", "overlay_prefix must be empty but was " + args.get("overlay_prefix")
     tomls_list = get_tomls_list(
         profile_file=profile_file,
-        overlay_dir=str(args.get("overlay_dir", ".")),
+        overlay_path_list=args.get("overlay_path_list"),
         overlay_toml_name=str(args.get("overlay_toml_name", "overlay.toml")),
         overlay_prefix=str(args.get("overlay_prefix", "")),
         no_ascend_dir_hierarchy=bool(args.get("no_ascend_dir_hierarchy", False)))

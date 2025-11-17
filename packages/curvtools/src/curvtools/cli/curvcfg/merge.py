@@ -69,14 +69,16 @@ def _resolve_schema_path(schema_toml_arg: str) -> Path:
         raise FileNotFoundError(f"Schema TOML {schema_toml_arg} not found")
     return Path(schema_toml_arg).resolve()
 
-def _resolve_overlay_dir(overlay_dir_arg: str) -> Path:
-    if not os.path.isdir(overlay_dir_arg):
-        raise FileNotFoundError(f"Overlay directory {overlay_dir_arg} not found")
-    return Path(overlay_dir_arg).resolve()
+def _resolve_overlay_path_list(overlay_path_list: List[Optional[str]]) -> List[Path]:
+    ret = [Path(path).resolve() for path in overlay_path_list if path is not None]
+    if len(ret) == 0:
+        # this should never happen because the default is [., None]
+        raise ValueError("--overlay-path must be specified at least once")
+    return ret
 
 def _mk_tomls_list(
     profile_file: Path, 
-    overlay_dir: str,
+    overlay_path_list: List[Path],
     overlay_toml_name: str,
     overlay_prefix: str,
     no_ascend_dir_hierarchy: bool
@@ -86,7 +88,7 @@ def _mk_tomls_list(
 
     Args:
         profile_file: the profile file path
-        overlay_dir: the overlay directory path
+        overlay_path_list: the list of overlay path list items
         overlay_toml_name: the name of the overlay TOML file
         overlay_prefix: the prefix for overlay files
         no_ascend_dir_hierarchy: whether to not ascend directory hierarchy
@@ -95,28 +97,38 @@ def _mk_tomls_list(
         A list of TOML file paths
     """
 
-    # get the overlay directory
-    overlay_dir_path = _resolve_overlay_dir(overlay_dir)
+    # if there is only one item in the list, then we are doing a directory hierarchy search
+    if len(overlay_path_list) == 1:
+        # if there is only one item in the list, then verify it is a directory
+        if not overlay_path_list[0].is_dir():
+            raise ValueError("--overlay-path must be a directory, not a file, unless it is used multiple times")
 
-    # Build overlay matcher according to CLI args
-    matcher = _make_overlay_matcher(
-        sub_dir=overlay_dir_path,
-        overlay_toml_name=overlay_toml_name,
-        overlay_prefix=overlay_prefix,
-        no_ascend_dir_hierarchy=no_ascend_dir_hierarchy,
-    )
+        # Build overlay matcher according to CLI args
+        matcher = _make_overlay_matcher(
+            sub_dir=overlay_path_list[0],
+            overlay_toml_name=overlay_toml_name,
+            overlay_prefix=overlay_prefix,
+            no_ascend_dir_hierarchy=no_ascend_dir_hierarchy,
+        )
 
-    # Determine search bounds
-    search_root_dir = get_curv_paths().get_repo_dir()
-    if no_ascend_dir_hierarchy:
-        search_root_dir = str(overlay_dir_path)
+        # Determine search bounds
+        search_root_dir = get_curv_paths().get_repo_dir()
+        if no_ascend_dir_hierarchy:
+            search_root_dir = str(overlay_path_list[0])
 
-    # Find overlay files (absolute paths)
-    overlay_files: list[str] = find_overlay_tomls_abs_paths(
-        root_dir=str(search_root_dir),
-        sub_dir=str(overlay_dir_path),
-        f_match_overlay_tomls=matcher,  # type: ignore[arg-type]
-    )
+        # Find overlay files (absolute paths)
+        overlay_files: list[str] = find_overlay_tomls_abs_paths(
+            root_dir=str(search_root_dir),
+            sub_dir=str(overlay_path_list[0]),
+            f_match_overlay_tomls=matcher,  # type: ignore[arg-type]
+        )
+    else:
+        # if there is more than one item in the list, then we are doing a file specific search
+        # so we just return the list of paths after verifying they are not directories
+        for path in overlay_path_list:
+            if path.is_dir():
+                raise ValueError("--overlay-path must be a file, not a directory, when it is used multiple times")
+        overlay_files: list[Path] = overlay_path_list
 
     # Build final tomls list: base first (lowest precedence), then overlays in order
     final_tomls_list: list[str] = [str(profile_file)] + [str(p) for p in overlay_files]
@@ -130,8 +142,8 @@ def _mk_tomls_list(
 
 def get_tomls_list(
     profile_file: str,
-    overlay_dir: str = ".",
-    overlay_toml_name: str = "overlay.toml",
+    overlay_path_list: List[Optional[str]],
+    overlay_toml_name: str,
     overlay_prefix: str = "",
     no_ascend_dir_hierarchy: bool = False
 ) -> list[str]:
@@ -140,7 +152,7 @@ def get_tomls_list(
 
     Args:
         profile_file: the profile file path
-        overlay_dir: the overlay directory path
+        overlay_path_list: the list of overlay path list items
         overlay_toml_name: the name of the overlay TOML file
         overlay_prefix: the prefix for overlay files (ALWAYS "" now)
         # combine_overlays: whether to combine overlays
@@ -150,15 +162,21 @@ def get_tomls_list(
         A list of TOML file paths
     """
     # get the profile file
-    profile_file_path = profile_file
+    profile_file_path = _resolve_profile_file_path(profile_file)
+
+    # this should never happen because the default is [., None]
+    assert not all(item is None for item in overlay_path_list), "overlay_path_list must be non-empty"
+
+    # get the overlay path list
+    overlay_path_list_resolved = _resolve_overlay_path_list(overlay_path_list)
 
     # make the list of TOML files to merge
     tomls_list = _mk_tomls_list(
-        profile_file_path,
-        overlay_dir,
-        overlay_toml_name,
-        overlay_prefix,
-        no_ascend_dir_hierarchy
+        profile_file=profile_file_path,
+        overlay_path_list=overlay_path_list_resolved,
+        overlay_toml_name=overlay_toml_name,
+        overlay_prefix=overlay_prefix,
+        no_ascend_dir_hierarchy=no_ascend_dir_hierarchy
     )
     
     return tomls_list
@@ -170,7 +188,7 @@ def get_tomls_list(
 #
 ###############################################################################
 
-def mk_dep_file_contents(merged_toml_name: str, build_dir: str, tomls_list: list[str], verbosity: int = 0, include_out_toml_in_deps: bool = True) -> str:
+def mk_dep_file_contents(merged_toml_name: str, build_dir: str, tomls_list: list[str], verbosity: int = 0) -> str:
     """
     Generate the dep fragment file.
     
@@ -179,7 +197,6 @@ def mk_dep_file_contents(merged_toml_name: str, build_dir: str, tomls_list: list
         build_dir: the build directory
         tomls_list: the list of TOML files to merge
         verbosity: the verbosity level
-        include_out_toml_in_deps: whether to include the output merged.toml in the dependencies
     Returns:
         string: contents of the dep fragment file
     """
@@ -237,12 +254,11 @@ def mk_dep_file_contents(merged_toml_name: str, build_dir: str, tomls_list: list
 
     # Build dependency list: output merged.toml and all input tomls
     deps_list: list[str] = []
-    if include_out_toml_in_deps:
-        if os.sep in merged_toml_name:
-            merged_toml_file_name = os.path.basename(merged_toml_name)
-        else:
-            merged_toml_file_name = merged_toml_name
-        deps_list.append(repl_build_config_dir(os.path.join(build_config_dir_abs, merged_toml_file_name)))
+    if os.sep in merged_toml_name:
+        merged_toml_file_name = os.path.basename(merged_toml_name)
+    else:
+        merged_toml_file_name = merged_toml_name
+    deps_list.append(repl_build_config_dir(os.path.join(build_config_dir_abs, merged_toml_file_name)))
     deps_list.extend(repl_root(p) for p in tomls_list)
 
     # Write wrapped dependency rule for readability (GNU make compatible)
@@ -331,7 +347,7 @@ def merge(args: CurvCliArgs) -> int:
     assert args.get("overlay_prefix")=="", "overlay_prefix must be empty but was " + args.get("overlay_prefix")
     tomls_list = get_tomls_list(
         profile_file=args.get("profile_file"),
-        overlay_dir=str(args.get("overlay_dir", ".")),
+        overlay_path_list=args.get("overlay_path_list"),
         overlay_toml_name=str(args.get("overlay_toml_name", "overlay.toml")),
         overlay_prefix=str(args.get("overlay_prefix", "")),
         no_ascend_dir_hierarchy=not bool(args.get("ascend_dir_hierarchy", True))
@@ -357,7 +373,7 @@ def merge(args: CurvCliArgs) -> int:
     # get output dir path
     build_dir = args.get("build_dir")
     merged_toml_output_dir = os.path.dirname(args.get("merged_file"))
-    dep_file_output_dir = os.path.dirname(args.get("out_dep"))
+    dep_file_output_dir = os.path.dirname(args.get("dep_file"))
     os.makedirs(merged_toml_output_dir, exist_ok=True)
     os.makedirs(dep_file_output_dir, exist_ok=True)
 
@@ -378,21 +394,21 @@ def merge(args: CurvCliArgs) -> int:
         display_merged_toml_table(config_values, get_curv_paths().mk_rel_to_cwd(args.get("merged_file")), use_ascii_box=False, verbosity=verbosity)
 
     # Unconditionally write dep fragment file
-    s = mk_dep_file_contents(args.get("merged_file"), build_dir, tomls_list, verbosity, include_out_toml_in_deps=True)
-    dep_file_overwritten = _write_dep_file(args.get("out_dep"), s, write_only_if_changed=True)
+    s = mk_dep_file_contents(args.get("merged_file"), build_dir, tomls_list, verbosity)
+    dep_file_overwritten = _write_dep_file(args.get("dep_file"), s, write_only_if_changed=True)
     if verbosity >= 2:
-        display_dep_file_contents(s, args.get("out_dep"), use_ascii_box=False)
+        display_dep_file_contents(s, args.get("dep_file"), use_ascii_box=False)
     
     if verbosity >= 1:
         rel_path_out_toml = get_curv_paths().mk_rel_to_cwd(args.get("merged_file"))
-        rel_path_out_dep = get_curv_paths().mk_rel_to_cwd(args.get("out_dep"))
+        rel_path_dep_file = get_curv_paths().mk_rel_to_cwd(args.get("dep_file"))
         if merged_toml_overwritten:
             console.print(f"[bright_yellow]wrote:[/bright_yellow] {rel_path_out_toml}")
         else:
             console.print(f"[green]unchanged:[/green] {rel_path_out_toml}")
         if dep_file_overwritten:
-            console.print(f"[bright_yellow]wrote:[/bright_yellow] {rel_path_out_dep}")
+            console.print(f"[bright_yellow]wrote:[/bright_yellow] {rel_path_dep_file}")
         else:
-            console.print(f"[green]unchanged:[/green] {rel_path_out_dep}")
+            console.print(f"[green]unchanged:[/green] {rel_path_dep_file}")
 
     return 0

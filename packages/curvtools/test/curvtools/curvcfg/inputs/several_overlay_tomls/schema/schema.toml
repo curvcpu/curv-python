@@ -1,0 +1,30 @@
+[_schema.vars.CFG_CPU_RESET_VECTOR]
+toml_path     = "cpu.reset_vector"
+var_name      = "CFG_CPU_RESET_VECTOR"
+type          = "int"
+min           = 0x000
+max           = 0xffc
+sv_type       = "logic [31:0]"
+makefile_type = "hex32"
+locations     = ["makefiles", "cfgpkg", "json"]
+
+[_schema.vars.CFG_CPU_MTVEC_BASE]
+toml_path     = "cpu.mtvec_base"
+var_name      = "CFG_CPU_MTVEC_BASE"
+type          = "int"
+min           = 0x0
+max           = 0xfffffffc
+sv_type       = "logic [31:0]"
+makefile_type = "hex32"
+locations     = ["cfgpkg", "json"]
+default       = 0x1234_5678
+
+[_schema.vars.CFG_CPU_XLEN]
+toml_path = "cpu.xlen"
+var_name = "CFG_CPU_XLEN"
+type = "enum"
+enum_values = [32, 64, 128, 256]
+default = 32
+sv_type = "int"
+makefile_type = "decimal"
+locations = ["makefiles", "cfgpkg", "env"]

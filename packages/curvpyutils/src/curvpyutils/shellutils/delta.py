@@ -34,7 +34,7 @@ def print_delta(
     try:
         delta = Which("delta", on_missing_action=on_delta_missing)()
     except FileNotFoundError as e:
-        # Respect user's desire to warn, but never fail fatally here; we will fall back
+        # never fail fatally here; fall back to difflib
         original_exc = e
         delta = None
 

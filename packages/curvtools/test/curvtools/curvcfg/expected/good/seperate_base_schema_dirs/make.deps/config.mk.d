@@ -1,7 +1,7 @@
-BUILD_GEN_DIR    := /tmp/curvcfg_e2e_build_daffn52v/generated
+# line removed because contains an absolute path that changes each time test tests are run
 
-BUILD_CONFIG_DIR := /tmp/curvcfg_e2e_build_daffn52v/config
+# line removed because contains an absolute path that changes each time test tests are run
 
 $(BUILD_GEN_DIR)/curv.mk $(BUILD_GEN_DIR)/.curv.env $(BUILD_GEN_DIR)/curvcfgpkg.sv $(BUILD_GEN_DIR)/curvcfg.svh: \
   $(BUILD_CONFIG_DIR)/merged.toml \
-  /home/mwg/curv-python/packages/curvtools/test/curvtools/curvcfg/inputs/good/seperate_base_schema_dirs/config/default.toml
+# line removed because contains an absolute path that changes each time test tests are run

@@ -46,11 +46,6 @@ def colorize_keyword(s: str) -> str:
 #     f"{colorize_keyword('<build-dir>')} or {colorize_keyword('%build-dir%')} => current value of --build-dir\n"
 # )
 
-EPILOG = """[dim]Examples:[/]
-  curvcfg merge --base-config <base.toml>
-  curvcfg show --keys '*cache*'
-"""
-
 import click
 from rich.console import Console
 from rich.markup import escape
@@ -317,11 +312,23 @@ class CurvcfgCommand(click.Command):
         opts = []
         with formatter.no_placeholder_protection():
             with formatter.section("Expansion Variables"):
-                formatter.write_text("These angle-bracketvariables will be expanded with the values of other arguments when used in a path argument (you probably need to put the entire path in quotes):")
+                formatter.write_text("These angle-bracket variables will be expanded with the values of other arguments or env vars when used in a quoted path:")
                 formatter.write_dl_with_markup([
-                    ("[cyan]<curv-root-dir>[/]", "expanded to current value of --curv-root-dir"),
-                    ("[cyan]<build-dir>[/]", "expanded to current value of --build-dir"),
+                    ("[cyan]<curv-root-dir>[/]", "expanded to value of --curv-root-dir or $CURV_ROOT_DIR"),
+                    ("[cyan]<build-dir>[/]", "expanded to value of --build-dir"),
                 ])
+    def format_epilog(self, ctx, formatter:CurvcfgAnsiHelpFormatter) -> None:
+        """Writes the epilog into the formatter if it exists."""
+        import inspect
+        from curvtools.cli.curvcfg.cli import epilog_fn
+        global epilog_fn
+        self.epilog = epilog_fn()
+        if self.epilog:
+            epilog = inspect.cleandoc(self.epilog)
+            formatter.write_paragraph()
+            with formatter.section("CURV_ROOT_DIR"):
+                formatter.write_text(epilog)
+
 
 class CurvcfgGroup(click.Group):
     """ Group that uses our context """
@@ -335,3 +342,15 @@ class CurvcfgGroup(click.Group):
         self.format_help_text(ctx, formatter)
         self.format_options(ctx, formatter)
         self.format_epilog(ctx, formatter)
+    def format_epilog(self, ctx, formatter:CurvcfgAnsiHelpFormatter) -> None:
+        """Writes the epilog into the formatter if it exists."""
+        import inspect
+        from curvtools.cli.curvcfg.cli import epilog_fn
+        global epilog_fn
+        self.epilog = epilog_fn()
+        if self.epilog:
+            epilog = inspect.cleandoc(self.epilog)
+            formatter.write_paragraph()
+            with formatter.section("CURV_ROOT_DIR"):
+                formatter.write_text(epilog)
+

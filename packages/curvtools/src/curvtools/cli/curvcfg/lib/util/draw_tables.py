@@ -218,7 +218,12 @@ def display_args_table(args: CurvCliArgs, title: str, use_ascii_box: bool = Fals
     table.add_column("Argument")
     table.add_column("Value", overflow="fold")
     for key, value in args.items():
-        table.add_row(f"{key}", str(value))
+        if isinstance(value, list):
+            table.add_row(f"{key}", str(value[0]))
+            for item in value[1:]:
+                table.add_row("", str(item))
+        else:
+            table.add_row(f"{key}", str(value))
 
     p2 = Panel(table, 
             title=f"[yellow]effective arguments ([bold]{title}[/bold] command)[/yellow]", 

@@ -8,6 +8,7 @@ from .ulimits import (
     raise_recursion_limit,
     raise_stack_limit,
 )
+from .user_config_file import UserConfigFile
 
 __all__ = [
     "get_nprocs",
@@ -16,5 +17,6 @@ __all__ = [
     "get_recursion_limit",
     "get_stack_limit",
     "raise_stack_limit",
+    "UserConfigFile",
 ]
 

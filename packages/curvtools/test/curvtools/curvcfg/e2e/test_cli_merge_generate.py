@@ -7,6 +7,12 @@ import subprocess
 import re
 from pathlib import Path
 import pytest
+from curvtools.cli.curvcfg.lib.globals.constants import (
+    DEFAULT_MERGED_TOML_NAME, DEFAULT_MERGED_TOML_DIR, 
+    DEFAULT_DEP_FILE_NAME, DEFAULT_DEP_FILE_DIR
+)
+from curvpyutils.test_helpers import compare_files
+from curvpyutils.shellutils import print_delta, Which
 
 pytestmark = pytest.mark.e2e
 
@@ -36,7 +42,7 @@ class TestCliMergeGenerate(CurvCfgE2ETestCase):
 
         # Paths (expected depends on mode for some files)
         expected_build_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "expected", "good", "seperate_base_schema_dirs"))
-        merged_toml_path = os.path.join(build_dir, "config", "merged.toml")
+        merged_toml_path = os.path.join(build_dir, DEFAULT_MERGED_TOML_DIR, DEFAULT_MERGED_TOML_NAME)
 
         # 0) Setup args depending on mode
         base_dir = Path(__file__).resolve().parent.parent
@@ -76,8 +82,8 @@ class TestCliMergeGenerate(CurvCfgE2ETestCase):
             os.path.join("generated", "curvcfg.svh"),
             os.path.join("generated", "curvcfgpkg.sv"),
             os.path.join("generated", ".curv.env"),
-            os.path.join("make.deps", "config.mk.d"),  # compared after stripping BUILD_GEN_DIR and BUILD_CONFIG_DIR lines because they contain absolute paths
-            os.path.join("config", "merged.toml"),
+            os.path.join(DEFAULT_DEP_FILE_DIR, DEFAULT_DEP_FILE_NAME),  # compared after stripping BUILD_GEN_DIR and BUILD_CONFIG_DIR lines because they contain absolute paths
+            os.path.join(DEFAULT_MERGED_TOML_DIR, DEFAULT_MERGED_TOML_NAME),
         ]
 
         comment_abs_path = "# line removed because contains an absolute path that changes each time test tests are run"
@@ -88,21 +94,14 @@ class TestCliMergeGenerate(CurvCfgE2ETestCase):
             self.assertTrue(os.path.isfile(expected_path), f"expected file missing: {expected_path}")
             self.assertTrue(os.path.isfile(generated_path), f"actual file missing: {generated_path}")
 
-            if rel_path.endswith(os.path.join("config", "merged.toml")):
-                # Create a filtered copy of merged.toml, replacing the absolute config_generated_dir line
-                final_generated_path = _write_filtered_copy(
-                    generated_path,
-                    [r"\s*config_generated_dir\s*="],
-                    comment_abs_path,
-                )
-            elif rel_path.endswith(os.path.join("make.deps", "config.mk.d")):
+            if rel_path.endswith(os.path.join(DEFAULT_DEP_FILE_DIR, DEFAULT_DEP_FILE_NAME)):
                 # Create a filtered copy of config.mk.d, replacing absolute path lines
                 final_generated_path = _write_filtered_copy(
                     generated_path,
                     [
-                        r"\s*BUILD_GEN_DIR\s*: =",
-                        r"\s*BUILD_CONFIG_DIR\s*: =",
-                        r"\s*/.*curvtools/test/curvtools/cfg/inputs/",
+                        r"\s*BUILD_GEN_DIR\s*:=",
+                        r"\s*BUILD_CONFIG_DIR\s*:=",
+                        r"\s*/.*curvtools/test/curvtools/curvcfg/inputs/",
                         r"\s*\$\(CURV_ROOT_DIR\)/tools/curvcfg/test/inputs/",
                     ],
                     comment_abs_path,
@@ -119,13 +118,74 @@ class TestCliMergeGenerate(CurvCfgE2ETestCase):
                 final_generated_path = generated_path
 
             # Compare the final generated path with the expected path
-            cmp_ok = filecmp.cmp(final_generated_path, expected_path, shallow=False)
+            cmp_ok = compare_files(final_generated_path, expected_path)
             # Try to display diffs if the files differ before we die on the assertion
             if not cmp_ok:
                 self._force_keep_temps = True
-                if shutil.which("delta"):
-                    subprocess.run(["delta", final_generated_path, expected_path], check=False)
-                elif shutil.which("diff"):
-                    subprocess.run(["diff", "-u", final_generated_path, expected_path], check=False)
+                print_delta(final_generated_path, expected_path, on_delta_missing=Which.OnMissingAction.ERROR)
             self.assertTrue(cmp_ok, f"mismatch: {final_generated_path} != {expected_path}")
 
+class TestMergeWithOverlayPathList(CurvCfgE2ETestCase):
+    def test_cli_merge_with_overlay_path_list(self) -> None:
+        # Create temporary build directory and ensure cleanup
+        build_dir = tempfile.mkdtemp(prefix="curvcfg_e2e_build_")
+        self.register_temp_path(build_dir)
+        
+    def test_cli_merge_generate(self) -> None:
+        # Create temporary build directory and ensure cleanup
+        build_dir = tempfile.mkdtemp(prefix="curvcfg_e2e_build_")
+        self.register_temp_path(build_dir)
+
+        # Paths
+        expected_build_dir = os.path.normpath(
+            os.path.join(os.path.dirname(__file__), "..", "expected", "several_overlay_tomls"))
+        merged_toml_path = os.path.join(build_dir, DEFAULT_MERGED_TOML_DIR, DEFAULT_MERGED_TOML_NAME)
+
+        # 0) Setup args
+        base_dir = Path(__file__).resolve().parent.parent
+        merge_args = [
+            "-vvv",
+            "merge",
+            "--profile-file", str(base_dir / "inputs/several_overlay_tomls/profiles/base.toml"),
+            "--schema-file", str(base_dir / "inputs/several_overlay_tomls/schema/schema.toml"),
+            "--overlay-path", str(base_dir / "inputs/several_overlay_tomls/overlay1.toml"),
+            "--overlay-path", str(base_dir / "inputs/several_overlay_tomls/overlay2.toml"),
+            "--overlay-path", str(base_dir / "inputs/several_overlay_tomls/overlay3.toml"),
+            "--build-dir", build_dir,
+        ]
+
+        # 1) Run merge
+        res_merge = self.run_cmd(self.base_cmd + merge_args, cwd=str(base_dir))
+        if res_merge.returncode != 0:
+            self._force_keep_temps = True
+        self.assertEqual(res_merge.returncode, 0, f"merge failed: {res_merge.returncode}\nstdout:\n{res_merge.stdout}\nstderr:\n{res_merge.stderr}")
+        if res_merge.returncode != 0:
+            self._force_keep_temps = True
+        self.assertTrue(os.path.isfile(merged_toml_path), f"merged.toml not found at {merged_toml_path}")
+
+        # 2) compare files
+        files_to_compare = [
+            os.path.join(DEFAULT_MERGED_TOML_DIR, DEFAULT_MERGED_TOML_NAME),
+            os.path.join(DEFAULT_DEP_FILE_DIR, DEFAULT_DEP_FILE_NAME),
+        ]
+        for rel_path in files_to_compare:
+            generated_path = os.path.join(build_dir, rel_path)
+            comment_abs_path = "# line removed because contains an absolute path that changes each time test tests are run"
+            final_generated_path = _write_filtered_copy(
+                generated_path,
+                [
+                    r"\s*BUILD_GEN_DIR\s*:=",
+                    r"\s*BUILD_CONFIG_DIR\s*:=",
+                    r"\s*/.*curvtools/test/curvtools/curvcfg/inputs/",
+                    r"\s*\$\(CURV_ROOT_DIR\)/tools/curvcfg/test/inputs/",
+                ],
+                comment_abs_path,
+            )
+            expected_path = os.path.join(expected_build_dir, rel_path)
+            self.assertTrue(os.path.isfile(expected_path), f"expected file missing: {expected_path}")
+            self.assertTrue(os.path.isfile(final_generated_path), f"actual file missing: {final_generated_path}")
+            cmp_ok = compare_files(final_generated_path, expected_path)
+            if not cmp_ok:
+                self._force_keep_temps = True
+                print_delta(final_generated_path, expected_path, on_delta_missing=Which.OnMissingAction.ERROR)
+            self.assertTrue(cmp_ok, f"mismatch: {final_generated_path} != {expected_path}")

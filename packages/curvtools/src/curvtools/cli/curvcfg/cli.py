@@ -2,7 +2,7 @@ from enum import Enum
 from pathlib import Path
 import sys
 import os
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Union, Callable, List
 import click
 from curvtools.cli.curvcfg.lib.globals.constants import PROGRAM_NAME, PACKAGE_NAME
 from curvtools.cli.curvcfg.version import get_styled_version, get_styled_version_message
@@ -11,7 +11,7 @@ from curvtools.cli.curvcfg.cli_helpers.help_formatter import CurvcfgGroup, Curvc
 from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
 from curvtools.cli.curvcfg.lib.util.draw_tables import display_args_table, display_curvcfg_settings_table
-from curvtools.cli.curvcfg.lib.globals.constants import DEFAULT_MERGED_TOML_NAME, PROGRAM_NAME, DEFAULT_OVERLAY_TOML_NAME
+from curvtools.cli.curvcfg.lib.globals.constants import DEFAULT_MERGED_TOML_NAME, PROGRAM_NAME, DEFAULT_OVERLAY_TOML_NAME, DEFAULT_DEP_FILE_PATH, DEFAULT_MERGED_TOML_PATH
 from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
 from curvtools.cli.curvcfg.cli_helpers import (
     build_dir_opt,
@@ -34,10 +34,12 @@ from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
 from rich.traceback import install, Traceback
 from curvtools.cli.curvcfg.lib.globals.console import console
+from curvpyutils.cli_util import preparse, EarlyArg
+from click.core import ParameterSource
 
 """
 Usage:
-  curvcfg [--curv-root-dir=<curv-root-dir>] merge    --profile-file=<profile-toml-file> [--schema-file=<schema-toml-file>] [--overlay-dir=<overlay-dir>] [--build-dir=<build-dir>] [--merged-file=<merged-toml-file-out>] [--dep-file-outfile=<dep-file-outfile>] [--no-ascend-dir-hierarchy] [--overlay-prefix=<overlay-prefix>] [--combine-overlays]
+  curvcfg [--curv-root-dir=<curv-root-dir>] merge    --profile-file=<profile-toml-file> [--schema-file=<schema-toml-file>] [--overlay-dir=<overlay-dir>] [--build-dir=<build-dir>] [--merged-file=<merged-toml-file-out>] [--dep-file=<dep-file-out>] [--no-ascend-dir-hierarchy] [--overlay-prefix=<overlay-prefix>] [--combine-overlays]
   curvcfg [--curv-root-dir=<curv-root-dir>] generate --build-dir=<build-dir>               [--merged-file=<merged-toml-file-in>]
   curvcfg                                   completions                                    [--shell=<shell>] [--install|--print] [--path=<path>]
   curvcfg [--curv-root-dir=<curv-root-dir>] show profiles
@@ -55,8 +57,8 @@ merge command options:
   --schema-file=<schema-toml-file>                  (required) Path to schema TOML file. Default is $CURV_ROOT_DIR/config/schema/schema.toml or <curv-root-dir>/config/schema.toml, depending on the base config and schema mode.
   --build-dir=<build-dir>                      Base build directory. Outputs are written under this directory. Default is "build/" relative to the cwd.
   --merged-file=<merged-toml-file-out>  Where to write merged.toml output file. Default is "<build-dir>/config/merged.toml".
-  --dep-file-outfile=<dep-file-outfile>        Where to write the Makefile dependency file. Default is "<build-dir>/make.deps/config.mk.d".
-  --overlay-no-ascend-dirs                     Do not ascend directories when searching for overlay toml files; only consider the overlay directory. Default is False.
+  --dep-file=<dep-file-out>        Where to write the Makefile dependency file. Default is "<build-dir>/make.deps/config.mk.d".
+  --ascend-dir-hierarchy/--no-ascend-dir-hierarchy                     Do ascend directories when searching for overlay toml files; only consider the overlay directory. Default is True.
   --overlay-dir=<overlay-dir>                  The lowest directory that contains an overlay.toml file. Default is cwd. May be relative to cwd, or absolute.
 
 completions command options:
@@ -93,6 +95,27 @@ def _resolved_dist_name() -> str:
     except Exception:
         return PACKAGE_NAME
 
+def make_epilog_fn(curv_root_dir: Optional[str], curv_root_dir_source: ParameterSource) -> Callable[[], str]:
+    def _epilog_fn() -> str:
+        match curv_root_dir_source:
+            case ParameterSource.ENVIRONMENT:
+                curv_root_dir_source_str = "env"
+            case ParameterSource.COMMANDLINE:
+                curv_root_dir_source_str = "cli"
+            case ParameterSource.DEFAULT:
+                curv_root_dir_source_str = "repo"
+            case _:
+                curv_root_dir_source_str = "unknown"
+        EPILOG = """
+'{curv_root_dir}' ({curv_root_dir_source_str})
+"""
+        return EPILOG.format(
+            curv_root_dir=curv_root_dir or "(not set, use --curv-root-dir to set)",
+            curv_root_dir_source_str=curv_root_dir_source_str,
+        )
+    return _epilog_fn
+
+epilog_fn: Callable[[], str] = lambda: None
 
 @click.group(
     cls=CurvcfgGroup,
@@ -126,14 +149,14 @@ def cli(
 ) -> None:
     """curvcfg command line interface"""
     ctx.ensure_object(dict)
-    ctx.obj["curv_root_dir"] = curv_root_dir
+    ctx.obj["curv_root_dir"] = curv_root_dir or epilog_fn() or os.environ.get("CURV_ROOT_DIR")
     ctx.obj["verbosity"] = max(ctx.obj.get("verbosity", 0), min(verbose, 3))
 
 @cli.command(
     cls=CurvcfgCommand,
     context_settings=CONTEXT_SETTINGS,
-    short_help="Merge base config and overlays",
-    help="Merge base config and overlays into a merged TOML (in <build-dir>/config/merged.toml by default) and a Makefile dependency file (in <build-dir>/make.deps/config.mk.d by default)"
+    short_help="Merge profile toml file and overlays",
+    help=f"Merge the profile toml file with any overlays to create a merged TOML (default: {DEFAULT_MERGED_TOML_PATH}) and a Makefile dependency file (default: {DEFAULT_DEP_FILE_PATH})"
 )
 @profile_file_opt(required=True)
 @schema_file_opt(required=True)
@@ -141,13 +164,6 @@ def cli(
 @overlay_opts()
 @merged_toml_opt(name="merged_file", outfile=True)
 @output_dep_opt()
-@click.option(
-    "--include-out-toml-in-deps/--no-include-out-toml-in-deps",
-    "include_out_toml_in_deps",
-    is_flag=True,
-    default=True,
-    help="Include the output merged.toml in the dependencies list in the config.mk.d.",
-)
 @verbosity_opts(include_verbose=True)
 @click.pass_context
 def merge(
@@ -155,25 +171,23 @@ def merge(
     profile_file: FsPathType,
     schema_file: FsPathType,
     build_dir: str,
-    overlay_dir: str,
+    overlay_path_list: list[Optional[str]],
     ascend_dir_hierarchy: bool,
     merged_file: Optional[str],
-    out_dep: Optional[str],
-    include_out_toml_in_deps: bool,
+    dep_file: Optional[str],
     verbose: int,
 ) -> None:
     merge_args: CurvCliArgs = {
-        "curv_root_dir": ctx.obj.get("curv_root_dir"),
+        "curv_root_dir": ctx.obj.get("curv_root_dir", epilog_fn() if epilog_fn else os.environ.get("CURV_ROOT_DIR")),
         "profile_file": profile_file,
         "schema_file": schema_file,
         "build_dir": build_dir,
-        "overlay_dir": overlay_dir,
+        "overlay_path_list": overlay_path_list,
         "overlay_toml_name": DEFAULT_OVERLAY_TOML_NAME,
         "overlay_prefix": "",
         "ascend_dir_hierarchy": ascend_dir_hierarchy,
         "merged_file": merged_file,
-        "out_dep": out_dep,
-        "include_out_toml_in_deps": include_out_toml_in_deps,
+        "dep_file": dep_file,
         "verbosity": max(ctx.obj["verbosity"], min(verbose, 2)),
     }
 
@@ -208,7 +222,7 @@ def generate(ctx: click.Context, build_dir: str, merged_file: Optional[str], sch
 
 
 
-@cli.command(name="completions", context_settings=CONTEXT_SETTINGS)
+@cli.command(name="completions", cls=CurvcfgCommand, context_settings=CONTEXT_SETTINGS)
 @click.option("--shell", "shell", type=click.Choice(["bash", "zsh", "fish", "powershell"]), default=None,
               help="Shell to generate completions for. Defaults to current shell.")
 @click.option("--install/--print", "install", default=False,
@@ -235,7 +249,7 @@ def completions(ctx: click.Context, shell: Optional[str], install: bool, install
 
 
 
-@cli.group(name="show", context_settings=CONTEXT_SETTINGS, help="Show active build configuration values and related information")
+@cli.group(name="show", cls=CurvcfgGroup, context_settings=CONTEXT_SETTINGS, help="Show active build configuration values and related information")
 @verbosity_opts(include_verbose=True)
 @click.pass_context
 def show(ctx: click.Context, verbose: int) -> None:
@@ -271,6 +285,7 @@ def show_active_variables(ctx: click.Context, build_dir: str, profile_file: FsPa
     raise SystemExit(rc)
 
 @show.command(
+    cls=CurvcfgCommand,
     context_settings=CONTEXT_SETTINGS,
     name="overlays", 
     short_help=f"Shows the hierarchy of base config + overlays",
@@ -282,13 +297,13 @@ def show_active_variables(ctx: click.Context, build_dir: str, profile_file: FsPa
 def show_overlays(
     ctx: click.Context, 
     profile_file: FsPathType, 
-    overlay_dir: str, 
+    overlay_path_list: List[Optional[str]], 
     ascend_dir_hierarchy: bool, 
     verbose: int) -> None:
     show_args: CurvCliArgs = {
         "curv_root_dir": ctx.obj.get("curv_root_dir"),
         "profile_file": profile_file,
-        "overlay_dir": overlay_dir,
+        "overlay_path_list": overlay_path_list,
         "overlay_toml_name": DEFAULT_OVERLAY_TOML_NAME,
         "overlay_prefix": "",
         "no_ascend_dir_hierarchy": not ascend_dir_hierarchy,
@@ -299,7 +314,7 @@ def show_overlays(
     rc = _show_overlays_impl(show_args)
     raise SystemExit(rc)
 
-@show.command(name="profiles", context_settings=CONTEXT_SETTINGS,
+@show.command(name="profiles", cls=CurvcfgCommand, context_settings=CONTEXT_SETTINGS,
     short_help="Show available base configurations (profiles)",
     help="Show available base configurations in $CURV_ROOT_DIR/config/profiles directory",
 )
@@ -326,6 +341,11 @@ def main(argv: Optional[list[str]] = None) -> int:
     install(show_locals=True, word_wrap=True, width=get_console_width(), suppress=[click])
 
     try:
+        from curvpyutils.file_utils.repo_utils import get_git_repo_root
+        early_curv_root_dir = EarlyArg(["--curv-root-dir"], env_var_fallback="CURV_ROOT_DIR", default_value_fallback=get_git_repo_root())
+        preparse([early_curv_root_dir], argv=argv or sys.argv[1:])
+        global epilog_fn
+        epilog_fn = make_epilog_fn(early_curv_root_dir.value, early_curv_root_dir.source)
         cli.main(args=argv, standalone_mode=True)
     except click.exceptions.ClickException as e:
         Traceback.from_exception(type(e), e, e.__traceback__, show_locals=True)

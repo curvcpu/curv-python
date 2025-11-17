@@ -36,8 +36,8 @@ class _ProfileRetriever():
         if not profile_name.endswith(".toml"):
             profile_file_filename = profile_name + ".toml"
         else:
-            profile_file_name = profile_name
-        merged_toml_dict = MergedTomlDict.from_toml_files(Path(self.profiles_dir) / profile_file_name)
+            profile_file_filename = profile_name
+        merged_toml_dict = MergedTomlDict.from_toml_files(Path(self.profiles_dir) / profile_file_filename)
         return merged_toml_dict
 
     def get_all_profiles(self, sort_with_default_first: bool = True) -> dict[str, Profile]:
