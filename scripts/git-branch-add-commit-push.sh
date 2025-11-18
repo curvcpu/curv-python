@@ -34,7 +34,8 @@ notes:
   Does this: 
    • git feat <new-branch> -r
    • <prompt for message if not provided>
-   • git magic -a -m 'message'
+   • git add -A
+   • git commit -m 'message'
    • <prompt for push [Y/n]> → git push
 EOF
 	exit 1
@@ -103,7 +104,8 @@ git-branch-add-commit-push() {
 	git feature -a "$feat_or_fix" "$new_branch" -r || { echo "error: failed to create new branch '$new_branch'" >&2; return 1; }
 
 	# stage all unstaged + commit
-	git magic -a -m "$msg" || { echo "error: failed to commit" >&2; return 1; }
+	git add -A || { echo "error: failed to stage all changes" >&2; return 1; }
+	git commit -m "$msg" || { echo "error: failed to commit" >&2; return 1; }
 
 	# Optional push
 	local ans ans_lower
