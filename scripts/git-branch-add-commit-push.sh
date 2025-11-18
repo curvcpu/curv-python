@@ -107,8 +107,8 @@ git-branch-add-commit-push() {
 
 	# Optional push
 	local ans ans_lower
-	read -r -p "Push now? [y/N] " ans
-	ans="${ans:-n}"  # default to "n" if empty (ENTER pressed)
+	read -r -p "Push now? [Y/n] " ans
+	ans="${ans:-Y}"  # default to "Y" if empty (ENTER pressed)
 	ans_lower="${ans,,}"  # convert to lowercase for case-insensitive matching
 	case "${ans_lower:0:1}" in  # check first character only
 		y) 
