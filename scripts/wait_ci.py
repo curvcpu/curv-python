@@ -60,12 +60,12 @@ print_out = mk_print_out_fn()
 # helper functions
 ################################################################################
 
-def get_latest_commit_gh_run_id(RETRY_TIMEOUT_SEC: int = 30, DELAY_BETWEEN_ATTEMPTS_SEC: int = 1) -> int:
+def get_latest_commit_gh_run_id(RETRY_TIMEOUT_SEC: int = 30, DELAY_BETWEEN_ATTEMPTS_SEC: int = 3) -> int:
     """
     Get the latest commit's Github Actions CI run id. We retry once per second until RETRY_TIMEOUT_SEC is reached.
 
     Args:
-        RETRY_TIMEOUT_SEC: The number of seconds to retry before timing out
+        RETRY_TIMEOUT_SEC: The number of seconds to retry before timing out; 0 means wait forever
         DELAY_BETWEEN_ATTEMPTS_SEC: The number of seconds to wait between attempts
     
     Together, these determine how many attempts will be made before timing out.
@@ -78,11 +78,14 @@ def get_latest_commit_gh_run_id(RETRY_TIMEOUT_SEC: int = 30, DELAY_BETWEEN_ATTEM
         RuntimeError: If the run id for the latest commit's Github Actions CI run cannot be found after MAX_ATTEMPTS attempts
     """
 
-    MAX_ATTEMPTS: int = RETRY_TIMEOUT_SEC // DELAY_BETWEEN_ATTEMPTS_SEC
+    if RETRY_TIMEOUT_SEC > 0:
+        MAX_ATTEMPTS: int = RETRY_TIMEOUT_SEC // DELAY_BETWEEN_ATTEMPTS_SEC
+    else:
+        MAX_ATTEMPTS = None
 
     attempts = 0
     run_id = None
-    while attempts < MAX_ATTEMPTS:
+    while MAX_ATTEMPTS is None or attempts < MAX_ATTEMPTS:
         # get the latest commit sha pushed to Github
         cmd = ["git", "rev-parse", "HEAD"]
         latest_commit_sha_result = subprocess.run(
@@ -192,6 +195,9 @@ def parse_args() -> argparse.Namespace:
             help="GitHub Actions run ID to watch (default: latest commit's Github Actions CI run)",
             type=int,
         )
+    
+    parser.add_argument("--timeout-ci-start", '-t', type=int, default=30, help="Timeout in seconds to wait for the CI run to start (default: %{default}s; 0 means wait forever)")
+    parser.add_argument("--interval-ci-start", '-i', type=int, default=3, help="Interval in seconds between polling to see if CI has started (default: %{default}s)")
 
     args = parser.parse_args()
 
@@ -210,7 +216,7 @@ def parse_args() -> argparse.Namespace:
     # if they don't provide a GH_ACTION_RUN_ID, try to get it from the latest commit
     if args.GH_ACTION_RUN_ID is None:
         try:
-            args.GH_ACTION_RUN_ID = get_latest_commit_gh_run_id()
+            args.GH_ACTION_RUN_ID = get_latest_commit_gh_run_id(args.timeout_ci_start, args.interval_ci_start)
         except Exception as e:
             print_out(f"Unable to get latest commit's Github Actions CI run ID:", severity=PrintSeverity.ERROR)
             print_out(f"  {e}", severity=PrintSeverity.ERROR)
