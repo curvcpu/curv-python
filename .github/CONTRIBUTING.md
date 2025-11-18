@@ -134,58 +134,6 @@ Example:
     $ make show
     ```
 
-### CI and PR Automation Scripts
+## Helpful Git Aliases
 
-This is completely optional, but here are some git aliases you may or may not find useful.
-
-- Add these aliases to `.git/config`:
-
-    ```shell
-    [alias]
-            # `git gci` - wait for current CI to complete; exit 0 on success, non-zero on failure
-            gci = "!REPO_ROOT=$(git rev-parse --show-toplevel); ${REPO_ROOT}/scripts/wait_ci.py"
-
-            # `git branch-off` - moves all unstaged changes to a new branch, commits and pushes; run with no args for help
-            branch-off = "!REPO_ROOT=$(git rev-parse --show-toplevel); ${REPO_ROOT}/scripts/git-branch-add-commit-push.sh"
-
-            # `git pr-[open,mergeable,merge]` - sequence of 3 commands to open, test and merge from the cli
-            pr-open = "!json=$(~/scripts/ollama-pr-message.py); \
-            title=$(printf '%s' \"$json\" | jq -r '.title'); \
-            body=$(printf '%s' \"$json\" | jq -r '.body'); \
-                    gh pr create --web --title \"$title\" --body \"$body\""
-            pr-mergeable = "!gh pr view --json mergeable | \
-                    jq -e '.mergeable == \"MERGEABLE\"' 1>&2 \
-                    && git gci"
-            pr-merge = "!json=$(gh pr view --json number,title); \
-                    number=$(printf '%s' \"$json\" | jq -r '.number'); \
-                    title=$(printf '%s' \"$json\" | jq -r '.title'); \
-                    gh pr merge --squash -d \
-                            --subject \"Merge PR #${number}: ${title}\" \
-                            --body \"\" \
-                    && git gci"
-    ```
-
-- Open a new `feat/` or `fix/` branch:
-
-    Suppose you have made some changes on `main` and now wish to turn them into a PR:
-
-    ```sh
-    # create a new branch `feat/new-feature` with the changes + commit + push
-    $ git branch-off feat/new-feature "add new feature"
-    ```
-
-- PR flow:
-
-    ```sh
-    # Let AI generate the commit message and edit in the browser before opening
-    $ git pr-open
-    ```
-
-    When ready to merge:
-    
-    ```sh
-    # wait for verified mergeable
-    $ git pr-mergeable && echo "ready to merge"
-    # merge and wait for merge CI to complete
-    $ git pr-merge && echo "success!"
-    ```
+This is not particularly unique to this repo, but some git aliases I have found helpful are documented in [docs/git-aliases.md](../docs/git-aliases.md).
