@@ -250,12 +250,9 @@ def main(argv):
         console.print("")
         panel = Panel.fit(
             Text.assemble(
-                Text("make publish PKG=", style="bold white"),
-                Text('\"', style="bold white"),
-                Text(f"{publish_order_str}", style="bold white"),
-                Text('\" ', style="bold white"),
-                Text("LEVEL=", style="bold white"),
-                Text("<patch|minor|major>", style="bold white"),
+                Text(f"make publish PKG={pkg} LEVEL=patch|minor|major", style="bold white"),
+                "\n\n",
+                Text(f"(This is because make re-runs this tool to determine all packages needing to be republished in order to publish {pkg}.)", style="dim white"),
             ),
             title=f"Recommended make command for publishing `{pkg}`",
             padding=(1, 2),
