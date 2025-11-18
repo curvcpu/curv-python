@@ -7,11 +7,10 @@ except Exception:
     except Exception:
         __version__ = "0.0.0.dev0+gunknown"
 
-
-from .version import (
-    get_version_str as get_curvtools_version_str,
-)
+from . import constants
+from .version import get_version_str as get_curvtools_version_str
 
 __all__ = [
+    "constants",
     "get_curvtools_version_str",
 ]

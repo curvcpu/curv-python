@@ -1,4 +1,4 @@
-"""curvtools-shellenv CLI package."""
+"""curvtools CLI package"""
 
 from .__main__ import main
 
