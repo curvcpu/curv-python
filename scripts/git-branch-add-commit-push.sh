@@ -35,7 +35,7 @@ notes:
    • git feat <new-branch> -r
    • <prompt for message if not provided>
    • git magic -a -m 'message'
-   • <prompt for push? [y/N]> → git push
+   • <prompt for push [Y/n]> → git push
 EOF
 	exit 1
 fi
