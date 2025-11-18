@@ -61,7 +61,7 @@ def get_initial_dict() -> dict[str, Any]:
 @click.group(
     context_settings=CONTEXT_SETTINGS,
     help=(
-        "This tool helps with setup for curvtools. Run `curvtools create` from the curv-python repo directory to create the config file, then run `curvtools instructions` for instructions on how to set up the environment variables."
+        "This tool helps with setup for curvtools. Run `curvtools config create` from the curv-python repo directory to create the config file, then run `curvtools instructions` for instructions on how to set up the environment variables."
     ),
     epilog=(
         f"For more information, see: `{PROGRAM_NAME} instructions`"
@@ -91,7 +91,17 @@ def instructions(
     console.print(f"echo 'eval \"$({PROGRAM_NAME} shellenv)\"' >> ~/.bashrc", highlight=False, style="bold white")
     console.print("\nThen restart your shell.", highlight=True, style="khaki3")
 
-@cli.command()
+@cli.group(name="config")
+@click.pass_context
+def config_group(
+    ctx: click.Context
+) -> None:
+    """
+    Manage the curvtools configuration file.
+    """
+    ctx.ensure_object(dict)
+
+@config_group.command(name="create")
 @click.pass_context
 def create(
     ctx: click.Context
@@ -107,12 +117,12 @@ def create(
             user_config_file.write(get_initial_dict())
             console.print(f"Config file {user_config_file.config_file_path} created or updated with default values.", highlight=True, style="bold green")
         else:
-            console.print(f"Config file {user_config_file.config_file_path} already exists; use `{PROGRAM_NAME} recreate` to re-create it with default values.", highlight=True, style="yellow")
+            console.print(f"Config file {user_config_file.config_file_path} already exists; use `{PROGRAM_NAME} config recreate` to re-create it with default values.", highlight=True, style="yellow")
     except ValueError as e:
         err_console.print(str(e))
         return
 
-@cli.command()
+@config_group.command(name="recreate")
 @click.pass_context
 def recreate (
     ctx: click.Context
@@ -130,7 +140,7 @@ def recreate (
         return
     console.print(f"Config file {user_config_file.config_file_path} re-created with default values.", highlight=True, style="bold green")
 
-@cli.command()
+@config_group.command(name="delete")
 @click.pass_context
 def delete(
     ctx: click.Context
