@@ -107,18 +107,19 @@ class TestCliMergeGenerate(CurvCfgE2ETestCase):
                     comment_abs_path,
                 )
                 # Also filter expected path to neutralize CURV_ROOT_DIR-relative test input paths
-                expected_path = _write_filtered_copy(
+                expected_path_tmp = _write_filtered_copy(
                     expected_path,
                     [r"\s*\$\(CURV_ROOT_DIR\)/tools/curvcfg/test/inputs/"],
                     comment_abs_path,
                 )
-                # Skip strict comparison; we validated existence and masked absolute/relative variability
-                continue
+                self.register_temp_path(expected_path_tmp)
+                self.register_temp_path(final_generated_path)
             else:
                 final_generated_path = generated_path
+                expected_path_tmp = expected_path
 
             # Compare the final generated path with the expected path
-            cmp_ok = compare_files(final_generated_path, expected_path)
+            cmp_ok = compare_files(final_generated_path, expected_path_tmp)
             # Try to display diffs if the files differ before we die on the assertion
             if not cmp_ok:
                 self._force_keep_temps = True
