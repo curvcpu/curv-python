@@ -10,6 +10,8 @@ except Exception:
         __version__ = "0.0.0.dev0+gunknown"
 
 __all__ = [
+    "cli_util",
+    "logging",
     "test_helpers",
     "colors",
     "file_utils",
