@@ -11,6 +11,7 @@ from curvpyutils.system import UserConfigFile
 from rich.console import Console
 from rich.traceback import install, Traceback
 from typing import Any
+from curvtools import constants
 
 install(show_locals=True, width=120, word_wrap=True)
 
@@ -25,10 +26,11 @@ PROGRAM_NAME = "curvtools"
 
 def make_user_config_file() -> UserConfigFile:
     return UserConfigFile(
-        app_name="curv", 
-        app_author="Mike Goelzer", 
-        filename="config.toml"
+        app_name=constants.USER_CONFIG_FILE['APP_NAME'], 
+        app_author=constants.USER_CONFIG_FILE['APP_AUTHOR'], 
+        filename=constants.USER_CONFIG_FILE['FILENAME']
     )
+
 def get_curv_python_repo_path() -> str:
     curr_dir_ok = False
     cmd = ["git", "remote", "get-url", "--all", "origin"]
