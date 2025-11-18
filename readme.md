@@ -5,7 +5,7 @@
   <a href="https://github.com/curvcpu/curv-python/releases/tag/curv-v0.1.14"><img src="https://img.shields.io/badge/v0.1.14-blue?label=curv" alt="curv version 0.1.14"></a>
   <!-- @endsubst -->
   <!-- @subst[`printf '<a href="https://github.com/curvcpu/curv-python/releases/tag/curvtools-v$CURVTOOLS_VER_MAJMINPTCH"><img src="https://img.shields.io/badge/v$CURVTOOLS_VER_MAJMINPTCH-blue?label=curvtools" alt="curvtools version $CURVTOOLS_VER_MAJMINPTCH"></a>\n'`] -->
-  <a href="https://github.com/curvcpu/curv-python/releases/tag/curvtools-v0.0.16"><img src="https://img.shields.io/badge/v0.0.16-blue?label=curvtools" alt="curvtools version 0.0.16"></a>
+  <a href="https://github.com/curvcpu/curv-python/releases/tag/curvtools-v0.0.17"><img src="https://img.shields.io/badge/v0.0.17-blue?label=curvtools" alt="curvtools version 0.0.17"></a>
   <!-- @endsubst -->
   <!-- @subst[`printf '<a href="https://github.com/curvcpu/curv-python/releases/tag/curvpyutils-v$CURVPYUTILS_VER_MAJMINPTCH"><img src="https://img.shields.io/badge/v$CURVPYUTILS_VER_MAJMINPTCH-blue?label=curvpyutils" alt="curvpyutils version $CURVPYUTILS_VER_MAJMINPTCH"></a>\n'`] -->
   <a href="https://github.com/curvcpu/curv-python/releases/tag/curvpyutils-v0.0.49"><img src="https://img.shields.io/badge/v0.0.49-blue?label=curvpyutils" alt="curvpyutils version 0.0.49"></a>
