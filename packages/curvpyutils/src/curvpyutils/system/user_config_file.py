@@ -54,6 +54,12 @@ class UserConfigFile:
         toml_dict = read_toml_file(self.config_file_path)
         return toml_dict
 
+    def raw_read(self) -> str:
+        """
+        Read the config file as a raw string.
+        """
+        return self.config_file_path.read_text(encoding="utf-8")
+
     def _dotted_path_to_list(self, path: str) -> list[str]:
         return path.split(".")
 
