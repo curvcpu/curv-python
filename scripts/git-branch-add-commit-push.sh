@@ -22,7 +22,7 @@ Takes all unstaged/unstaged changes and commits them onto a NEW branch and
 optionally pushes them to the remote.
 
 usage:
-  ${prog} [feat|fix] <new-branch> [commit message]
+  ${prog} [feat|fix] <new-branch> [commit message] [-S]
 
 examples:
   ${prog} fix bug-in-script "my commit message"
@@ -37,6 +37,8 @@ notes:
    • git add -A
    • git commit -m 'message'
    • <prompt for push [Y/n]> → git push
+  Optional:
+   • Pass -S as the final argument to append " [skip ci]" to the commit message.
 EOF
 	exit 1
 fi
@@ -47,9 +49,15 @@ if ! git extras --version >/dev/null 2>&1; then
 	exit 1
 fi
 
+append_skip_ci=false
+if [[ $# -ge 3 && "${!#}" == "-S" ]]; then
+	append_skip_ci=true
+	set -- "${@:1:$(( $#-1 ))}"
+fi
+
 # make sure no extra args
 if [[ $# -gt 3 ]]; then
-	echo "error: only three arguments allowed: [feat|fix] <new-branch> [message]" >&2
+	echo "error: only three arguments allowed (plus optional trailing -S): [feat|fix] <new-branch> [message] [-S]" >&2
 	exit 1
 fi
 
@@ -98,6 +106,10 @@ git-branch-add-commit-push() {
 				break
 			fi
 		done
+	fi
+
+	if [[ "$append_skip_ci" == "true" ]]; then
+		msg+=" [skip ci]"
 	fi
 
 	# creates & checks out new branch
