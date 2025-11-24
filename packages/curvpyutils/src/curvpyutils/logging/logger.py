@@ -3,11 +3,57 @@ from typing import Optional
 from rich.traceback import install
 from rich.logging import RichHandler
 import logging
+import os
+
+log = logging.getLogger(__name__)
+
+@dataclass
+class LoggingLevels:
+    stderr_level: int = field(default=logging.ERROR)
+    file_level: int = field(default=logging.NOTSET)
+    _stderr_level_str: str = field(default="")
+    _file_level_str: str = field(default="")
+    def __post_init__(self):
+        self._stderr_level_str = logging.getLevelName(self.stderr_level)
+        self._file_level_str = logging.getLevelName(self.file_level)
+    @classmethod
+    def from_verbosity(cls, verbosity: int) -> "LoggingLevels":
+        match verbosity:
+            case v if v <= -1:
+                stderr_level = logging.CRITICAL
+            # case 0 is handled by the default case
+            case 1:
+                stderr_level = logging.WARNING
+            case 2:
+                stderr_level = logging.INFO
+            case v if v >= 3:
+                stderr_level = logging.DEBUG
+            case _:
+                stderr_level = logging.ERROR
+        return cls(stderr_level=stderr_level, file_level=logging.NOTSET)
+    @property
+    def stderr_level(self) -> int:
+        return self.stderr_level
+    @property
+    def stderr_level_str(self) -> str:
+        return self._stderr_level_str
+    @property
+    def file_level(self) -> int:
+        return self.file_level
+    @property
+    def file_level_str(self) -> str:
+        return self._file_level_str
+    @property
+    def stderr_quiet(self) -> bool:
+        return self.stderr_level >= logging.CRITICAL
+    def __str__(self) -> str:
+        return f"LoggingLevels(stderr_level={self.stderr_level_str}, file_level={self.file_level_str})"
 
 def configure_rich_root_logger(
-    verbosity: int = 0, 
+    verbosity: int|LoggingLevels = LoggingLevels(), 
     err_console: Optional[Console] = None,
-    addl_consoles: Optional[list[Console]] = None
+    addl_consoles: Optional[list[Console]] = None,
+    log_file_path: Optional[str] = None,
 ) -> None:
     """
     Configure the root logger based on the verbosity argument.
@@ -45,32 +91,29 @@ def configure_rich_root_logger(
     Returns:
         None
     """
+    if isinstance(verbosity, int):
+        verbosity = LoggingLevels.from_verbosity(verbosity)
+    elif isinstance(verbosity, LoggingLevels):
+        pass
+    else:
+        raise ValueError(f"Invalid verbosity: {verbosity}")
+
     if err_console is None:
         err_console = Console(stderr=True)
+    if verbosity.is_stderr_quiet:
+        err_console.quiet = True
+    if log_file_path is not None:
+        file_console = Console(file=log_file_path)
     if addl_consoles is None:
         addl_consoles = []
     import click # just so we can suppress click tracebacks
     tracebacks_suppress = [click] # type: ignore
 
-    match verbosity:
-        case v if v <= -1:
-            level = logging.CRITICAL
-            err_console.quiet = True
-        # case 0 is handled by the default case
-        case 1:
-            level = logging.WARNING
-        case 2:
-            level = logging.INFO
-        case v if v >= 3:
-            level = logging.DEBUG
-        case _:
-            level = logging.ERROR
-    
     # install rich tracebacks for console.log() and uncaught exceptions
     show_path_map: dict[Console, bool] = {}
-    for c in [err_console] + addl_consoles:
+    for c in [err_console] + addl_consoles + ([file_console] if file_console is not None else []):
         # only show path if there is enough width in the console
-        show_path_map[c] = (c.width is not None and c.width >= 80)
+        show_path_map[c] = (c.width is not None and c.width >= 80) or (log_file_path is not None and c==file_console)
         install(
             console=c, 
             show_locals=True, 
@@ -79,13 +122,10 @@ def configure_rich_root_logger(
 
     # configure logging
     FORMAT = "%(message)s"
-    logging.basicConfig(
-        force=True,  # in case we're reconfiguring logging
-        level=level, 
-        format=FORMAT, 
-        datefmt="[%X]", 
-        handlers=[RichHandler(
+    handlers=[
+        RichHandler(
             console=err_console,
+            level=verbosity.stderr_level,
             show_level=True, 
             show_path=show_path_map[err_console],
             enable_link_path=True,
@@ -96,5 +136,36 @@ def configure_rich_root_logger(
             tracebacks_code_width=150,
             tracebacks_word_wrap=True,
             tracebacks_suppress=tracebacks_suppress
-        )]
+        ),
+    ]
+    if log_file_path is not None:
+        handlers.append(
+            RichHandler(
+                level=verbosity.file_level,
+                console=file_console,
+                show_level=True, 
+                show_path=show_path_map[file_console],
+                enable_link_path=True,
+                rich_tracebacks=True,
+                tracebacks_show_locals=True,
+                tracebacks_width=120,
+                # tracebacks_extra_lines=5,
+                tracebacks_code_width=150,
+                tracebacks_word_wrap=True,
+                tracebacks_suppress=tracebacks_suppress
+            )
+        )
+        log_file_path2 = log_file_path.replace(
+            os.path.basename(log_file_path), os.path.basename(log_file_path)+'2')
+        handlers.append(
+            # Plain file output
+            logging.FileHandler(log_file_path2, mode="a", encoding="utf-8"),
+        )
+    logging.basicConfig(
+        force=True,  # in case we're reconfiguring logging
+        level=logging.NOTSET, 
+        format=FORMAT, 
+        datefmt="[%X]", 
+        handlers=handlers
     )
+    log.info(f"[logger] configured: {str(verbosity)}")
