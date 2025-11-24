@@ -5,8 +5,9 @@ from typing import NamedTuple
 import os
 import sys
 from typing import Any, Dict, Tuple
+import tempfile
 from curvpyutils.toml_utils import MergedTomlDict  # type: ignore
-from curvtools.cli.curvcfg.lib.util.cfgvalue import CfgValue, CfgValues, MissingVars
+from curvtools.cli.curvcfg.lib.util import CfgValue, CfgValues
 from curvpyutils.file_utils.repo_utils import get_git_repo_root
 from curvtools.cli.curvcfg.lib.util import FileEmitter, ConfigFileTypes, ConfigFileTypesForWriting
 
@@ -197,13 +198,13 @@ def validate_and_collect(cfg:Dict[str, Any], schema:Dict[str, Any]) -> Tuple[Cfg
 
     return CfgValues(cfg_values), MissingVars(missing_vars)
 
-def get_config_values(config: str | Path | Dict[str, Any], schema: str | Path | Dict[str, Any] | None, is_combined_toml: bool) -> CfgValues:
+def get_config_values(config: str | Path | Dict[str, Any], schema: list[str|Path] | Dict[str, Any] | None, is_combined_toml: bool) -> CfgValues:
     """
-    Generates the configuration based on a base config TOML file and a schema TOML file.
+    Generates the configuration based on a base config TOML file and a schema TOML file list or dictionary.
 
     Args:
         config: The base config TOML, either as a file path (string or Path) or a dictionary.
-        schema: The schema TOML, either as a file path (string or Path) or a dictionary.
+        schema: The schema TOMLs, either as a list of file paths (list[string|Path]) or a dictionary.
         is_combined_toml: If True, the config argument is the path to a combined TOML file containing both the base config and the schema,
             and the schema argument is unused.
 
@@ -211,27 +212,68 @@ def get_config_values(config: str | Path | Dict[str, Any], schema: str | Path | 
         - vals: Dict[str, CfgValue]
         The validated config values as a dictionary of str->CfgValue.
     """
+
+    ############################################################################
+    # Combine the schema files into a single temporary file
+    ############################################################################
+    schema_processed = None
+    if schema is not None:
+        assert not is_combined_toml, "is_combined_toml implies that schema is None"
+        if isinstance(schema, list):
+            # convert every element of the schema list into a Path object
+            schema_file_paths_list: list[Path] = []
+            for f in schema:
+                if f is None:
+                    continue
+                if isinstance(f, str):
+                    schema_file_paths_list.append(Path(f))
+                elif isinstance(f, Path):
+                    schema_file_paths_list.append(f)
+                else:
+                    raise ValueError("if schema is a list, it must be a list of str or Path objects")
+            # Create a temporary file and concatenate the contents of all schema files into it
+            tmp_fd, tmp_path = tempfile.mkstemp(suffix=".toml", prefix="curvcfg_combined_schema_")
+            with os.fdopen(tmp_fd, "w") as tmp_file:
+                for schema_path in schema_file_paths_list:
+                    with open(schema_path, "r") as f_in:
+                        tmp_file.write(f_in.read())
+                        tmp_file.write("\n")
+            schema_processed = Path(tmp_path)
+        elif isinstance(schema, dict):
+            schema_processed = schema
+        else:
+            raise ValueError("schema must be a list of file paths (str or Path) or a dictionary, but got {}".format(type(schema)))
+    else:
+        assert is_combined_toml, "is_combined_toml implies that schema is None"
+
+    ############################################################################
+    # Validate the config and schema
+    ############################################################################
     if is_combined_toml:
-        if isinstance(config, str) or isinstance(config, Path):
-            combined_toml_dict:MergedTomlDict = MergedTomlDict.from_toml_files(str(config))
+        assert schema_processed is None, "schema_processed must be None in this branch"
+        if isinstance(config, (str, Path)):
+            combined_toml_dict:MergedTomlDict = MergedTomlDict(str(config))
         else:
             combined_toml_dict:MergedTomlDict = MergedTomlDict.from_dict(config)
         schema_dict, config_dict = combined_toml_dict.split_on_top_level_key("_schema")
         config_values, _ = validate_and_collect(config_dict, schema_dict)
+    
     else:
-        if isinstance(config, str) or isinstance(config, Path):
-            config_dict:MergedTomlDict = MergedTomlDict.from_toml_files(str(config))
+        if isinstance(config, (str, Path)):
+            config_dict:MergedTomlDict = MergedTomlDict(str(config))
         else:
             config_dict:MergedTomlDict = MergedTomlDict.from_dict(config)
-        if isinstance(schema, str) or isinstance(schema, Path):
-            schema_dict:MergedTomlDict = MergedTomlDict.from_toml_files(str(schema))
+        
+        assert schema_processed is not None, "schema_processed must not be None in this branch"
+        if isinstance(schema_processed, (str, Path)):
+            schema_dict:MergedTomlDict = MergedTomlDict(str(schema_processed))
         else:
-            schema_dict:MergedTomlDict = MergedTomlDict.from_dict(schema)
+            schema_dict:MergedTomlDict = MergedTomlDict.from_dict(schema_processed)
         config_values, _ = validate_and_collect(config_dict, schema_dict)
     return config_values
 
 def emit_config_files(config_values: CfgValues,
-                      outdir_path: str, 
+                      outdir_path: str | Path, 
                       emit_files: ConfigFileTypes = ConfigFileTypesForWriting, 
                       verbosity: int = 0) -> tuple[list[str], list[str]]:
     """
