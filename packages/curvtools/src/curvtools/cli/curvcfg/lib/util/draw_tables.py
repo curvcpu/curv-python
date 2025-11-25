@@ -1,3 +1,4 @@
+from __future__ import annotations
 from typing import Union, Optional, Dict, List
 from curvtools.cli.curvcfg.lib.util.cfgvalue import CfgValues
 from rich.padding import Padding, PaddingDimensions
@@ -7,51 +8,18 @@ from rich.style import Style
 from rich.table import Table
 from rich.markup import escape
 from rich.tree import Tree
-from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
 from pathlib import Path
 from curvtools.cli.curvcfg.lib.globals.console import console
 from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
 import click
+from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
+from curvtools.cli.curvcfg.lib.globals.constants import PATHS_RAW_ENV_FILE_REL_PATH
 
 def get_box(use_ascii_box: bool = False) -> Box:
     return ASCII2 if use_ascii_box else ROUNDED
-
-###############################################################################
-#
-# Display tree of TOML files helper
-#
-###############################################################################
-
-def display_toml_tree(tomls_list: list[str], use_ascii_box: bool = False, verbosity: int = 0) -> None:
-    """
-    Display the tree of TOML files.
-    
-    Args:
-        tomls_list: the list of TOML files
-
-    Returns:
-        None
-    """
-    # Display tree of TOML files
-    rel_base_path = get_curv_paths().mk_rel_to_curv_root(tomls_list[0])
-    if verbosity >= 1:
-        if len(tomls_list) > 1:
-            tree = Tree(f"[bold cyan]TOML Configuration Tree[/bold cyan]")
-            tree.add(f"[bold green]Base:[/bold green] [bold]{Path(rel_base_path).stem}[/bold] {escape('[' + rel_base_path + ']')}")
-            overlays_branch = tree.add("[bold yellow]Overlays (later take precedence):[/bold yellow]")
-            for i, overlay_path in enumerate(tomls_list[1:], 1):
-                rel_overlay_path = get_curv_paths().mk_rel_to_curv_root(overlay_path)
-                overlays_branch.add(f"[dim]{i}.[/dim] {rel_overlay_path}")
-        else:
-            tree = Tree(f"[bold cyan]Base:[/bold cyan] [bold]{Path(rel_base_path).stem}[/bold] {escape('[' + rel_base_path + ']')}")
-        console.print(Panel(tree, 
-            expand=False, 
-            title=f"[bold green]Configuration[/bold green]", 
-            border_style="cyan",
-            box=get_box(use_ascii_box),
-            ))
-        console.print()  # spacing
-
 
 ###############################################################################
 #
@@ -92,14 +60,7 @@ def display_merged_toml_table(config_values: CfgValues, target_path: str, use_as
             m = color_for_makefile_type.get(makefile_type, color_for_makefile_type["default"])
             return m["open"] + s + m["close"]
 
-        # p = Panel(f"{target_path}", 
-        #     style="green bold", 
-        #     border_style="white", 
-        #     expand=True,
-        #     box=get_box(use_ascii_box),
-        #     padding=(1, 2, 1, 2))
-        # console.print(p)
-
+        from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
         table_options = {}
         # table_options["title"] = f"{target_path}"
         # table_options["title_style"] = Style(color="green", bold=True)
@@ -108,7 +69,7 @@ def display_merged_toml_table(config_values: CfgValues, target_path: str, use_as
 
         if verbosity >= 2:
             table = Table(expand=False, **table_options)
-            table.add_column(f"Variable [dim](source: [green]{target_path}[/green])[/dim]", overflow="fold")
+            table.add_column(f"Variable [dim](source: [green]{CurvPaths.mk_rel_to_cwd(target_path)}[/green])[/dim]", overflow="fold")
             table.add_column("Value", overflow="fold")
             table.add_column("Type", overflow="fold")
             table.add_column("Constraints", overflow="fold")
@@ -126,7 +87,7 @@ def display_merged_toml_table(config_values: CfgValues, target_path: str, use_as
                 )
         else:
             table = Table(expand=False, **table_options)
-            table.add_column(f"Variable [dim](source: [green]{target_path}[/green])[/dim]", overflow="fold")
+            table.add_column(f"Variable [dim](source: [green]{CurvPaths.mk_rel_to_cwd(target_path)}[/green])[/dim]", overflow="fold")
             table.add_column("Value", overflow="fold")
             for k in sorted(config_values.keys()):
                 if not k.startswith("CFG_"):
@@ -146,7 +107,7 @@ def display_merged_toml_table(config_values: CfgValues, target_path: str, use_as
 #
 ###############################################################################
 
-def display_dep_file_contents(contents: str, target_path: str, use_ascii_box: bool = False) -> None:
+def display_dep_file_contents(contents: str, target_path: FsPathType, use_ascii_box: bool = False) -> None:
     """
     Display the dep file contents.
     
@@ -158,7 +119,7 @@ def display_dep_file_contents(contents: str, target_path: str, use_ascii_box: bo
     Returns:
         None
     """
-    title = get_curv_paths().mk_rel_to_cwd(target_path)
+    title = target_path.mk_rel_to_cwd()
     box=get_box(use_ascii_box)
     p = Panel(contents, 
         title=f"[bold green]{title}[/bold green]", 
@@ -174,7 +135,7 @@ def display_dep_file_contents(contents: str, target_path: str, use_ascii_box: bo
 #
 ###############################################################################
 
-def display_curvcfg_settings_table(ctx: click.Context, use_ascii_box: bool = False):
+def display_tool_settings(ctx: click.Context, use_ascii_box: bool = False):
     # print the tool's config settings
     curvcfg_settings_path = ctx.obj.get('curvcfg_settings_path', None)
     curvcfg_settings = ctx.obj.get('curvcfg_settings', None)
@@ -205,6 +166,42 @@ def display_curvcfg_settings_table(ctx: click.Context, use_ascii_box: bool = Fal
                 )
         console.print(p)
         console.print()
+
+def display_curvpaths(curv_paths: CurvPaths, use_ascii_box: bool = False) -> None:
+    """
+    Display the curvpaths.
+    
+    Args:
+        curv_paths: the curv paths instance
+        use_ascii_box: whether to use ascii box
+
+    Returns:
+        None
+    """
+    table = Table(
+            expand=False, 
+            highlight=True, 
+            border_style="blue",
+            title=f"[bold blue]{PATHS_RAW_ENV_FILE_REL_PATH}[/bold blue]",
+            box=MINIMAL_HEAVY_HEAD if not use_ascii_box else ASCII2,
+            pad_edge=False,
+            )
+    table.add_column("Path Name", overflow="fold", highlight=False)
+    table.add_column("Value", overflow="fold", highlight=False, style="deep_pink4")
+    table.add_column("Resolved", overflow="fold", highlight=False)
+    for key, value in curv_paths.items():
+        key_table = Table.grid()
+        key_table.add_column("Key", overflow="fold", highlight=False)
+        key_table.add_row(f"{key}")
+        key_table.add_row(f"{value.uninterpolated_value}", style="dark_magenta")
+        table.add_row(
+            key_table,
+            str(value),
+            "[green]yes[/green]" if value.is_fully_resolved() else "[red]no[/red]",
+            end_section=True,
+    )
+    console.print(table)
+    console.print()
 
 def display_args_table(args: CurvCliArgs, title: str, use_ascii_box: bool = False):
     # print the effective arguments
