@@ -72,7 +72,7 @@ class TestMergeTomls(unittest.TestCase):
         Does not consider the subdirs, only the base config.
         """
         overlay_toml_files = find_overlay_tomls_abs_paths(str(self.inputs_dir), str(self.inputs_dir), f_match_overlay_tomls=make_simple_match_overlay_tomls())
-        merged_toml_dict = MergedTomlDict.from_toml_files(str(self.config_path), overlay_toml_files)
+        merged_toml_dict = MergedTomlDict(str(self.config_path), overlay_toml_files)
         self.assertEqual(merged_toml_dict['cache']['sets'], 4)
 
     def test_merged_toml_dict1(self):
@@ -80,7 +80,7 @@ class TestMergeTomls(unittest.TestCase):
         Goes only to the first subdir, subdir1.
         """
         overlay_toml_files = find_overlay_tomls_abs_paths(str(self.inputs_dir), str(self.inputs_dir_subdir1), f_match_overlay_tomls=make_simple_match_overlay_tomls())
-        merged_toml_dict = MergedTomlDict.from_toml_files(str(self.config_path), overlay_toml_files)
+        merged_toml_dict = MergedTomlDict(str(self.config_path), overlay_toml_files)
         self.assertEqual(merged_toml_dict['cache']['sets'], 8)
 
     def test_merged_toml_dict2(self):
@@ -88,7 +88,7 @@ class TestMergeTomls(unittest.TestCase):
         Goes all the way to the deepest subdir.
         """
         overlay_toml_files = find_overlay_tomls_abs_paths(str(self.inputs_dir), str(self.inputs_dir_deepest_subdir), f_match_overlay_tomls=make_simple_match_overlay_tomls())
-        merged_toml_dict = MergedTomlDict.from_toml_files(str(self.config_path), overlay_toml_files)
+        merged_toml_dict = MergedTomlDict(str(self.config_path), overlay_toml_files)
         self.assertEqual(merged_toml_dict['cache']['sets'], 16)
 
     def test_write_to_file(self):
@@ -98,7 +98,7 @@ class TestMergeTomls(unittest.TestCase):
         # get the overlay toml files
         overlay_toml_files = find_overlay_tomls_abs_paths(str(self.inputs_dir), str(self.inputs_dir_deepest_subdir), f_match_overlay_tomls=make_simple_match_overlay_tomls())
 
-        merged_toml_dict = MergedTomlDict.from_toml_files(str(self.config_path), overlay_toml_files)
+        merged_toml_dict = MergedTomlDict(str(self.config_path), overlay_toml_files)
         with tempfile.TemporaryDirectory() as td:
             outdir = Path(td) / "generated"
             outdir.mkdir(parents=True, exist_ok=True)
