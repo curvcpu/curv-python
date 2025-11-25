@@ -4,6 +4,7 @@ from rich.traceback import install
 from rich.logging import RichHandler
 import logging
 import os
+from dataclasses import dataclass, field
 
 log = logging.getLogger(__name__)
 
@@ -32,14 +33,8 @@ class LoggingLevels:
                 stderr_level = logging.ERROR
         return cls(stderr_level=stderr_level, file_level=logging.NOTSET)
     @property
-    def stderr_level(self) -> int:
-        return self.stderr_level
-    @property
     def stderr_level_str(self) -> str:
         return self._stderr_level_str
-    @property
-    def file_level(self) -> int:
-        return self.file_level
     @property
     def file_level_str(self) -> str:
         return self._file_level_str
@@ -48,6 +43,9 @@ class LoggingLevels:
         return self.stderr_level >= logging.CRITICAL
     def __str__(self) -> str:
         return f"LoggingLevels(stderr_level={self.stderr_level_str}, file_level={self.file_level_str})"
+
+# def strip_extension(path: str) -> str:
+#     return os.path.splitext(path)[0]
 
 def configure_rich_root_logger(
     verbosity: int|LoggingLevels = LoggingLevels(), 
@@ -100,10 +98,12 @@ def configure_rich_root_logger(
 
     if err_console is None:
         err_console = Console(stderr=True)
-    if verbosity.is_stderr_quiet:
+    if verbosity.stderr_quiet:
         err_console.quiet = True
     if log_file_path is not None:
-        file_console = Console(file=log_file_path)
+        file_console = Console(file=open(log_file_path, "a", encoding="utf-8"), width=120)
+    else:
+        file_console = None
     if addl_consoles is None:
         addl_consoles = []
     import click # just so we can suppress click tracebacks
@@ -155,12 +155,14 @@ def configure_rich_root_logger(
                 tracebacks_suppress=tracebacks_suppress
             )
         )
-        log_file_path2 = log_file_path.replace(
-            os.path.basename(log_file_path), os.path.basename(log_file_path)+'2')
-        handlers.append(
-            # Plain file output
-            logging.FileHandler(log_file_path2, mode="a", encoding="utf-8"),
-        )
+        # log_file_path2 = log_file_path.replace(
+        #     strip_extension(log_file_path), 
+        #     strip_extension(log_file_path)+'2'
+        # )
+        # handlers.append(
+        #     # Plain file output
+        #     logging.FileHandler(log_file_path2, mode="a", encoding="utf-8"),
+        # )
     logging.basicConfig(
         force=True,  # in case we're reconfiguring logging
         level=logging.NOTSET, 
