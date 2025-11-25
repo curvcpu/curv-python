@@ -84,16 +84,16 @@ class CurvCfgE2ETestCase(unittest.TestCase):
             repo_root = os.getcwd()
         rel = env.get("CURV_FAKE_ROOT_REL", "packages/curvtools/test/curvtools/curvcfg/fake_curv_root")
         env["CURV_ROOT_DIR"] = os.path.join(repo_root, rel)
-        # # Ensure workspace packages are importable in subprocesses
-        # # Prepend so local sources take precedence over any installed versions
-        # workspace_paths = [
-        #     os.path.join(repo_root, "packages", "curvtools", "src"),
-        #     os.path.join(repo_root, "packages", "curv", "src"),
-        #     os.path.join(repo_root, "packages", "curvpyutils", "src"),
-        # ]
-        # existing_pythonpath = env.get("PYTHONPATH", "")
-        # new_pythonpath = os.pathsep.join([p for p in workspace_paths if p] + ([existing_pythonpath] if existing_pythonpath else []))
-        # env["PYTHONPATH"] = new_pythonpath
+        # Ensure workspace packages are importable in subprocesses
+        # Prepend so local sources take precedence over any installed versions
+        workspace_paths = [
+            os.path.join(repo_root, "packages", "curvtools", "src"),
+            os.path.join(repo_root, "packages", "curv", "src"),
+            os.path.join(repo_root, "packages", "curvpyutils", "src"),
+        ]
+        existing_pythonpath = env.get("PYTHONPATH", "")
+        new_pythonpath = os.pathsep.join([p for p in workspace_paths if p] + ([existing_pythonpath] if existing_pythonpath else []))
+        env["PYTHONPATH"] = new_pythonpath
         res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, env=env, cwd=cwd)
         if res.returncode != 0:
             # Mark to keep temps and print current temp paths for quick access
