@@ -3,7 +3,6 @@ import shutil
 import subprocess
 import click
 from typing import Optional, Union, Dict
-import curvtools.cli.curvcfg.lib.globals.curvpaths as curvpaths
 from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
 
 def infer_shell_from_env() -> Optional[str]:
@@ -59,7 +58,7 @@ def determine_program_name(command_path: Optional[str], info_name: Optional[str]
         return info_name
     return default_prog
 
-def completions(completions_args: CurvCliArgs, prog_name: str) -> int:
+def completions(completions_args: CurvCliArgs, ctx_obj: dict, prog_name: str) -> int:
     install = completions_args.get("install", False)
     install_path = completions_args.get("install_path", None)
     shell = completions_args.get("shell", None)
