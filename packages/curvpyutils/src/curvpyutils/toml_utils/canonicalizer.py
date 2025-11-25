@@ -7,6 +7,7 @@ import shutil
 from subprocess import CalledProcessError
 from curvpyutils.toml_utils import dump_dict_to_toml_str, read_toml_file    
 from typing import Optional
+from collections import OrderedDict
 
 class TomlCanonicalizer:
     def __init__(self, input_file: Path) -> None:
@@ -71,6 +72,21 @@ class TomlCanonicalizer:
         """
         Canonicalize a TOML file with python-toml.
         """
-        s = dump_dict_to_toml_str(read_toml_file(str(self.temp_file)))
+        # Sort the dictionary keys alphabetically
+        def sort_obj(x):
+            if isinstance(x, dict):
+                # sort keys alphabetically
+                return OrderedDict((k, sort_obj(x[k])) for k in sorted(x))
+            elif isinstance(x, list):
+                # if you want to keep array order, just recurse:
+                return [sort_obj(v) for v in x]
+                # or, for certain keys you know are sets, sort them explicitly
+            else:
+                return x
+        
+        print(f"canonicalizing with python-toml: {self.temp_file}")
+        d = read_toml_file(str(self.temp_file))
+        data = sort_obj(d)
+        s = dump_dict_to_toml_str(data)
         with open(self.temp_file, 'w') as f:
             f.write(s)
