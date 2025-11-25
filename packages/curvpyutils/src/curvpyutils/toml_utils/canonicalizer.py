@@ -1,0 +1,76 @@
+from __future__ import annotations
+import subprocess
+from curvpyutils.shellutils import Which
+from pathlib import Path
+import tempfile
+import shutil
+from subprocess import CalledProcessError
+from curvpyutils.toml_utils import dump_dict_to_toml_str, read_toml_file    
+from typing import Optional
+
+class TomlCanonicalizer:
+    def __init__(self, input_file: Path) -> None:
+        self.input_file = input_file
+        self.temp_file = self._copy_input_file_to_temp_file()
+        self.taplo_cmd = self._get_taplo_cmd()
+        if self.taplo_cmd is not None:
+            self._taplo_in_place_rewrite()
+        else:
+            self._canonicalize_with_python_toml()
+
+    def _get_taplo_cmd(self) -> Optional[Path]:
+        try:
+            return Which('taplo', on_missing_action=Which.OnMissingAction.RAISE)()
+        except FileNotFoundError:
+            return None
+
+    def _copy_input_file_to_temp_file(self) -> Path:
+        """
+        Copy the input TOML file to a temporary file.
+        """
+        temp_file = Path(tempfile.mkstemp(suffix='.toml', prefix='taplo_toml_temp_')[1])
+        shutil.copy(self.input_file, temp_file)
+        return temp_file
+
+    def _taplo_in_place_rewrite(self) -> None:
+        """
+        Run taplo to canonicalize a single TOML file.
+        """
+        if not self.temp_file.exists():
+            raise FileNotFoundError(f"TOML file not found: {self.temp_file}")
+        # IMPORTANT:  taplo can go crazy and reformat everything recursively under cwd,
+        # so it's essential to pass it a single file!
+        if not self.temp_file.is_file():
+            raise ValueError(f"TOML file is not a file: {self.temp_file}")
+
+        try:
+            result = subprocess.run(
+                [   self.taplo_cmd, 
+                    'fmt', 
+                    '-o', 'align_entries=true', 
+                    '-o', 'array_trailing_comma=true', 
+                    '-o', 'reorder_keys=true', 
+                    '-o', 'array_auto_expand=true', 
+                    '-o', 'array_auto_collapse=false', 
+                    '-o', 'compact_arrays=false', 
+                    self.temp_file ], 
+                stdout=subprocess.PIPE, 
+                stderr=subprocess.PIPE, 
+                text=True,
+                check=True
+            )
+        except CalledProcessError as e:
+            raise CalledProcessError(f"taplo returned non-zero (exit code {e.returncode}): {e.stderr}")
+        print(f"taplo output: {result.stdout}")
+        print(f"taplo stderr: {result.stderr}")
+        print(f"taplo return code: {result.returncode}")
+        print(f"taplo temp file: {self.temp_file}")
+        print(f"taplo input file: {self.input_file}")
+
+    def _canonicalize_with_python_toml(self) -> None:
+        """
+        Canonicalize a TOML file with python-toml.
+        """
+        s = dump_dict_to_toml_str(read_toml_file(str(self.temp_file)))
+        with open(self.temp_file, 'w') as f:
+            f.write(s)

@@ -1,0 +1,92 @@
+# Machine-generated file; do not edit
+
+[cpu]
+xlen = 128
+reset_vector = "0x0000_00ab"
+mtvec_base = "0x00ff_abcd"
+
+[cpu.regfile]
+use_lutram = 1
+
+[cache]
+tags_in_lutram = 1
+sets = 4
+ways = 2
+tags_have_valid_dirty_bits = 0
+
+[cache.cachelines]
+num_words = 16
+initially_valid = 1
+latency = 0
+
+[cache.cacheable_addresses]
+width = 27
+
+[cache.tags]
+have_valid_dirty_bits = 0
+
+[cache.hex_files]
+base_addr = "0x00000100"
+
+[cache.hex_files.src]
+type = "asm"
+name = "count1234"
+
+[cache.hex_files.subdirs]
+icache = "icache"
+dcache = "dcache"
+cachelines = "cachelines"
+tagram = "tagram"
+
+[tb.cache.dcache]
+simulate_latency = 0
+
+[tb.cache.icache]
+simulate_latency = 0
+
+[_schema.vars.CFG_CPU_RESET_VECTOR]
+toml_path = "cpu.reset_vector"
+var_name = "CFG_CPU_RESET_VECTOR"
+type = "int"
+min = 0
+max = 4092
+sv_type = "logic [31:0]"
+makefile_type = "hex32"
+locations = [
+    "makefiles",
+    "cfgpkg",
+    "json",
+]
+
+[_schema.vars.CFG_CPU_MTVEC_BASE]
+toml_path = "cpu.mtvec_base"
+var_name = "CFG_CPU_MTVEC_BASE"
+type = "int"
+min = 0
+max = 4294967292
+sv_type = "logic [31:0]"
+makefile_type = "hex32"
+locations = [
+    "cfgpkg",
+    "json",
+]
+default = 305419896
+
+[_schema.vars.CFG_CPU_XLEN]
+toml_path = "cpu.xlen"
+var_name = "CFG_CPU_XLEN"
+type = "enum"
+enum_values = [
+    32,
+    64,
+    128,
+    256,
+]
+default = 32
+sv_type = "int"
+makefile_type = "decimal"
+locations = [
+    "makefiles",
+    "cfgpkg",
+    "env",
+]
