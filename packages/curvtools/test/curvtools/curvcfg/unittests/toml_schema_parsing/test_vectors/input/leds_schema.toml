@@ -1,0 +1,21 @@
+[_schema.arrays."board.leds"]
+msb = 7
+lsb = 0
+var = "idx"
+lpf_name = "led"
+display = { sv_port = "output wire [{msb}:{lsb}] {lpf_name}" }
+required = true
+
+[_schema.arrays."board.leds[{idx}]".lpf_name]
+parse   = "string"
+domain  = { choices = ["led[{idx}]"] }
+
+[_schema.arrays."board.leds[{idx}]".sv_name]
+parse   = "string"
+domain  = {}
+
+[_schema.arrays."board.leds[{idx}]".c_hdr_name]
+parse   = "string"
+domain  = {}
+
+

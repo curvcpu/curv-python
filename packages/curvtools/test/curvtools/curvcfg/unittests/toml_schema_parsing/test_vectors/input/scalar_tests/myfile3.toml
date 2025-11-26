@@ -1,0 +1,20 @@
+# myfile3.toml
+[_schema.arrays.board_leds]
+toml_path = "board.leds"
+msb = 7
+lsb = 0
+lpf_name = "led"
+display = { sv_tmpl = "output wire [${MSB}:${LSB}] ${LPF_NAME}" }
+
+[_schema.arrays."board_leds[index]".lpf_name]
+parse   = "string"
+domain  = {}
+
+[_schema.arrays."board_leds[index]".sv_name]
+parse   = "string"
+domain  = {}
+
+[_schema.arrays."board_leds[index]".c_hdr_name]
+parse   = "string"
+domain  = {}
+

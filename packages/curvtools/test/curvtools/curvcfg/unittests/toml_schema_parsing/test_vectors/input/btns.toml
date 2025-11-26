@@ -1,0 +1,16 @@
+[[board.buttons]]
+name      = "B1"               # human-readable / enum symbol
+lpf_name  = "btn[{idx}]"       # {idx} is the index of the element within the array, formatted as a decimal integer
+active    = "0"                # active low
+
+[[board.buttons]]
+name      = "B2"
+lpf_name  = "btn[{idx}]"
+active    = "0"
+
+[[board.buttons]]
+name      = "UP"
+lpf_name  = "btn[{idx}]"
+active    = "0"
+
+

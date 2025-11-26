@@ -1,0 +1,21 @@
+[_schema.arrays."board.buttons"]
+msb = 2
+lsb = 0
+var = "idx"
+lpf_name = "btn"
+display = { sv_port = "input wire [{msb}:{lsb}] {lpf_name}" }
+required = true
+
+[_schema.arrays."board.buttons[{idx}]".name]
+parse = "string"
+domain = {}
+
+[_schema.arrays."board.buttons[{idx}]".lpf_name]
+parse = "string"
+domain = { choices = [ "btn[{idx}]" ] }
+
+[_schema.arrays."board.buttons[{idx}]".active]
+parse = "int"
+domain = { choices = [0, 1] }
+
+

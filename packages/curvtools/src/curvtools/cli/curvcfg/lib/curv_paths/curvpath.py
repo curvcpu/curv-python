@@ -1,8 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
-if TYPE_CHECKING:
-    from curvtools.cli.curvcfg.lib.util.cfgvalue import CfgValues
+import os
 from .replace_funcs import match_vars, replace_vars
 
 class CurvPath:

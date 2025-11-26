@@ -1,0 +1,39 @@
+[
+    {
+        "board.buttons": {
+            "display": {
+                "sv_port": "input wire [{msb}:{lsb}] {lpf_name}"
+            },
+            "lpf_name": "btn",
+            "lsb": 0,
+            "msb": 2,
+            "required": true,
+            "var": "idx"
+        }
+    },
+    {
+        "board.buttons[{idx}]": {
+            "active": {
+                "domain": {
+                    "choices": [
+                        0,
+                        1
+                    ]
+                },
+                "parse": "int"
+            },
+            "lpf_name": {
+                "domain": {
+                    "choices": [
+                        "btn[{idx}]"
+                    ]
+                },
+                "parse": "string"
+            },
+            "name": {
+                "domain": {},
+                "parse": "string"
+            }
+        }
+    }
+]

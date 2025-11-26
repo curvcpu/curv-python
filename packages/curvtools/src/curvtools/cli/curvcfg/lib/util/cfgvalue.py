@@ -152,7 +152,7 @@ class CfgValue():
     def __repr__(self) -> str:
         return f"CfgValue(value={self.value if self.value is not None else 'None'}, makefile_type={self.meta.makefile_type}, string_value={self._string_value() if self._string_value() is not None else 'None'}, locations={','.join(self.meta.locations)}, toml_path={self.meta.toml_path}, python type={self.python_type}, is_default={self.is_default})"
 
-class CfgValues(Dict[str, CfgValue]):
+class CfgValues(dict[str, CfgValue]):
     """
     Encapsulates a collection of CfgValue objects as a dictionary of str->CfgValue.
     """

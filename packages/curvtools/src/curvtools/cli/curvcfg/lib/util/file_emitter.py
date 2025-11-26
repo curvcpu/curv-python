@@ -3,8 +3,9 @@ import filecmp
 import json
 import re
 from enum import Flag
-from typing import Dict, Optional, Any
+from typing import Dict, Optional, Any, Iterable, List
 from . import CfgValues, CfgValue
+from pathlib import Path
 
 class ConfigFileTypes(Flag):
     NONE = 0
@@ -13,7 +14,8 @@ class ConfigFileTypes(Flag):
     SVH = 4
     MAKEFILE = 8
     JSON = 16
-    ALL = ENV | SVPKG | SVH | MAKEFILE | JSON
+    DEPS_MK = 32
+    ALL = ENV | SVPKG | SVH | MAKEFILE | JSON | DEPS_MK
 
 ConfigFileTypesForWriting = ConfigFileTypes.MAKEFILE | ConfigFileTypes.ENV | ConfigFileTypes.SVPKG | ConfigFileTypes.SVH
 
@@ -24,6 +26,161 @@ DEFAULT_OUTFILE_NAMES = {
     "svpkg": "curvcfgpkg.sv",
     "json": "curvcfg.json",
 }
+
+
+def _emit_dep_file_contents(
+    merged_toml_name: Path,
+    build_dir: Path,
+    tomls_list: Iterable[Path],
+    curv_root_dir: Path,
+    verbosity: int = 0,
+    emit_files: ConfigFileTypes = ConfigFileTypesForWriting,
+) -> str:
+    """
+    Generate the contents of a Makefile-style dependency fragment.
+
+    The resulting fragment expresses that each emitted config file produced under
+    <build_dir>/generated depends on:
+      - the merged TOML file under <build_dir>/config, and
+      - all of the source TOML files in tomls_list
+    
+    IMPORTANT:  every path passed as an argument to this function must be both 
+    .is_absolute() and .resolve()'d by the caller.
+
+    All paths are expressed relative to $(CURV_ROOT_DIR) and $(BUILD_CONFIG_DIR)
+    in a GNU-make-compatible wrapped dependency rule.
+    """
+
+    curv_root_dir = Path(curv_root_dir).resolve()
+    toml_paths: List[Path] = [Path(p).resolve() for p in tomls_list]
+
+    # check our preconditions
+    assert (merged_toml_name.is_absolute()) and (str(merged_toml_name.resolve())==str(merged_toml_name)), "merged_toml_name must be an absolute path and already be resolved"
+    assert (build_dir.is_absolute()) and (str(build_dir.resolve())==str(build_dir)), "build_dir must be an absolute path and already be resolved"
+    assert all((p.is_absolute()) and (str(p.resolve())==str(p)) for p in toml_paths), "all toml paths must be absolute and already be resolved"
+
+    # Replace a path under CURV_ROOT_DIR with '$(CURV_ROOT_DIR)/<relpath>'
+    def repl_curv_root_dir(p: Path) -> str:
+        try:
+            rel = p.relative_to(curv_root_dir)
+            return "$(CURV_ROOT_DIR)/" + rel.as_posix()
+        except ValueError:
+            # Not under CURV_ROOT_DIR; leave as absolute path
+            return p.as_posix()
+
+    # Build list of targets to generate (relative to generated dir)
+    build_generated_dir_abs = (build_dir / "generated").resolve()
+    os.makedirs(build_generated_dir_abs, exist_ok=True)
+    build_generated_dir = repl_curv_root_dir(build_generated_dir_abs)
+
+    build_config_dir_abs = (build_dir / "config").resolve()
+    os.makedirs(build_config_dir_abs, exist_ok=True)
+    build_config_dir = repl_curv_root_dir(build_config_dir_abs)
+
+    # Determine which file types to include based on runtime flags
+    flag_to_key = {
+        ConfigFileTypes.MAKEFILE: "makefile",
+        ConfigFileTypes.ENV: "env",
+        ConfigFileTypes.SVPKG: "svpkg",
+        ConfigFileTypes.SVH: "svh",
+        ConfigFileTypes.JSON: "json",
+    }
+
+    target_names: List[str] = []
+    for flag, key in flag_to_key.items():
+        if emit_files & flag:
+            outname = DEFAULT_OUTFILE_NAMES.get(key)
+            if outname:
+                target_names.append(outname)
+
+    # Targets to be generated
+    all_targets = target_names
+
+    lines: List[str] = []
+
+    # BUILD_GEN_DIR / BUILD_CONFIG_DIR assignments using $(CURV_ROOT_DIR)
+    lines.append(f"BUILD_GEN_DIR    := {build_generated_dir}")
+    lines.append("")
+    lines.append(f"BUILD_CONFIG_DIR := {build_config_dir}")
+    lines.append("")
+
+    # Dep fragment: replace build config dir with $(BUILD_CONFIG_DIR)
+    def repl_build_config_dir(p: Path) -> str:
+        try:
+            rel = p.relative_to(build_config_dir_abs)
+            return "$(BUILD_CONFIG_DIR)/" + rel.as_posix()
+        except ValueError:
+            return p.as_posix()
+
+    # Left-hand targets remain under BUILD_GEN_DIR
+    target_strs = " ".join(f"$(BUILD_GEN_DIR)/{name}" for name in all_targets)
+
+    # Build dependency list: output merged.toml and all input tomls
+    deps_list: List[str] = []
+    deps_list.append(
+        repl_build_config_dir(build_config_dir_abs / merged_toml_name.name)
+    )
+    deps_list.extend(repl_curv_root_dir(p) for p in toml_paths)
+
+    # Write wrapped dependency rule for readability (GNU make compatible)
+    lines.append(f"{target_strs}: \\")
+    for i, dep in enumerate(deps_list):
+        is_last = i == len(deps_list) - 1
+        if is_last:
+            lines.append(f"  {dep}")
+        else:
+            lines.append(f"  {dep} \\")
+
+    # Ensure trailing newline
+    return "\n".join(lines) + "\n"
+
+
+def _emit_dep_file(
+    path: Path,
+    contents: str,
+    write_only_if_changed: bool = True,
+    verbosity: int = 0,
+) -> bool:
+    """
+    Write the dependency fragment file to *path*.
+
+    Returns True if the file was created or overwritten, False if it was left
+    unchanged because the contents were identical.
+    """
+    import tempfile
+
+    assert path.is_absolute(), "path must be an absolute path"
+
+    # Determine if we need to use a temporary file for comparison
+    use_temp_file = write_only_if_changed and path.exists()
+
+    if use_temp_file:
+        temp_fd, temp_path_str = tempfile.mkstemp(suffix=".dep", prefix="curvcfg_")
+        os.close(temp_fd)  # Close the file descriptor, we'll use the path string
+        temp_path = Path(temp_path_str)
+        path_to_write = temp_path
+    else:
+        # Create the directory if it doesn't exist
+        path.parent.mkdir(parents=True, exist_ok=True)
+        # Use the original path
+        path_to_write = path
+
+    with open(path_to_write, "w") as f:
+        f.write(contents)
+
+    if use_temp_file:
+        # Compare with existing file; if unchanged, delete temp and return False
+        if filecmp.cmp(str(path_to_write), str(path)):
+            path_to_write.unlink(missing_ok=True)
+            return False
+        else:
+            # Overwrite the original file with the temporary file
+            path.parent.mkdir(parents=True, exist_ok=True)
+            os.replace(str(path_to_write), str(path))
+            return True
+    else:
+        # No temp file used => we've already overwritten the original file
+        return True
 
 class FormatUtils:
     @staticmethod
@@ -93,16 +250,16 @@ class FormatUtils:
         return str(v)
         
 class FileEmitter:
-    def __init__(self, config_values:CfgValues, outdir_path:str, emit_files: ConfigFileTypes, verbosity: int = 0):
+    def __init__(self, config_values:CfgValues, outdir_path:str | Path, emit_files: ConfigFileTypes, verbosity: int = 0):
         self.config_values = config_values
         self.outdir_path = outdir_path
         self.emit_files = emit_files
         self.verbosity = verbosity
-        self.output_paths = {"makefile": os.path.join(self.outdir_path, DEFAULT_OUTFILE_NAMES["makefile"]),
-                            "env": os.path.join(self.outdir_path, DEFAULT_OUTFILE_NAMES["env"]),
-                            "svpkg": os.path.join(self.outdir_path, DEFAULT_OUTFILE_NAMES["svpkg"]),
-                            "svh": os.path.join(self.outdir_path, DEFAULT_OUTFILE_NAMES["svh"]),
-                            "json": os.path.join(self.outdir_path, DEFAULT_OUTFILE_NAMES["json"]),
+        self.output_paths = {"makefile": os.path.join(str(self.outdir_path), DEFAULT_OUTFILE_NAMES["makefile"]),
+                            "env": os.path.join(str(self.outdir_path), DEFAULT_OUTFILE_NAMES["env"]),
+                            "svpkg": os.path.join(str(self.outdir_path), DEFAULT_OUTFILE_NAMES["svpkg"]),
+                            "svh": os.path.join(str(self.outdir_path), DEFAULT_OUTFILE_NAMES["svh"]),
+                            "json": os.path.join(str(self.outdir_path), DEFAULT_OUTFILE_NAMES["json"]),
                             }
         self.emitter_functions = {  "makefile": self._emit_makefile,
                                     "env": self._emit_env_file,
@@ -111,7 +268,7 @@ class FileEmitter:
                                     "json": self._emit_json,
                                     }
 
-    def _ensure_outdir(self, p:str) -> None:
+    def _ensure_outdir(self, p:str | Path) -> None:
         os.makedirs(p, exist_ok=True)
 
     def emit(self, write_only_if_changed: bool = True) -> tuple[list[str], list[str]]:        

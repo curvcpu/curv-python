@@ -12,7 +12,7 @@ import inspect
 from curvtools.cli.curvcfg.lib.util import get_config_values
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
 from .curvpath import CurvPath
-from curvtools.cli.curvcfg.lib.globals.curvpaths_temporary import get_curv_root_dir_from_repo_root
+from ..util.cfgvalue import CfgValues, CfgValue
 
 curvpaths: Optional[Dict[str, CurvPath]] = None
 _curvroot_dir_source: Optional[ParameterSource] = None
@@ -26,10 +26,17 @@ class CurvPaths(dict[str, CurvPath]):
         self.profile = profile
         self.board = board
         self.device = device
+        self.cfg_values = None
         if merged_toml is not None:
-            self.cfg_values = get_config_values(config=merged_toml, schema=None, is_combined_toml=True)
-        else:
-            self.cfg_values = None
+            if isinstance(merged_toml, dict[str, CfgValue]):
+                self.cfg_values = CfgValues(vals=merged_toml)
+            elif isinstance(merged_toml, (str, Path, FsPathType, dict[str, Any])):
+                self.cfg_values = get_config_values(
+                    config=merged_toml, 
+                    schema=None, 
+                    is_combined_toml=True)
+            else:
+                raise ValueError(f"merged_toml must be a dictionary of CfgValue objects, a string, a path, or a FsPathType, but got {type(merged_toml)}")
         self._refresh_from_path_env_file()
         
     def _refresh_from_path_env_file(self):
@@ -78,11 +85,14 @@ class CurvPaths(dict[str, CurvPath]):
         self.device = device if device is not None else self.device
         self.build_dir = Path(build_dir).resolve() if build_dir is not None else self.build_dir
         self.curv_root_dir = Path(curv_root_dir).resolve() if curv_root_dir is not None else self.curv_root_dir
-        self.cfg_values = get_config_values(
-            config=merged_toml, 
-            schema=None, 
-            is_combined_toml=True
-        ) if merged_toml is not None else self.cfg_values
+        if merged_toml is not None:
+            if isinstance(merged_toml, dict[str, CfgValue]):
+                self.cfg_values.update(merged_toml)
+            elif isinstance(merged_toml, (str, Path, FsPathType)):
+                self.cfg_values.update(get_config_values(
+                    config=merged_toml, 
+                    schema=None, 
+                    is_combined_toml=True))
         self._refresh_from_path_env_file()
 
     def __str__(self):
@@ -97,6 +107,7 @@ class CurvPaths(dict[str, CurvPath]):
     def get_curv_root_dir(self, add_trailing_slash: bool = False) -> str:
         return CurvPath._add_trailing_slash(str(self.curv_root_dir)) if add_trailing_slash else str(self.curv_root_dir)
     def get_repo_dir(self, add_trailing_slash: bool = False) -> str:
+        from curvtools.cli.curvcfg.lib.curvpaths.curvpaths_temporary import get_curv_root_dir_from_repo_root
         repo_root_dir = Path(get_curv_root_dir_from_repo_root(self.curv_root_dir, invert=True)).resolve()
         return CurvPath._add_trailing_slash(str(repo_root_dir)) if add_trailing_slash else str(repo_root_dir)
 
@@ -147,7 +158,7 @@ class CurvPaths(dict[str, CurvPath]):
         """
         return CurvPaths._try_make_relative_to_dir(path, self.get_config_dir())
 
-def get_curv_paths(args: CurvCliArgs | Context | None = None) -> CurvPaths:
+def get_curv_paths(ctx: Context) -> CurvPaths:
     """
     Get the paths commonly used in this build system, and track where CURV_ROOT_DIR was obtained from.
     """
@@ -155,17 +166,7 @@ def get_curv_paths(args: CurvCliArgs | Context | None = None) -> CurvPaths:
 
     # initialize curvpaths if it's not already initialized
     # (if we get called a second time with a non-None args, we re-initialize)
-    if curvpaths is None or args is not None:
-
-        # reset if it was previously set since now we're updating
-        _curvroot_dir_source = None
-
-        # extract args if we were passed a Context
-        if isinstance(args, Context):
-            temp_args = args.obj
-        else:
-            temp_args = args
-
+    if curvpaths is None or ctx is not None:
         detailed_error_msg = (
             f"The program was unable to get " 
             "a valid CURV_ROOT_DIR from --curv-root-dir argument, CURV_ROOT_DIR environment variable, or using git "
@@ -175,51 +176,18 @@ def get_curv_paths(args: CurvCliArgs | Context | None = None) -> CurvPaths:
             "or cd'ing any directory under the curvcpu/curv repo root.)"
         )
 
-        if temp_args is None or "curv_root_dir" not in temp_args:
-            curv_root_dir = os.environ.get("CURV_ROOT_DIR")
-            if curv_root_dir is not None and os.path.isdir(curv_root_dir):
-                _curvroot_dir_source = ParameterSource.ENVIRONMENT
-        else:
-            curv_root_dir = temp_args.get("curv_root_dir", None)
-            if curv_root_dir is not None and os.path.isdir(curv_root_dir):
-                _curvroot_dir_source = ParameterSource.COMMANDLINE
-            else:
-                curv_root_dir = os.environ.get("CURV_ROOT_DIR")
-                if curv_root_dir is not None and os.path.isdir(curv_root_dir):
-                    _curvroot_dir_source = ParameterSource.ENVIRONMENT
-
-        # fall back to git rev-parse to find repo root if unable to get CURV_ROOT_DIR from args or environment variable
-        if not curv_root_dir:
-            try:
-                repo_root_dir = get_git_repo_root()
-                repo_root_dir = os.path.expanduser(str(repo_root_dir))
-                curv_root_dir = get_curv_root_dir_from_repo_root(repo_root_dir)
-            except Exception as e:
-                console.print(f"[red]error:[/red] {os.path.basename(__file__)}:{inspect.currentframe().f_lineno}: unable to get CURV_ROOT_DIR from git rev-parse\n\n{detailed_error_msg}")
-                raise SystemExit(1)
-
-        # fail if we have not gotten a valid dir yet for CURV_ROOT_DIR
-        if not os.path.isdir(curv_root_dir):
-            console.print(f"[red]error:[/red] {os.path.basename(__file__)}:{inspect.currentframe().f_lineno}: --curv-root-dir not found: {curv_root_dir}\n\n{detailed_error_msg}")
-            raise SystemExit(1)
-        else:
-            # Default in this context means it was found through git-rev-parse
-            _curvroot_dir_source = ParameterSource.DEFAULT
+        curv_root_dir = ctx.obj.get("curv_root_dir", None)
+        _curvroot_dir_source = ctx.get_parameter_source("curv_root_dir")
 
         kwargs = {'curv_root_dir': curv_root_dir}
-        if temp_args is not None and "build_dir" in temp_args:
-            kwargs['build_dir'] = temp_args.get("build_dir")
-        if temp_args is not None and "profile" in temp_args:
-            kwargs['profile'] = temp_args.get("profile")
-        if temp_args is not None and "board" in temp_args:
-            kwargs['board'] = temp_args.get("board")
-        if temp_args is not None and "device" in temp_args:
-            kwargs['device'] = temp_args.get("device")
-        if temp_args is not None and "merged_toml" in temp_args:
-            kwargs['merged_toml'] = temp_args.get("merged_toml")
-        if curvpaths is not None:
-            curvpaths.update_and_refresh(**kwargs)
-        else:
+        kwargs['build_dir'] = ctx.params.get("build_dir", None)
+        kwargs['profile'] = ctx.params.get("profile", None)
+        kwargs['board'] = ctx.params.get("board", None)
+        kwargs['device'] = ctx.params.get("device", None)
+        kwargs['merged_toml'] = ctx.params.get("merged_toml", None)
+        if curvpaths is None:
             curvpaths = CurvPaths(**kwargs)
+        else:
+            curvpaths.update_and_refresh(**kwargs)
 
     return curvpaths

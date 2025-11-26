@@ -7,7 +7,7 @@ import sys
 from typing import Any, Dict, Tuple
 import tempfile
 from curvpyutils.toml_utils import MergedTomlDict  # type: ignore
-from curvtools.cli.curvcfg.lib.util import CfgValue, CfgValues
+from curvtools.cli.curvcfg.lib.util import CfgValue, CfgValues, MissingVars
 from curvpyutils.file_utils.repo_utils import get_git_repo_root
 from curvtools.cli.curvcfg.lib.util import FileEmitter, ConfigFileTypes, ConfigFileTypesForWriting
 
@@ -257,13 +257,11 @@ def get_config_values(config: str | Path | Dict[str, Any], schema: list[str|Path
             combined_toml_dict:MergedTomlDict = MergedTomlDict.from_dict(config)
         schema_dict, config_dict = combined_toml_dict.split_on_top_level_key("_schema")
         config_values, _ = validate_and_collect(config_dict, schema_dict)
-    
     else:
         if isinstance(config, (str, Path)):
             config_dict:MergedTomlDict = MergedTomlDict(str(config))
         else:
             config_dict:MergedTomlDict = MergedTomlDict.from_dict(config)
-        
         assert schema_processed is not None, "schema_processed must not be None in this branch"
         if isinstance(schema_processed, (str, Path)):
             schema_dict:MergedTomlDict = MergedTomlDict(str(schema_processed))

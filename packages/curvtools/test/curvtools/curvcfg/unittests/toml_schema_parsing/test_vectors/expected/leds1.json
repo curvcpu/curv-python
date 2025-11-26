@@ -1,0 +1,34 @@
+[
+    {
+        "board.leds": {
+            "display": {
+                "sv_port": "output wire [{msb}:{lsb}] {lpf_name}"
+            },
+            "lpf_name": "led",
+            "lsb": 0,
+            "msb": 7,
+            "required": true,
+            "var": "idx"
+        }
+    },
+    {
+        "board.leds[{idx}]": {
+            "c_hdr_name": {
+                "domain": {},
+                "parse": "string"
+            },
+            "lpf_name": {
+                "domain": {
+                    "choices": [
+                        "led[{idx}]"
+                    ]
+                },
+                "parse": "string"
+            },
+            "sv_name": {
+                "domain": {},
+                "parse": "string"
+            }
+        }
+    }
+]

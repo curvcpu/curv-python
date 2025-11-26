@@ -1,7 +1,7 @@
 import click
 from typing import Callable, Any
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import make_fs_path_param_type_class, FsPathType
-from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
+from ...lib.curv_paths import get_curv_paths
 from enum import Enum
 from pathlib import Path
 import os
