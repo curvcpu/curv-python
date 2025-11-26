@@ -1,19 +1,21 @@
 from dataclasses import dataclass
 import os
 import click
-from typing import Optional
+from typing import Optional, TYPE_CHECKING
 # from curvtools.cli.curvcfg.cli_helpers import Profile
 from curvtools.cli.curvcfg.lib.curv_paths import CurvPaths, get_curv_paths
 from pathlib import Path
+if TYPE_CHECKING:
+    from curvtools.cli.curvcfg.cli_helpers.paramtypes.profile import Profile
 
 @dataclass
 class CurvContext:
-    curv_root_dir: Optional[str]     = None
-    build_dir:     Optional[str]     = None
-    profile:       Optional[str] = None
-    board:         Optional[str]     = None
-    device:        Optional[str]     = None
-    merged_toml:   Optional[Path]    = None
+    curv_root_dir: Optional[str]       = None
+    build_dir:     Optional[str]       = None
+    profile:       Optional["Profile"] = None
+    board:         Optional[str]       = None
+    device:        Optional[str]       = None
+    merged_toml:   Optional[Path]      = None
 
     ctx: click.Context | None = None
     

@@ -1,7 +1,7 @@
 .venv/
 .pytest_cache/
 .ruff_cache/
-__pycache__/
+**/__pycache__/
 build/
 dist/
 *.egg-info
@@ -12,3 +12,4 @@ packages/*/*.egg-info
 packages/*/src/**/_version.py
 packages/*/src/**/*.stamp
 packages/*/src/**/*.stamp
+*.pyc
