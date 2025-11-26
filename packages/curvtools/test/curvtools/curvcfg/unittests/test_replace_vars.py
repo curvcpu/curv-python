@@ -5,7 +5,7 @@ from typing import Any, Dict
 
 import pytest
 
-from curvtools.cli.curvcfg.lib.globals.curvpaths.replace_funcs import match_vars, replace_vars
+from curvtools.cli.curvcfg.lib.curv_paths.replace_funcs import match_vars, replace_vars
 
 def test_match_vars():
     s = "$(X)/${Y}/$(Z)"
