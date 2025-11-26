@@ -4,38 +4,39 @@ import sys
 import os
 from typing import Dict, Optional, Union, Callable, List
 import click
-from curvtools.cli.curvcfg.lib.globals.constants import PROGRAM_NAME, PACKAGE_NAME
-from curvtools.cli.curvcfg.version import get_styled_version, get_styled_version_message
 from curvtools.cli.curvcfg.cli_helpers import shell_complete_curv_root_dir
-from curvtools.cli.curvcfg.cli_helpers.help_formatter import CurvcfgGroup, CurvcfgCommand
-from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
+from curvtools.cli.curvcfg.cli_helpers.help_formatter import CurvcfgHelpFormatterGroup, CurvcfgHelpFormatterCommand
+from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths, CurvPaths
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
-from curvtools.cli.curvcfg.lib.util.draw_tables import display_args_table, display_curvcfg_settings_table
-from curvtools.cli.curvcfg.lib.globals.constants import DEFAULT_MERGED_TOML_NAME, PROGRAM_NAME, DEFAULT_OVERLAY_TOML_NAME, DEFAULT_DEP_FILE_PATH, DEFAULT_MERGED_TOML_PATH
-from curvtools.cli.curvcfg.lib.globals.curvpaths import get_curv_paths
+from curvtools.cli.curvcfg.lib.util.draw_tables import display_args_table, display_tool_settings, display_curvpaths
+from curvtools.cli.curvcfg.lib.globals.constants import DEFAULT_MERGED_TOML_NAME, DEFAULT_OVERLAY_TOML_NAME, DEFAULT_DEP_FILE_PATH, DEFAULT_MERGED_TOML_PATH
 from curvtools.cli.curvcfg.cli_helpers import (
     build_dir_opt,
-    merged_toml_opt,
+    overlay_opts_for_paths_list,
+    merged_toml_input_opt,
+    merged_toml_output_opt,
     verbosity_opts,
-    overlay_opts,
     output_dep_opt,
     schema_file_opt,
     profile_file_opt,
+    version_opt,
+    kind_opts,
+    board_device_opts,
 )
 from .generate import generate as _generate_impl
 from .show import (
     show_profiles as _show_profiles_impl, 
     show_active_variables as _show_active_variables_impl,
-    show_overlays as _show_overlays_impl
 )
 from .merge import merge as _merge_impl
 from .completions import completions as _completions_impl, determine_program_name
 from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
-from rich.traceback import install, Traceback
+from rich.traceback import install
 from curvtools.cli.curvcfg.lib.globals.console import console
 from curvpyutils.cli_util import preparse, EarlyArg
-from click.core import ParameterSource
+from curvtools.cli.curvcfg.cli_helpers.help_formatter.epilog import set_epilog_fn
+from curvtools.cli.curvcfg.cli_helpers.opts.board_device_opts import Kind
 
 """
 Usage:
@@ -88,141 +89,193 @@ CONTEXT_SETTINGS = {
     # "max_content_width": get_console_width(),
 }
 
-def _resolved_dist_name() -> str:
-    try:
-        top = __package__.split('.')[0]
-        return ilmd.packages_distributions().get(top, [top])[0]
-    except Exception:
-        return PACKAGE_NAME
+def update_curvpaths(
+        ctx: click.Context,
+        curv_root_dir: FsPathType|None = None,
+        build_dir: FsPathType|None = None,
+        profile: FsPathType|str|None = None,
+        board: FsPathType|str|None = None,
+        device: FsPathType|str|None = None,
+        merged_toml_path: FsPathType|None = None,
+    ) -> None:
+    """
+    Update the ctx.obj['CurvPaths'] object in the context object. Any argument except ctx can be None and it will be ignored.
 
-def make_epilog_fn(curv_root_dir: Optional[str], curv_root_dir_source: ParameterSource) -> Callable[[], str]:
-    def _epilog_fn() -> str:
-        match curv_root_dir_source:
-            case ParameterSource.ENVIRONMENT:
-                curv_root_dir_source_str = "env"
-            case ParameterSource.COMMANDLINE:
-                curv_root_dir_source_str = "cli"
-            case ParameterSource.DEFAULT:
-                curv_root_dir_source_str = "repo"
-            case _:
-                curv_root_dir_source_str = "unknown"
-        EPILOG = """
-'{curv_root_dir}' ({curv_root_dir_source_str})
-"""
-        return EPILOG.format(
-            curv_root_dir=curv_root_dir or "(not set, use --curv-root-dir to set)",
-            curv_root_dir_source_str=curv_root_dir_source_str,
-        )
-    return _epilog_fn
+    Args:
+        ctx: The click context object.
+        curv_root_dir: The CURV_ROOT_DIR to use.
+        build_dir: The build directory to use.
+        profile: The profile to use.
+        board: The board to use.
+        device: The device to use.
+        merged_toml_path: The merged TOML path to use.
 
-epilog_fn: Callable[[], str] = lambda: None
+    Returns:
+        None
+    """
+    ctx.ensure_object(dict)
+    if 'CurvPaths' not in ctx.obj:
+        ctx.obj['CurvPaths']: CurvPaths = get_curv_paths(ctx)
+    kwargs = {}
+    if curv_root_dir is not None:
+        kwargs['curv_root_dir'] = str(Path(curv_root_dir).resolve()) if isinstance(curv_root_dir, (FsPathType, Path)) else curv_root_dir
+    if build_dir is not None:
+        kwargs['build_dir'] = str(Path(build_dir).resolve()) if isinstance(build_dir, (FsPathType, Path)) else build_dir
+    if profile is not None:
+        kwargs['profile'] = profile.stem if isinstance(profile, (FsPathType, Path)) else profile
+    if board is not None:
+        kwargs['board'] = board.stem if isinstance(board, (FsPathType, Path)) else board
+    if device is not None:
+        kwargs['device'] = device.stem if isinstance(device, (FsPathType, Path)) else device
+    if merged_toml_path is not None:
+        kwargs['merged_toml'] = merged_toml_path if isinstance(merged_toml_path, (FsPathType, Path)) else merged_toml_path
+    ctx.obj['CurvPaths'].update_and_refresh(**kwargs)
 
 @click.group(
-    cls=CurvcfgGroup,
+    cls=CurvcfgHelpFormatterGroup,
     context_settings=CONTEXT_SETTINGS,
     epilog=None,
+    invoke_without_command=True,
 )
-@click.version_option(
-    version=get_styled_version(),
-    message=get_styled_version_message(),
-    prog_name=PROGRAM_NAME,
-    package_name=_resolved_dist_name(),
-)
+@version_opt()
 @click.option(
     "--curv-root-dir",
     "curv_root_dir",
     metavar="<curv-root-dir>",
-    default=os.environ.get("CURV_ROOT_DIR"),
-    show_default=True,
+    show_default=True, # default comes from default_map["curv_root_dir"] from early args
     help=(
         "Overrides CURV_ROOT_DIR found from the environment or git-rev-parse."
     ),
     envvar="CURV_ROOT_DIR",
     shell_complete=shell_complete_curv_root_dir,
+    is_eager=True,
 )
+@kind_opts(default_kind=Kind.SOC)
 @verbosity_opts(include_verbose=True)
 @click.pass_context
 def cli(
     ctx: click.Context,
     curv_root_dir: Optional[str],
+    kind: Kind,
     verbose: int,
 ) -> None:
     """curvcfg command line interface"""
+    # no-op if ctx.obj is already a dict created by preparse() and passed in by main()
     ctx.ensure_object(dict)
-    ctx.obj["curv_root_dir"] = curv_root_dir or epilog_fn() or os.environ.get("CURV_ROOT_DIR")
+    # Only override if not already set by preparse()
+    # Effective value resolution *inside* Click:
+    #   1. CLI option (--curv_root_dir)
+    #   2. envvar CURV_ROOT_DIR
+    #   3. default_map["curv_root_dir"] (if provided)
+    #   4. parameter default (if defined)
+    ctx.obj.setdefault("curv_root_dir", curv_root_dir)
+    update_curvpaths(
+        ctx=ctx, 
+        curv_root_dir=curv_root_dir, 
+    )
     ctx.obj["verbosity"] = max(ctx.obj.get("verbosity", 0), min(verbose, 3))
-
+    
 @cli.command(
-    cls=CurvcfgCommand,
+    name="merge",
+    cls=CurvcfgHelpFormatterCommand,
     context_settings=CONTEXT_SETTINGS,
-    short_help="Merge profile toml file and overlays",
-    help=f"Merge the profile toml file with any overlays to create a merged TOML (default: {DEFAULT_MERGED_TOML_PATH}) and a Makefile dependency file (default: {DEFAULT_DEP_FILE_PATH})"
+    short_help="Merge TOML files",
+    help=f"Merges one or more TOML files to create a merged TOML output file. Each TOML file listed may add to or override settings in earlier TOML files, with the last taking the highest precedence."
 )
 @profile_file_opt(required=True)
 @schema_file_opt(required=True)
-@build_dir_opt(help="Base build directory; outputs written under this directory")
-@overlay_opts()
-@merged_toml_opt(name="merged_file", outfile=True)
-@output_dep_opt()
+@overlay_opts_for_paths_list(default=None)
+@build_dir_opt(must_exist=False, help="Base build directory; outputs written under this directory")
+@merged_toml_output_opt(name="merged_file")
+@output_dep_opt(must_exist=False)
+@board_device_opts(default_board_name="ulx3s", default_device_name="85f")
 @verbosity_opts(include_verbose=True)
 @click.pass_context
 def merge(
     ctx: click.Context,
     profile_file: FsPathType,
-    schema_file: FsPathType,
-    build_dir: str,
-    overlay_path_list: list[Optional[str]],
-    ascend_dir_hierarchy: bool,
-    merged_file: Optional[str],
-    dep_file: Optional[str],
+    schema_file_list: list[FsPathType],
+    overlay_path_list: list[FsPathType],
+    build_dir: FsPathType,
+    merged_file: FsPathType,
+    dep_file: FsPathType,
+    board_dir: FsPathType,
+    device_toml: FsPathType,
     verbose: int,
 ) -> None:
+    update_curvpaths(
+        ctx=ctx, 
+        build_dir=build_dir, 
+        profile=profile_file, 
+        board=board_dir,
+        device=device_toml,
+    )
+
     merge_args: CurvCliArgs = {
-        "curv_root_dir": ctx.obj.get("curv_root_dir", epilog_fn() if epilog_fn else os.environ.get("CURV_ROOT_DIR")),
+        "curv_root_dir": ctx.obj.get("curv_root_dir"),
         "profile_file": profile_file,
-        "schema_file": schema_file,
-        "build_dir": build_dir,
+        "schema_file_list": schema_file_list,
         "overlay_path_list": overlay_path_list,
-        "overlay_toml_name": DEFAULT_OVERLAY_TOML_NAME,
-        "overlay_prefix": "",
-        "ascend_dir_hierarchy": ascend_dir_hierarchy,
+        "build_dir": build_dir,
         "merged_file": merged_file,
         "dep_file": dep_file,
+        "board_dir": board_dir,
+        "device_toml": device_toml,
         "verbosity": max(ctx.obj["verbosity"], min(verbose, 2)),
     }
 
     if int(merge_args.get("verbosity", 0) or 0) >= 3:
+        display_tool_settings(ctx)
         display_args_table(merge_args, "merge")
-    _exit_code = _merge_impl(merge_args)
-    raise SystemExit(_exit_code)
+    rc = _merge_impl(merge_args, ctx.obj)
+    raise SystemExit(rc)
+
 
 @cli.command(
-    cls=CurvcfgCommand,
+    cls=CurvcfgHelpFormatterCommand,
     context_settings=CONTEXT_SETTINGS,
     epilog=None,
 )
-@build_dir_opt(help="Base build directory; outputs written to this directory.  Also used to locate <merged-toml> by default, unless --merged-toml overrides with a specific path.")
-@merged_toml_opt(name="merged_file", outfile=False)
+@build_dir_opt(must_exist=True, help="Base build directory; outputs written to this directory.  Also used to locate <merged-toml> by default, unless --merged-toml overrides with a specific path.")
+@merged_toml_input_opt(name="merged_file")
 @schema_file_opt(required=True)
+@board_device_opts(default_board_name="ulx3s", default_device_name="85f")
 @verbosity_opts(include_verbose=True)
 @click.pass_context
-def generate(ctx: click.Context, build_dir: str, merged_file: Optional[str], schema_file: FsPathType, verbose: int) -> None:
+def generate(
+    ctx: click.Context, 
+    build_dir: FsPathType, 
+    merged_file: FsPathType, 
+    schema_file_list: list[FsPathType], 
+    board_dir: FsPathType,
+    device_toml: FsPathType,
+    verbose: int
+) -> None:
     """Generate output files from a merged TOML and schema."""
+    update_curvpaths(
+        ctx=ctx, 
+        build_dir=build_dir, 
+        merged_toml_path=merged_file,
+        board=board_dir,
+        device=device_toml,
+    )
     generate_args: CurvCliArgs = {
         "curv_root_dir": ctx.obj.get("curv_root_dir"),
-        "build_dir": os.path.abspath(build_dir),
+        "build_dir": build_dir,
         "merged_file": merged_file,
-        "schema_file": schema_file,
+        "schema_file_list": schema_file_list,
+        "board_dir": board_dir,
+        "device_toml": device_toml,
         "verbosity": max(ctx.obj["verbosity"], min(verbose, 2)),
     }
     if int(generate_args.get("verbosity", 0) or 0) >= 3:
         display_args_table(generate_args, "generate")
-    rc = _generate_impl(generate_args)
+    rc = _generate_impl(generate_args, ctx.obj)
     raise SystemExit(rc)
 
 
 
-@cli.command(name="completions", cls=CurvcfgCommand, context_settings=CONTEXT_SETTINGS)
+@cli.command(name="completions", cls=CurvcfgHelpFormatterCommand, context_settings=CONTEXT_SETTINGS)
 @click.option("--shell", "shell", type=click.Choice(["bash", "zsh", "fish", "powershell"]), default=None,
               help="Shell to generate completions for. Defaults to current shell.")
 @click.option("--install/--print", "install", default=False,
@@ -243,78 +296,101 @@ def completions(ctx: click.Context, shell: Optional[str], install: bool, install
     prog_name = determine_program_name(ctx.command_path, ctx.info_name, "curvcfg")
     if int(completions_args.get("verbosity", 0) or 0) >= 3:
         display_args_table(completions_args, "completions")
-    _exit_code = _completions_impl(completions_args, prog_name)
+    _exit_code = _completions_impl(completions_args, ctx.obj, prog_name)
     raise SystemExit(_exit_code)
 
 
 
-
-@cli.group(name="show", cls=CurvcfgGroup, context_settings=CONTEXT_SETTINGS, help="Show active build configuration values and related information")
+@cli.group(name="show", 
+    cls=CurvcfgHelpFormatterGroup, 
+    context_settings=CONTEXT_SETTINGS, 
+    help="Show active build configuration values and related information",
+    epilog=None,
+)
 @verbosity_opts(include_verbose=True)
 @click.pass_context
 def show(ctx: click.Context, verbose: int) -> None:
     """Show active build configuration values and related information"""
-    ctx.obj["verbosity"] = max(min(verbose, 3), ctx.obj.get("verbosity", 0))
+    # ctx.obj["verbosity"] = max(min(verbose, 3), ctx.obj.get("verbosity", 0))
 
 @show.command(name="vars", context_settings=CONTEXT_SETTINGS,
     short_help="Show active configuration variables",
     help="Show active configuration variables that apply in the current build environment based on the <build-dir>/config/merged.toml file. If such a file does not exist, then nothing is shown.")
-@build_dir_opt(help=(
+@build_dir_opt(must_exist=True, help=(
     f"Base build directory; used to locate <merged-toml> "
     "by default, unless --merged-toml overrides with a specific "
     "path."
 ))
 @profile_file_opt(required=True)
-@merged_toml_opt(name="merged_file", outfile=False)
+@overlay_opts_for_paths_list(default=None)
+@merged_toml_input_opt(name="merged_file")
+@board_device_opts(default_board_name="ulx3s", default_device_name="85f")
 @verbosity_opts(include_verbose=True)
 @click.pass_context
-def show_active_variables(ctx: click.Context, build_dir: str, profile_file: FsPathType, merged_file: Optional[str], verbose: int) -> None:
-    
+def show_active_variables(
+    ctx: click.Context, 
+    build_dir: FsPathType, 
+    profile_file: FsPathType, 
+    overlay_path_list: list[FsPathType], 
+    merged_file: FsPathType, 
+    board_dir: FsPathType,
+    device_toml: FsPathType,
+    verbose: int
+) -> None:
+    update_curvpaths(
+        ctx=ctx, 
+        build_dir=build_dir, 
+        profile=profile_file, 
+        merged_toml_path=merged_file,
+        board=board_dir,
+        device=device_toml,
+    )
+
     show_args: CurvCliArgs = {
         "curv_root_dir": ctx.obj.get("curv_root_dir"),
         "build_dir": build_dir,
         "profile_file": profile_file,
-        "merged_file": merged_file,
-        "verbosity": max(ctx.obj["verbosity"], min(verbose, 3)),
-    }
-        
-    if int(show_args.get("verbosity", 0) or 0) >= 3:
-        display_curvcfg_settings_table(ctx)
-        display_args_table(show_args, "show")
-    rc = _show_active_variables_impl(show_args)
-    raise SystemExit(rc)
-
-@show.command(
-    cls=CurvcfgCommand,
-    context_settings=CONTEXT_SETTINGS,
-    name="overlays", 
-    short_help=f"Shows the hierarchy of base config + overlays",
-    help=f"Shows the hierarchy of base config + overlays that generate the {DEFAULT_MERGED_TOML_NAME} in the current build environment")
-@profile_file_opt(required=True)
-@overlay_opts()
-@verbosity_opts(include_verbose=True)
-@click.pass_context
-def show_overlays(
-    ctx: click.Context, 
-    profile_file: FsPathType, 
-    overlay_path_list: List[Optional[str]], 
-    ascend_dir_hierarchy: bool, 
-    verbose: int) -> None:
-    show_args: CurvCliArgs = {
-        "curv_root_dir": ctx.obj.get("curv_root_dir"),
-        "profile_file": profile_file,
         "overlay_path_list": overlay_path_list,
-        "overlay_toml_name": DEFAULT_OVERLAY_TOML_NAME,
-        "overlay_prefix": "",
-        "no_ascend_dir_hierarchy": not ascend_dir_hierarchy,
+        "merged_file": merged_file,
+        "board_dir": board_dir,
+        "device_toml": device_toml,
         "verbosity": max(ctx.obj["verbosity"], min(verbose, 3)),
     }
+    
     if int(show_args.get("verbosity", 0) or 0) >= 3:
+        display_tool_settings(ctx)
         display_args_table(show_args, "show")
-    rc = _show_overlays_impl(show_args)
+    rc = _show_active_variables_impl(show_args, ctx.obj)
     raise SystemExit(rc)
 
-@show.command(name="profiles", cls=CurvcfgCommand, context_settings=CONTEXT_SETTINGS,
+# @show.command(
+#     cls=CurvcfgHelpFormatterCommand,
+#     context_settings=CONTEXT_SETTINGS,
+#     name="overlays", 
+#     short_help=f"Shows the hierarchy of base config + overlays",
+#     help=f"Shows the hierarchy of base config + overlays that generate the {DEFAULT_MERGED_TOML_NAME} in the current build environment")
+# @profile_file_opt(required=True)
+# @overlay_opts_for_paths_list(default=None)
+# @verbosity_opts(include_verbose=True)
+# @click.pass_context
+# def show_overlays(
+#     ctx: click.Context, 
+#     profile_file: FsPathType,
+#     overlay_path_list: list[FsPathType],
+#     verbose: int,
+# ) -> None:
+#     show_args: CurvCliArgs = {
+#         "curv_root_dir": ctx.obj.get("curv_root_dir"),
+#         "profile_file": profile_file,
+#         "overlay_path_list": overlay_path_list,
+#         "verbosity": max(ctx.obj["verbosity"], min(verbose, 3)),
+#     }
+#     if int(show_args.get("verbosity", 0) or 0) >= 3:
+#         display_args_table(show_args, "show")
+#     rc = _show_overlays_impl(show_args, ctx.obj)
+#     raise SystemExit(rc)
+
+@show.command(name="profiles", cls=CurvcfgHelpFormatterCommand, context_settings=CONTEXT_SETTINGS,
     short_help="Show available base configurations (profiles)",
     help="Show available base configurations in $CURV_ROOT_DIR/config/profiles directory",
 )
@@ -329,8 +405,50 @@ def show_profiles(ctx: click.Context, verbose: int) -> None:
     }
     if int(show_args.get("verbosity", 0) or 0) >= 3:
         display_args_table(show_args, "show")
-    rc = _show_profiles_impl(show_args)
+    rc = _show_profiles_impl(show_args, ctx.obj)
     raise SystemExit(rc)
+
+@show.command(name="curvpaths", 
+    cls=CurvcfgHelpFormatterCommand, 
+    context_settings=CONTEXT_SETTINGS,
+    short_help="Show interpolated paths read",
+    help="Show the interpolatedpaths read from the path_raw.env file",
+)
+@build_dir_opt(must_exist=False)
+@board_device_opts(default_board_name="ulx3s", default_device_name="85f")
+@verbosity_opts(include_verbose=True)
+@click.pass_context
+def show_curvpaths(
+    ctx: click.Context, 
+    build_dir: FsPathType, 
+    board_dir: FsPathType,
+    device_toml: FsPathType,
+    verbose: int
+) -> None:
+    """Show interpolated paths read from the path_raw.env file"""
+    update_curvpaths(
+        ctx=ctx, 
+        build_dir=build_dir, 
+        board=board_dir,
+        device=device_toml,
+    )
+    show_args: CurvCliArgs = {
+        "curv_root_dir": ctx.obj.get("curv_root_dir"),
+        "build_dir": build_dir,
+        "board_dir": board_dir,
+        "device_toml": device_toml,
+        "verbosity": max(ctx.obj["verbosity"], min(verbose, 2)),
+    }
+    if int(show_args.get("verbosity", 0) or 0) >= 3:
+        display_args_table(show_args, "show curvpaths")
+    
+    # show the curvpaths
+    try:
+        display_curvpaths(ctx.obj["CurvPaths"])
+    except Exception as e:
+        console.print(f"[red]error:[/red] {e}")
+        raise SystemExit(1)
+    raise SystemExit(0)
 
 # entry point
 def main(argv: Optional[list[str]] = None) -> int:
@@ -340,19 +458,39 @@ def main(argv: Optional[list[str]] = None) -> int:
     import click
     install(show_locals=True, word_wrap=True, width=get_console_width(), suppress=[click])
 
-    try:
+    def _process_early_args(argv: Optional[list[str]] = sys.argv[1:]) -> list[EarlyArg]:
         from curvpyutils.file_utils.repo_utils import get_git_repo_root
-        early_curv_root_dir = EarlyArg(["--curv-root-dir"], env_var_fallback="CURV_ROOT_DIR", default_value_fallback=get_git_repo_root())
-        preparse([early_curv_root_dir], argv=argv or sys.argv[1:])
-        global epilog_fn
-        epilog_fn = make_epilog_fn(early_curv_root_dir.value, early_curv_root_dir.source)
-        cli.main(args=argv, standalone_mode=True)
-    except click.exceptions.ClickException as e:
-        Traceback.from_exception(type(e), e, e.__traceback__, show_locals=True)
-        return e.exit_code
+        from curvtools.cli.curvcfg.lib.globals.curvpaths_temporary import get_curv_root_dir_from_repo_root
+        try:
+            repo_fallback_curv_root_dir = get_curv_root_dir_from_repo_root(get_git_repo_root())
+        except Exception:
+            repo_fallback_curv_root_dir = None
+        early_curv_root_dir = EarlyArg(
+            ["--curv-root-dir"], 
+            env_var_fallback="CURV_ROOT_DIR", 
+            default_value_fallback=repo_fallback_curv_root_dir
+        )
+        preparse([early_curv_root_dir], argv=argv)
+        return [early_curv_root_dir]
+    
+    try:
+        [early_curv_root_dir] = _process_early_args() # list of one EarlyArg object
+        ctx_obj: dict = {}
+        default_map: dict = {}
+        if early_curv_root_dir.valid:
+            set_epilog_fn(early_curv_root_dir.value, early_curv_root_dir.source)
+            ctx_obj["curv_root_dir"] = early_curv_root_dir.value
+            ctx_obj["CurvPaths"] = get_curv_paths(early_curv_root_dir.value)
+            default_map["curv_root_dir"] = early_curv_root_dir.value
+        cli.main(
+            args=argv, 
+            standalone_mode=True, 
+            obj=ctx_obj,
+            default_map=default_map,
+        )
     except SystemExit as e:
-        Traceback.from_exception(type(e), e, e.__traceback__, show_locals=True)
         return int(e.code)
+        raise e
     return 0
 
 # never executes
