@@ -49,6 +49,14 @@ class AnsiColorsTool:
             "bkgred": "bkg_red",
             "bkgblue": "bkg_blue",
             "bkgwhite": "bkg_white",
+            "light_grey": "light_grey",
+            "dark_grey": "dark_grey",
+            "ltgrey": "light_grey",
+            "lt_grey": "light_grey",
+            "brgray": "light_grey",
+            "br_grey": "light_grey",
+            "drkgray": "dark_grey",
+            "drk_grey": "dark_grey",
         }
 
     def _get_colors_dict(self) -> dict[str, str]:
@@ -81,6 +89,8 @@ class AnsiColorsTool:
             "bkg_green": "\033[42m",
             "bkg_red": "\033[41m",
             "bkg_blue": "\033[44m",
+            "light_grey": "\033[38;5;244m",
+            "dark_grey": "\033[90m",
         }
 
     def __getitem__(self, key: str):
