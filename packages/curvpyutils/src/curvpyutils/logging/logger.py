@@ -1,5 +1,5 @@
 from rich.console import Console
-from typing import Optional
+from typing import ClassVar, Optional
 from rich.traceback import install
 from rich.logging import RichHandler
 import logging
@@ -7,8 +7,14 @@ import os
 
 log = logging.getLogger(__name__)
 
+# default width used in log file (if applicable)
+DEFAULT_LOG_FILE_WIDTH = 120
+
 @dataclass
 class LoggingLevels:
+    SILENT: ClassVar[int] = logging.CRITICAL+10
+    logging.addLevelName(SILENT, "SILENT") # type: ignore
+
     stderr_level: int = field(default=logging.ERROR)
     file_level: int = field(default=logging.NOTSET)
     _stderr_level_str: str = field(default="")
@@ -45,7 +51,7 @@ class LoggingLevels:
         return self._file_level_str
     @property
     def stderr_quiet(self) -> bool:
-        return self.stderr_level >= logging.CRITICAL
+        return self.stderr_level >= self.SILENT
     def __str__(self) -> str:
         return f"LoggingLevels(stderr_level={self.stderr_level_str}, file_level={self.file_level_str})"
 
@@ -54,6 +60,7 @@ def configure_rich_root_logger(
     err_console: Optional[Console] = None,
     addl_consoles: Optional[list[Console]] = None,
     log_file_path: Optional[str] = None,
+    log_file_width: int = DEFAULT_LOG_FILE_WIDTH,
 ) -> None:
     """
     Configure the root logger based on the verbosity argument.
@@ -103,7 +110,9 @@ def configure_rich_root_logger(
     if verbosity.is_stderr_quiet:
         err_console.quiet = True
     if log_file_path is not None:
-        file_console = Console(file=log_file_path)
+        file_console = Console(file=open(log_file_path, "a", encoding="utf-8"), width=log_file_width)
+    else:
+        file_console = None
     if addl_consoles is None:
         addl_consoles = []
     import click # just so we can suppress click tracebacks
@@ -135,7 +144,8 @@ def configure_rich_root_logger(
             # tracebacks_extra_lines=5,
             tracebacks_code_width=150,
             tracebacks_word_wrap=True,
-            tracebacks_suppress=tracebacks_suppress
+            tracebacks_suppress=tracebacks_suppress,
+            omit_repeated_times=False,
         ),
     ]
     if log_file_path is not None:
@@ -152,15 +162,18 @@ def configure_rich_root_logger(
                 # tracebacks_extra_lines=5,
                 tracebacks_code_width=150,
                 tracebacks_word_wrap=True,
-                tracebacks_suppress=tracebacks_suppress
+                tracebacks_suppress=tracebacks_suppress,
+                omit_repeated_times=False,
             )
         )
-        log_file_path2 = log_file_path.replace(
-            os.path.basename(log_file_path), os.path.basename(log_file_path)+'2')
-        handlers.append(
-            # Plain file output
-            logging.FileHandler(log_file_path2, mode="a", encoding="utf-8"),
-        )
+        # log_file_path2 = log_file_path.replace(
+        #     strip_extension(log_file_path), 
+        #     strip_extension(log_file_path)+'2'
+        # )
+        # handlers.append(
+        #     # Plain file output
+        #     logging.FileHandler(log_file_path2, mode="a", encoding="utf-8"),
+        # )
     logging.basicConfig(
         force=True,  # in case we're reconfiguring logging
         level=logging.NOTSET, 
@@ -168,4 +181,5 @@ def configure_rich_root_logger(
         datefmt="[%X]", 
         handlers=handlers
     )
+    log.info('-' * min(log_file_width, 80))
     log.info(f"[logger] configured: {str(verbosity)}")
