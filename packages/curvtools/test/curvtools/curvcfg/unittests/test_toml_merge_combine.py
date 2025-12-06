@@ -4,7 +4,9 @@ from pathlib import Path
 import sys
 
 import pytest
+pytestmark = [pytest.mark.unit]
 
+from curvtools.cli.curvcfg.lib.util.combinetomls import merge_tomls, combine_tomls
 
 def _import_merge_combine_tomls():
     """
@@ -43,10 +45,9 @@ def _several_overlay_toml_paths() -> list[Path]:
 
 
 def test_merge_combine_tomls_overlay_mode():
-    merge_combine_tomls = _import_merge_combine_tomls()
     paths = _several_overlay_toml_paths()
 
-    result = merge_combine_tomls(paths, overlay_mode=True)
+    result = merge_tomls(paths)
 
     # Expected result based on manual run of the helper script.
     assert result == {
@@ -60,11 +61,10 @@ def test_merge_combine_tomls_overlay_mode():
 
 
 def test_merge_combine_tomls_union_mode_conflict():
-    merge_combine_tomls = _import_merge_combine_tomls()
     paths = _several_overlay_toml_paths()
 
     with pytest.raises(KeyError) as excinfo:
-        merge_combine_tomls(paths, overlay_mode=False)
+        combine_tomls(paths)
 
     msg = str(excinfo.value)
     # We expect a conflict on the cpu.xlen key with differing values.

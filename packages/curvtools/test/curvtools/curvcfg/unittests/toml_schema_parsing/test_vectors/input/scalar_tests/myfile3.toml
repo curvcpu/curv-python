@@ -1,20 +1,31 @@
 # myfile3.toml
-[_schema.arrays.board_leds]
-toml_path = "board.leds"
-msb = 7
-lsb = 0
-lpf_name = "led"
-display = { sv_tmpl = "output wire [${MSB}:${LSB}] ${LPF_NAME}" }
 
-[_schema.arrays."board_leds[index]".lpf_name]
-parse   = "string"
-domain  = {}
+[_schema.arrays.BOARD_LEDS]
+# parse type "array[object]" means we are defining a variable called BOARD_LEDS that
+# is an array of objects, and each object has the fields defined below in this schema.
+# (Note that array[object] is currently the only array type supported.)
+src = { toml_path = "board.leds", parse="array[object]" }
+# display not allowed on arrays; they can be looped over in a jinja2 template but
+# not used elsewhere.  Therefore, the only permitted artifact is JINJA2 currently.
+artifacts = ["JINJA2"]
 
-[_schema.arrays."board_leds[index]".sv_name]
-parse   = "string"
-domain  = {}
+# class variables are fields that are the same on every element in the array of objects;
+# they always use src.constant_value=..., but parse can influence how that value is parsed
+[_schema.arrays.BOARD_LEDS._classvars.lpf_name]
+# constant_value is a special source type that sets the value in the schema and ignores
+# any setting specified in the toml file that we use this schema to parse.
+src = { constant_value = "leds", parse="string" }
+# domain not allowed on class variables
+# display not allowed on class variables
+# artifacts not allowed at the field level.
 
-[_schema.arrays."board_leds[index]".c_hdr_name]
-parse   = "string"
-domain  = {}
+# instance variables are fields that are different on each element in the array of objects;
+# they are defined the same ways as anything in _schema.vars.*, e.g. src.toml_path=...,
+# src.parse=..., etc. But artifacts is now allowed at the field level.
+[_schema.arrays.BOARD_LEDS._instancevars.name]
+# because this is a field within an array of objects, the toml_path is relative
+# to the array path, i.e., this is [[board.leds]].name for each element in the array.
+src = { toml_path = "name", parse="string" }
+domain = { }
+# artifacts not allowed on individual fields
 

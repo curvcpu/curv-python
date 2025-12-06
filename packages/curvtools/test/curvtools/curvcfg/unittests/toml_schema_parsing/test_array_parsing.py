@@ -20,7 +20,7 @@ EXPECTED_DIR = VECTORS_DIR / "expected"
 
 
 # Make the /home/.../scripts directory importable, so we can import parse_schema_arrays
-sys.path.insert(0, str('/home/mwg/scripts'))
+sys.path.insert(0, str('/home/mwg/scripts/tomls'))
 
 import parse_schema_arrays as psa  # type: ignore  # noqa: E402
 

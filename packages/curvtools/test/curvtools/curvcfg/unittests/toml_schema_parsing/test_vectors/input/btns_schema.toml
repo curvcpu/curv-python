@@ -1,21 +1,18 @@
-[_schema.arrays."board.buttons"]
-msb = 2
-lsb = 0
-var = "idx"
-lpf_name = "btn"
-display = { sv_port = "input wire [{msb}:{lsb}] {lpf_name}" }
-required = true
+[_schema.arrays.BOARD_BTNS]
+src = { toml_path = "board.buttons", parse="array[object]" }
+artifacts = ["JINJA2"]
 
-[_schema.arrays."board.buttons[{idx}]".name]
-parse = "string"
-domain = {}
+[_schema.arrays.BOARD_BTNS._classvars.lpf_name]
+src = { constant_value = "btn", parse="string" }
 
-[_schema.arrays."board.buttons[{idx}]".lpf_name]
-parse = "string"
-domain = { choices = [ "btn[{idx}]" ] }
+[_schema.arrays.BOARD_BTNS._instancevars.name]
+src = { toml_path = "name", parse="string" }
+domain = { }
+# artifacts not allowed on individual fields
 
-[_schema.arrays."board.buttons[{idx}]".active]
-parse = "int"
-domain = { choices = [0, 1] }
-
+[_schema.arrays.BOARD_BTNS._instancevars.active_state]
+# this field defines, for each button, whether it is considered 
+# active high (1) or active low (0).
+src = { toml_path = "active_state", parse="int" }
+domain = { choices = [0, 1], default = 1 }
 

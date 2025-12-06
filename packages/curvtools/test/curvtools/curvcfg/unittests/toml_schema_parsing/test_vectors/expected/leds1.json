@@ -4,11 +4,11 @@
             "display": {
                 "sv_port": "output wire [{msb}:{lsb}] {lpf_name}"
             },
+            "loop_var": "idx",
             "lpf_name": "led",
             "lsb": 0,
             "msb": 7,
-            "required": true,
-            "var": "idx"
+            "required": true
         }
     },
     {

@@ -4,11 +4,11 @@
             "display": {
                 "sv_port": "input wire [{msb}:{lsb}] {lpf_name}"
             },
+            "loop_var": "idx",
             "lpf_name": "btn",
             "lsb": 0,
             "msb": 2,
-            "required": true,
-            "var": "idx"
+            "required": true
         }
     },
     {
