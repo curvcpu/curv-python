@@ -4,6 +4,7 @@ from curvtools.cli.curvcfg.cli_helpers.paramtypes.profile import Profile
 from curvtools.cli.curvcfg.cli_helpers.paramtypes.device import Device
 from curvtools.cli.curvcfg.cli_helpers.paramtypes.board import Board
 from curvtools.cli.curvcfg.cli_helpers.paramtypes.merged_toml import MergedToml
+from curvtools.cli.curvcfg.cli_helpers.paramtypes.merged_intermediate_toml import MergedIntermediateToml
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import make_fs_path_param_type_class
 
 ProfileResolvable = Resolvable[Profile]
@@ -30,6 +31,45 @@ board_type = make_resolvable_param_type(
     from_name=Board.from_name,
 )
 
+#
+# generated/intermediates/merged_board.toml
+# 
+InputMergedBoardTomlResolvable = Resolvable[MergedIntermediateToml]
+input_merged_board_toml_type = make_resolvable_param_type(
+    type_name="merged_board_toml",
+    from_path=lambda p: MergedIntermediateToml(p),
+    is_input_path=True,
+    from_name=MergedIntermediateToml.from_name,
+)
+OutputMergedBoardTomlResolvable = Resolvable[MergedIntermediateToml]
+output_merged_board_toml_type = make_resolvable_param_type(
+    type_name="merged_board_toml",
+    from_path=lambda p: MergedIntermediateToml(p),
+    is_input_path=False,
+    from_name=MergedIntermediateToml.from_name,
+)
+
+#
+# generated/intermediates/merged_config.toml
+# 
+InputMergedConfigTomlResolvable = Resolvable[MergedIntermediateToml]
+input_merged_config_toml_type = make_resolvable_param_type(
+    type_name="merged_config_toml",
+    from_path=lambda p: MergedIntermediateToml(p),
+    is_input_path=True,
+    from_name=MergedIntermediateToml.from_name,
+)
+OutputMergedConfigTomlResolvable = Resolvable[MergedIntermediateToml]
+output_merged_config_toml_type = make_resolvable_param_type(
+    type_name="merged_config_toml",
+    from_path=lambda p: MergedIntermediateToml(p),
+    is_input_path=False,
+    from_name=MergedIntermediateToml.from_name,
+)
+
+#
+# generated/config/merged.toml
+# 
 InputMergedTomlResolvable = Resolvable[MergedToml]
 input_merged_toml_type = make_resolvable_param_type(
     type_name="merged_toml",
@@ -46,6 +86,9 @@ output_merged_toml_type = make_resolvable_param_type(
     from_name=MergedToml.from_name,
 )
 
+#
+# schema files
+# 
 schema_file_type = make_fs_path_param_type_class(
     dir_okay=False,
     file_okay=True,

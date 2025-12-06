@@ -1,3 +1,5 @@
+# btns_schema.toml
+
 [_schema.arrays.BOARD_BTNS]
 src = { toml_path = "board.buttons", parse="array[object]" }
 artifacts = ["JINJA2"]

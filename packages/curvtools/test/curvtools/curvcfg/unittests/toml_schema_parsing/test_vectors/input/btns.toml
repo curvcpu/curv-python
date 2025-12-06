@@ -1,16 +1,29 @@
-[[board.buttons]]
-name      = "B1"               # human-readable / enum symbol
-lpf_name  = "btn[{idx}]"       # {idx} is the index of the element within the array, formatted as a decimal integer
-active    = "0"                # active low
+# btns.toml
+
+#
+# ULX3S Buttons
+#
 
 [[board.buttons]]
-name      = "B2"
-lpf_name  = "btn[{idx}]"
-active    = "0"
+name = "B1"
+active_state = 0
 
 [[board.buttons]]
-name      = "UP"
-lpf_name  = "btn[{idx}]"
-active    = "0"
+name = "B2"
+active_state = 0
 
+[[board.buttons]]
+name = "UP"
+active_state = 1
 
+[[board.buttons]]
+name = "DOWN"
+active_state = 1
+
+[[board.buttons]]
+name = "LEFT"
+active_state = 1
+
+[[board.buttons]]
+name = "RIGHT"
+active_state = 1

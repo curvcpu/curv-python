@@ -196,7 +196,7 @@ class CurvPaths(dict[str, CurvPath]):
         """
         return CurvPaths._try_make_relative_to_dir(path, self.get_config_dir())
 
-def get_curv_paths(ctx: Optional[Context]) -> CurvPaths:
+def get_curv_paths(ctx: Optional[Context] = None, curv_root_dir: Optional[str] = None, build_dir: Optional[str] = None) -> CurvPaths:
     """
     Get the paths commonly used in this build system, and track where CURV_ROOT_DIR was obtained from.
     """
@@ -204,25 +204,35 @@ def get_curv_paths(ctx: Optional[Context]) -> CurvPaths:
 
     # initialize curvpaths if it's not already initialized
     # (if we get called a second time with a non-None args, we re-initialize)
-    if curvpaths is None or ctx is not None:
-        detailed_error_msg = (
-            f"The program was unable to get " 
-            "a valid CURV_ROOT_DIR from --curv-root-dir argument, CURV_ROOT_DIR environment variable, or using git "
-            "repository root based on the current directory. " 
-            "The program cannot function unless a valid CURV_ROOT_DIR is provided somehow. \n\n"
-            "(Hint: try setting CURV_ROOT_DIR environment variable in your shell's rc file,"
-            "or cd'ing any directory under the curvcpu/curv repo root.)"
-        )
+    if curvpaths is None or ctx is not None or curv_root_dir is not None:
+        if ctx is not None and obj in ctx and ctx.obj is not None:
+            if not curv_root_dir:
+                curv_root_dir = ctx.obj.get("curv_root_dir", ctx.params.get("curv_root_dir", None))
+                _curvroot_dir_source = ctx.get_parameter_source("curv_root_dir")
+            if not build_dir:
+                build_dir = ctx.obj.get("build_dir", ctx.params.get("build_dir", None))
+                _build_dir_source = ctx.get_parameter_source("build_dir")
 
-        curv_root_dir = ctx.obj.curv_root_dir if ctx is not None else None
-        _curvroot_dir_source = ctx.get_parameter_source("curv_root_dir")
-
-        kwargs = {'curv_root_dir': curv_root_dir}
-        kwargs['build_dir'] = ctx.params.get("build_dir", None)
-        kwargs['profile'] = ctx.params.get("profile", None)
-        kwargs['board'] = ctx.params.get("board", None)
-        kwargs['device'] = ctx.params.get("device", None)
-        kwargs['merged_toml'] = ctx.params.get("merged_toml", None)
+        kwargs = {}
+        if curv_root_dir:
+            kwargs['curv_root_dir'] = curv_root_dir
+        if build_dir:
+            kwargs['build_dir'] = build_dir
+        if ctx is not None:
+            if 'obj' in ctx:
+                if 'profile' in ctx.obj and ctx.obj['profile'] is None:
+                    kwargs['profile'] = ctx.params.get("profile", None)
+                if 'board' in ctx.obj and ctx.obj['board'] is None:
+                    kwargs['board'] = ctx.params.get("board", None)
+                if 'device' in ctx.obj and ctx.obj['device'] is None:
+                    kwargs['device'] = ctx.params.get("device", None)
+                if 'merged_toml' in ctx.obj and ctx.obj['merged_toml'] is None:
+                    kwargs['merged_toml'] = ctx.params.get("merged_toml", None)
+            else:
+                kwargs['profile'] = ctx.params.get("profile", None)
+                kwargs['board'] = ctx.params.get("board", None)
+                kwargs['device'] = ctx.params.get("device", None)
+                kwargs['merged_toml'] = ctx.params.get("merged_toml", None)
         if curvpaths is None:
             curvpaths = CurvPaths(**kwargs)
         else:

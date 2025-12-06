@@ -1,41 +1,30 @@
-[[board.leds]]
-lpf_name="led[{idx}]"
-sv_name="RT_RED_LED"
-c_hdr_name="RT_RED_LED"
+# leds.toml
+
+#
+# ULX3S LEDs
+#
 
 [[board.leds]]
-lpf_name="led[{idx}]"
-sv_name="RT_GRN_LED"
-c_hdr_name="RT_GRN_LED"
+# this is the 0th element of the array
+name="RT_RED_LED"
 
 [[board.leds]]
-lpf_name="led[{idx}]"
-sv_name="RT_BLU_LED"
-c_hdr_name="RT_BLU_LED"
+name="RT_ORNG_LED"
 
 [[board.leds]]
-lpf_name="led[{idx}]"
-sv_name="RT_YLW_LED"
-c_hdr_name="RT_YLW_LED"
+name="RT_GRN_LED"
 
 [[board.leds]]
-lpf_name="led[{idx}]"
-sv_name="LFT_RED_LED"
-c_hdr_name="LFT_RED_LED"
+name="RT_BLU_LED"
 
 [[board.leds]]
-lpf_name="led[{idx}]"
-sv_name="LFT_GRN_LED"
-c_hdr_name="LFT_GRN_LED"
+name="LFT_RED_LED"
 
 [[board.leds]]
-lpf_name="led[{idx}]"
-sv_name="LFT_BLU_LED"
-c_hdr_name="LFT_BLU_LED"
+name="LFT_ORNG_LED"
 
 [[board.leds]]
-lpf_name="led[{idx}]"
-sv_name="LFT_BLU_LED"
-c_hdr_name="LFT_BLU_LED"
+name="LFT_GRN_LED"
 
-
+[[board.leds]]
+name="LFT_BLU_LED"

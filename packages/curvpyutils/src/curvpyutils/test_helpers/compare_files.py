@@ -28,7 +28,7 @@ def compare_files(test_file: str|Path, expected_file: str|Path, verbose: bool = 
             print_delta(test_file, expected_file, on_delta_missing=Which.OnMissingAction.WARNING)
     return cmp_result
 
-def compare_toml_files(test_file: str|Path, expected_file: str|Path, verbose: bool = False, show_delta: bool = False, delete_temp_files: bool = True) -> bool:
+def compare_toml_files(test_file: str|Path, expected_file: str|Path, verbose: bool = False, show_delta: bool = False, delete_temp_files: bool = True, debug_output_silent: bool = True) -> bool:
     """
     Compares temp copies of two canonicalized TOML files and returns True if they are the same, False otherwise.
 
@@ -38,12 +38,14 @@ def compare_toml_files(test_file: str|Path, expected_file: str|Path, verbose: bo
         verbose (bool): if True, prints a message if the files are different.
         show_delta (bool): if True, shows the delta between the files if the files are different.
         delete_temp_files (bool): if True, deletes the temporary files after comparison.
+        debug_output_silent (bool): if True, does not print certain debug output from the
+        canonicalizatizer, which is not helpful unless that is what you are debugging. Defaults to True.
     Returns:
         bool: True if the files are the same, False otherwise.
     """
     try:
-        test_temp_file = TomlCanonicalizer(test_file).temp_file
-        expected_temp_file = TomlCanonicalizer(expected_file).temp_file
+        test_temp_file = TomlCanonicalizer(test_file, silent=debug_output_silent).temp_file
+        expected_temp_file = TomlCanonicalizer(expected_file, silent=debug_output_silent).temp_file
         return compare_files(test_temp_file, expected_temp_file, verbose=verbose, show_delta=show_delta)
     finally:
         if delete_temp_files:

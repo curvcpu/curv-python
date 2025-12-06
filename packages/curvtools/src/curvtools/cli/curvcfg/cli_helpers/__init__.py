@@ -14,8 +14,10 @@ from .opts import (
     kind_opts,
     board_device_opts,
 )
+from .default_map import DefaultMapArgs
 
 __all__ = [
+    "DefaultMapArgs",
     "build_dir_opt",
     "output_dep_opt",
     "merged_toml_input_opt",

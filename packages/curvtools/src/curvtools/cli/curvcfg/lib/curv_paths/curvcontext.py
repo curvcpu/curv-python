@@ -50,12 +50,16 @@ class CurvContext:
         assert isinstance(ctx, click.Context), "ctx argumentmust be a click.Context object"
         self._ctx = ctx
         self._update_and_retrieve_curvpaths()
+        print(f"curvpaths: {self.curvpaths}")
+        return
 
     def _update_and_retrieve_curvpaths(self) -> CurvPaths:
         if self.curvpaths is None:
             assert self._ctx is not None, "self._ctx must be set to update curvpaths"
             self.curvpaths = get_curv_paths(self._ctx)
         else:
+            print(f"type of _ctx: {type(self._ctx)}")
+            print(f"type of _ctx.params: {type(self._ctx.params)}")
             kwargs = {}
             for k, v in [
                 ("curv_root_dir", self._ctx.params.get("curv_root_dir", self.curv_root_dir)),
@@ -65,9 +69,15 @@ class CurvContext:
                 ("profile", self._ctx.params.get("profile", self.profile)),
             ]:
                 if v is not None:
+                    # if getattr(self, k, None) is None:
+                        # setattr(self, k, v)
+                    print(f"setting {k} to {v} (type of v: {type(v)})")
                     kwargs[k] = v
-            self.curvpaths.update_and_refresh(**kwargs)
-        return self.curvpaths
+            if len(kwargs) > 0:
+                self.curvpaths.update_and_refresh(**kwargs)
+        retval = self.curvpaths
+        print(f"retval: {retval}")
+        return retval
 
     def make_paths(self) -> CurvPaths:
         if not self.curv_root_dir or not self.build_dir:
@@ -75,31 +85,3 @@ class CurvContext:
                 "--curv-root-dir and --build-dir are required"
             )
         return self._update_and_retrieve_curvpaths()
-
-
-    # def make_paths_tb(self) -> CurvPaths:
-    #     if not self.curv_root_dir or not self.build_dir:
-    #         raise click.UsageError(
-    #             "--curv-root-dir and --build-dir are required"
-    #         )
-    #     return self._update_and_retrieve_curvpaths()
-
-    # def make_paths_show(self) -> CurvPaths:
-    #     if not self.curv_root_dir or not self.build_dir:
-    #         raise click.UsageError(
-    #             "--curv-root-dir and --build-dir are required"
-    #         )
-    #     return self._update_and_retrieve_curvpaths()
-
-    # def make_paths_soc(self) -> CurvPaths:
-    #     missing = [
-    #         name for name, value in [
-    #             ("--curv-root-dir", self.curv_root_dir),
-    #             ("--build-dir", self.build_dir),
-    #         ] if not value
-    #     ]
-    #     if missing:
-    #         raise click.UsageError(
-    #             "Missing required options for 'soc' commands: " + ", ".join(missing)
-    #         )
-    #     return self._update_and_retrieve_curvpaths()

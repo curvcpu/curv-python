@@ -9,6 +9,8 @@ from curvtools.cli.curvcfg.cli_helpers.help_formatter import (
     CurvcfgHelpFormatterCommand, 
     set_epilog_fn,
 )
+from curvpyutils.cli_util import preparse, EarlyArg
+from curvtools.cli.curvcfg.lib.curv_paths import get_curv_paths
 from curvtools.cli.curvcfg.cli_helpers.opts.curv_root_dir_opt import shell_complete_curv_root_dir
 from curvtools.cli.curvcfg.cli_helpers.opts.build_dir_opts import shell_complete_build_dir
 from curvtools.cli.curvcfg.cli_helpers.opts.version_opt import version_opt
@@ -24,6 +26,10 @@ from curvtools.cli.curvcfg.cli_helpers.paramtypes import (
     profile_type, 
     device_type, 
     board_type,
+    input_merged_board_toml_type,
+    output_merged_board_toml_type,
+    input_merged_config_toml_type,
+    output_merged_config_toml_type,
     input_merged_toml_type,
     output_merged_toml_type,
     schema_file_type,
@@ -46,6 +52,7 @@ from curvtools.cli.curvcfg.show import (
 from curvtools.cli.curvcfg.board import (
     merge_board_impl,
 )
+from curvtools.cli.curvcfg.cli_helpers.default_map import DefaultMapArgs
 import sys
 
 CONTEXT_SETTINGS = {
@@ -58,18 +65,26 @@ CONTEXT_SETTINGS = {
 #
 ################################################################################################################################################################################################################
 # Intended usage patterns:
-#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] board                               merge     --board=... --device=...                                      --schema=... --schema=... --merged_board_toml_out=... --dep-file-out=...
+#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] board                               merge     --board=... --device=...                                      --schema=... --schema=... --merged-board-toml-out=... --dep-file-out=...
+#     👆 produces generated/{config/intermediates/merged_board.toml, make/board.mk.d}
 #   curvcfg --curv-root-dir=... --build-dir=... [-vvv] board                               generate  --merged_board_toml_in=...
-#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] tb                                  merge     --profile=...               --overlay=... --overlay=... [...] --schema=... --schema=... --merged-toml-out=...       --dep-file-out=...
+#     👆 generated/{make/board.mk, hdl/board.sv, hdl/board.svh}
+#
+#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] tb                                  merge     --profile=...               --overlay=... --overlay=... [...] --schema=... --schema=... --merged-config-toml-out=... --merged-board-toml-out=...       --dep-file-out=...
+#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] tb                                  combine   --merged-config-toml-in=... [--merged-board-toml-in=...]                                                             --merged-toml-out=...
 #   curvcfg --curv-root-dir=... --build-dir=... [-vvv] tb                                  generate  --merged-toml-in=...
-#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] soc                                 merge     --profile=...               --overlay=... --overlay=... [...] --schema=... --schema=... --merged-toml-out=...       --dep-file-out=...
+#
+#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] soc                                 merge     --profile=...               --overlay=... --overlay=... [...] --schema=... --schema=... --merged-config-toml-out=... --merged-board-toml-out=...       --dep-file-out=...
+#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] soc                                 combine   --merged-config-toml-in=... --merged-board-toml-in=...                                                               --merged-toml-out=...
 #   curvcfg --curv-root-dir=... --build-dir=... [-vvv] soc                                 generate  --merged-toml-in=...
+#
 #   curvcfg --curv-root-dir=... --build-dir=... [-vvv] show                                profiles
-#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] show                                curvpaths [--board=...] [--device=...]
-#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] show                                vars      --merged-toml-in=... (can be merged.toml or merged_board.toml)
+#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] show                                curvpaths [--profile=...] [--board=...] [--device=...]
+#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] show                                vars      --merged-toml-in=...
 ################################################################################################################################################################################################################
 
 @click.group(
+    cls=CurvcfgHelpFormatterGroup, 
     context_settings=CONTEXT_SETTINGS,
 )
 @click.option(
@@ -128,6 +143,19 @@ def curvcfg(ctx: click.Context, curv_root_dir: Optional[str], build_dir: Optiona
 #
 ########################################################
 
+##########################
+# board subcommand group #
+##########################
+
+@curvcfg.group(
+    cls=CurvcfgHelpFormatterGroup, 
+    context_settings=CONTEXT_SETTINGS,
+)
+@click.pass_context
+def board(ctx: click.Context):
+    """Board artifacts generation"""
+    pass
+
 #######################
 # tb subcommand group #
 #######################
@@ -138,7 +166,7 @@ def curvcfg(ctx: click.Context, curv_root_dir: Optional[str], build_dir: Optiona
 )
 @click.pass_obj
 def tb(curvctx: CurvContext):
-    """Testbench-related commands"""
+    """Testbench artifact generation"""
     # nothing else; we’ll call curvctx.make_paths() in subcommands
     pass
 
@@ -152,20 +180,7 @@ def tb(curvctx: CurvContext):
 )
 @click.pass_context
 def soc(ctx: click.Context):
-    """SoC-related commands"""
-    pass
-
-##########################
-# board subcommand group #
-##########################
-
-@curvcfg.group(
-    cls=CurvcfgHelpFormatterGroup, 
-    context_settings=CONTEXT_SETTINGS,
-)
-@click.pass_context
-def board(ctx: click.Context):
-    """SoC-related commands"""
+    """SoC artifact generation"""
     pass
 
 #########################
@@ -178,7 +193,7 @@ def board(ctx: click.Context):
 )
 @click.pass_context
 def show(ctx: click.Context):
-    """Show subcommands"""
+    """Show information"""
     pass
 
 ########################################################
@@ -187,9 +202,9 @@ def show(ctx: click.Context):
 #
 ########################################################
 
-##########################
-# board merge subcommand #
-##########################
+################################
+# board merge subcommand       #
+################################
 
 @board.command(name="merge")
 @click.option(
@@ -217,49 +232,51 @@ def show(ctx: click.Context):
     help="Schema TOML file(s); may be given multiple times; order matters.",
 )
 @click.option(
-    "--merged-board-toml-out",
-    "merged_toml_out",
-    type=output_merged_toml_type,
+    "--merged-board-toml",
+    "merged_board_toml",
+    type=output_merged_board_toml_type,
     required=True,
     help="Path to merged board config TOML output file",
 )
 @click.option(
-    "--dep-file-out",
+    "--board-mk-dep",
+    "board_mk_dep",
     type=click.Path(exists=False, dir_okay=False, resolve_path=True),
     required=True,
     help="Path to Makefile dependency file output file for merged board configuration",
 )
 @click.pass_obj
-def merge_board(curvctx: CurvContext, board_name: BoardResolvable, device_name: DeviceResolvable, schemas: list[FsPathType], merged_toml_out: OutputMergedTomlResolvable, dep_file_out: click.Path):
+def merge_board(curvctx: CurvContext, board_name: BoardResolvable, device_name: DeviceResolvable, schemas: list[FsPathType], merged_board_toml: OutputMergedBoardTomlResolvable, board_mk_dep: click.Path):
     """
     Merge schemas, board.toml, and <device-name>.toml for hardware configuration and write merged_board.toml + board.mk.d
     """
-    merged_board_toml_out_path = merged_toml_out.resolve(curvctx.curvpaths).path
+    merged_board_toml_out_path = merged_board_toml.resolve(curvctx.curvpaths).path
     curvctx.board = board_name.resolve(curvctx.curvpaths).name
     curvctx.device = device_name.resolve(curvctx.curvpaths).name
     curv_paths = curvctx.make_paths()
 
-    merge_board_impl(curvctx, board_name, device_name, schemas, merged_board_toml_out_path, dep_file_out)
+    merge_board_impl(curvctx, board_name, device_name, schemas, merged_board_toml_out_path, board_mk_dep)
 
 
 
-############################
-# soc generate subcommand  #
-############################
+############################$$
+# board generate subcommand  #
+############################$$
 
 @board.command(name="generate")
 @click.option(
-    "--merged-board-toml-in",
-    type=input_merged_toml_type,
+    "--merged-board-toml",
+    "merged_board_toml",
+    type=input_merged_board_toml_type,
     required=True,
     help="Path to merged board config TOML input file",
 )
 @click.pass_obj
-def generate_board(curvctx: CurvContext, merged_board_toml_in: InputMergedTomlResolvable):
+def generate_board(curvctx: CurvContext, merged_board_toml: InputMergedBoardTomlResolvable):
     """
-    Generate board configuration files from merged_board.toml
+    Generate board configuration artifacts from merged_board.toml
     """
-    merged_board_toml_in_path = merged_board_toml_in.resolve(curvctx.curvpaths).path
+    merged_board_toml_path = merged_board_toml.resolve(curvctx.curvpaths).path
     verbosity = int(curvctx.args.get("verbosity", 0))
     curv_paths = curvctx.make_paths()
 
@@ -267,7 +284,7 @@ def generate_board(curvctx: CurvContext, merged_board_toml_in: InputMergedTomlRe
         show_args: dict[str, Any] = {
             "curv_root_dir": curv_paths.curv_root_dir,
             "build_dir": curvctx.build_dir,
-            "merged_board_toml_in": merged_board_toml_in_path,
+            "merged_board_toml": merged_board_toml_path,
             "verbosity": verbosity,
         }
         display_tool_settings(curvctx)
@@ -275,9 +292,9 @@ def generate_board(curvctx: CurvContext, merged_board_toml_in: InputMergedTomlRe
 
     pass
 
-########################
-# soc merge subcommand #
-########################
+###############################
+# soc merge         subcommand #
+###############################
 
 @soc.command(name="merge")
 @click.option(
@@ -302,27 +319,28 @@ def generate_board(curvctx: CurvContext, merged_board_toml_in: InputMergedTomlRe
     help="Overlay TOML file(s); may be given multiple times; later overrides earlier.",
 )
 @click.option(
-    "--merged-toml-out",
-    type=output_merged_toml_type,
+    "--merged-config-toml",
+    "merged_config_toml",
+    type=output_merged_config_toml_type,
     required=True,
-    help="Path to merged config TOML output file",
+    help="Path to merged config intermediate TOML output file",
 )
 @click.option(
-    "--dep-file-out",
+    "--config-mk-dep",
+    "config_mk_dep",
     type=click.Path(exists=False, dir_okay=False, resolve_path=True),
     required=True,
-    help="Path to Makefile dependency file output file",
+    help="Path to Makefile dependency file output file for merged config configuration",
 )
 @click.pass_obj
-def merge_soc(curvctx: CurvContext, profile: ProfileResolvable, schemas: list[FsPathType], overlays: list[click.Path], merged_toml_out: OutputMergedTomlResolvable, dep_file_out: click.Path):
+def merge_soc(curvctx: CurvContext, profile: ProfileResolvable, schemas: list[FsPathType], overlays: list[click.Path], merged_config_toml: OutputMergedConfigTomlResolvable, config_mk_dep: click.Path):
     """
-    Merge schemas/overlays for SoC configuration and write merged.toml + config.mk.d
+    Merge schemas/overlays for SoC configuration and write merged_config.toml + config.mk.d
     """
+    merged_config_toml_out_path = merged_config_toml.resolve(curvctx.curvpaths).path
     curvctx.profile = profile.resolve(curvctx.curvpaths)
     curv_paths = curvctx.make_paths()
-
-    print("--------------------------------")
-    print(f"curv_paths = {str(curv_paths)}")
+    merge_config_impl(curvctx, profile, schemas, overlays, merged_config_toml_out_path, config_mk_dep)
 
 
     # # merge overlays
@@ -341,6 +359,45 @@ def merge_soc(curvctx: CurvContext, profile: ProfileResolvable, schemas: list[Fs
     # same merging logic, but presumably different target paths/contents
     pass
 
+####################################
+# soc combine subcommand           #
+####################################
+
+@soc.command(name="combine")
+@click.option(
+    "--merged-board-toml",
+    "merged_board_toml",
+    type=input_merged_board_toml_type,
+    required=True,
+    help="Path to merged board intermediate TOML output file",
+)
+@click.option(
+    "--merged-config-toml",
+    "merged_config_toml",
+    type=input_merged_config_toml_type,
+    required=True,
+    help="Path to merged config intermediate TOML output file",
+)
+@click.option(
+    "--merged-toml",
+    "merged_toml",
+    type=output_merged_toml_type,
+    required=True,
+    help="Path to merged config TOML output file",
+)
+@click.pass_obj
+def combine_soc(curvctx: CurvContext, merged_board_toml: InputMergedBoardTomlResolvable, merged_config_toml: InputMergedConfigTomlResolvable, merged_toml: OutputMergedTomlResolvable):
+    """
+    Combine all merged intermediate TOML files into a single merged.toml file
+    """
+    merged_board_toml_path = merged_board_toml.resolve(curvctx.curvpaths).path
+    merged_config_toml_path = merged_config_toml.resolve(curvctx.curvpaths).path
+    merged_toml_out_path = merged_toml.resolve(curvctx.curvpaths).path
+    curv_paths = curvctx.make_paths()
+
+    print("--------------------------------")
+    print(f"curv_paths = {str(curv_paths)}")
+
 
 ############################
 # soc generate subcommand  #
@@ -348,17 +405,18 @@ def merge_soc(curvctx: CurvContext, profile: ProfileResolvable, schemas: list[Fs
 
 @soc.command(name="generate")
 @click.option(
-    "--merged-toml-in",
+    "--merged-toml",
+    "merged_toml",
     type=input_merged_toml_type,
     required=True,
     help="Path to merged config TOML input file",
 )
 @click.pass_obj
-def generate_soc(curvctx: CurvContext, merged_toml_in: InputMergedTomlResolvable):
+def generate_soc(curvctx: CurvContext, merged_toml: InputMergedTomlResolvable):
     """
-    Generate SoC configuration files from merged.toml
+    Generate SoC artifacts from merged.toml
     """
-    merged_toml_in_path = merged_toml_in.resolve(curvctx.curvpaths).path
+    merged_toml_in_path = merged_toml.resolve(curvctx.curvpaths).path
     verbosity = int(curvctx.args.get("verbosity", 0))
     curv_paths = curvctx.make_paths()
 
@@ -366,7 +424,7 @@ def generate_soc(curvctx: CurvContext, merged_toml_in: InputMergedTomlResolvable
         show_args: dict[str, Any] = {
             "curv_root_dir": curv_paths.curv_root_dir,
             "build_dir": curvctx.build_dir,
-            "merged_toml_in": merged_toml_in_path,
+            "merged_toml": merged_toml_in_path,
             "verbosity": verbosity,
         }
         display_tool_settings(curvctx)
@@ -377,9 +435,12 @@ def generate_soc(curvctx: CurvContext, merged_toml_in: InputMergedTomlResolvable
     # 
     pass
 
-########################
-# tb merge subcommand #
-########################
+
+
+
+##############################
+# tb merge subcommand        #
+##############################
 
 @tb.command(name="merge")
 @click.option(
@@ -403,10 +464,24 @@ def generate_soc(curvctx: CurvContext, merged_toml_in: InputMergedTomlResolvable
     multiple=True,
     help="Overlay TOML file(s); may be given multiple times; later overrides earlier.",
 )
+@click.option(
+    "--merged-config-toml",
+    "merged_config_toml",
+    type=output_merged_config_toml_type,
+    required=True,
+    help="Path to merged config intermediate TOML output file",
+)
+@click.option(
+    "--config-mk-dep",
+    "config_mk_dep",
+    type=click.Path(exists=False, dir_okay=False, resolve_path=True),
+    required=True,
+    help="Path to Makefile dependency file output file for merged config configuration",
+)
 @click.pass_obj
-def merge_tb(curvctx: CurvContext, profile: ProfileResolvable, schemas: list[FsPathType], overlays: list[click.Path]):
+def merge_tb(curvctx: CurvContext, profile: ProfileResolvable, schemas: list[FsPathType], overlays: list[click.Path], merged_config_toml: OutputMergedConfigTomlResolvable, config_mk_dep: click.Path):
     """
-    Merge schemas/overlays for TB configuration and write merged.toml + config.mk.d
+    Merge schemas/overlays for testbench configuration and write merged_config.toml + config.mk.d
     """
     curvctx.profile = profile.resolve(curvctx.curvpaths)
     curv_paths = curvctx.make_paths()
@@ -429,23 +504,63 @@ def merge_tb(curvctx: CurvContext, profile: ProfileResolvable, schemas: list[FsP
     # merged.write(merged_path)
     # write_config_mk_d(merged, mkd_path)
 
+####################################
+# tb combine subcommand            #
+####################################
+
+@tb.command(name="combine")
+@click.option(
+    "--merged-board-toml",
+    "merged_board_toml",
+    type=input_merged_board_toml_type,
+    required=False,
+    help="Path to merged board intermediate TOML output file",
+)
+@click.option(
+    "--merged-config-toml",
+    "merged_config_toml",
+    type=input_merged_config_toml_type,
+    required=True,
+    help="Path to merged config intermediate TOML output file",
+)
+@click.option(
+    "--merged-toml",
+    "merged_toml",
+    type=output_merged_toml_type,
+    required=True,
+    help="Path to merged config TOML output file",
+)
+@click.pass_obj
+def combine_tb(curvctx: CurvContext, merged_config_toml: InputMergedConfigTomlResolvable, merged_toml: OutputMergedTomlResolvable):
+    """
+    Combine all merged intermediate TOML files into a single merged.toml file
+    """
+    merged_config_toml_path = merged_config_toml.resolve(curvctx.curvpaths).path
+    merged_toml_out_path = merged_toml.resolve(curvctx.curvpaths).path
+    curv_paths = curvctx.make_paths()
+
+    print("--------------------------------")
+    print(f"curv_paths = {str(curv_paths)}")
+
+
 ##########################
 # tb generate subcommand #
 ##########################
 
 @tb.command(name="generate")
 @click.option(
-    "--merged-toml-in",
+    "--merged-toml",
+    "merged_toml",
     type=input_merged_toml_type,
     required=True,
     help="Path to merged config TOML input file",
 )
 @click.pass_obj
-def generate_tb(curvctx: CurvContext, merged_toml_in: InputMergedTomlResolvable):
+def generate_tb(curvctx: CurvContext, merged_toml: InputMergedTomlResolvable):
     """
-    Generate TB configuration files from merged.toml
+    Generate testbench artifacts from merged.toml
     """
-    merged_toml_in_path = merged_toml_in.resolve(curvctx.curvpaths).path
+    merged_toml_path = merged_toml.resolve(curvctx.curvpaths).path
     verbosity = int(curvctx.args.get("verbosity", 0))
     curv_paths = curvctx.make_paths()
 
@@ -453,7 +568,7 @@ def generate_tb(curvctx: CurvContext, merged_toml_in: InputMergedTomlResolvable)
         show_args: dict[str, Any] = {
             "curv_root_dir": curv_paths.curv_root_dir,
             "build_dir": curvctx.build_dir,
-            "merged_toml_in": merged_toml_in_path,
+            "merged_toml": merged_toml_path,
             "verbosity": verbosity,
         }
         display_tool_settings(curvctx)
@@ -462,6 +577,7 @@ def generate_tb(curvctx: CurvContext, merged_toml_in: InputMergedTomlResolvable)
     #
     # TODO: implement
     # 
+
 
 # ########################
 # # show vars subcommand #
@@ -474,7 +590,8 @@ def generate_tb(curvctx: CurvContext, merged_toml_in: InputMergedTomlResolvable)
     short_help="Show active configuration variables",
     help="Show active configuration variables that apply in the current build environment based on the build directory's merged.toml file. If such a file does not exist, then nothing is shown.")
 @click.option(
-    "--merged-toml-in",
+    "--merged-toml",
+    "merged_toml",
     type=input_merged_toml_type,
     required=True,
     help="Path to merged config TOML input file",
@@ -482,9 +599,9 @@ def generate_tb(curvctx: CurvContext, merged_toml_in: InputMergedTomlResolvable)
 @click.pass_obj
 def show_active_variables(
     curvctx: CurvContext,
-    merged_toml_in: InputMergedTomlResolvable
+    merged_toml: InputMergedTomlResolvable
 ) -> None:
-    merged_toml_in_path = merged_toml_in.resolve(curvctx.curvpaths).path
+    merged_toml_in_path = merged_toml.resolve(curvctx.curvpaths).path
     curv_paths = curvctx.make_paths()
     verbosity = int(curvctx.args.get("verbosity", 0))
 
@@ -492,7 +609,7 @@ def show_active_variables(
         show_args: dict[str, Any] = {
             "curv_root_dir": curv_paths.curv_root_dir,
             "build_dir": curvctx.build_dir,
-            "merged_toml_in": merged_toml_in_path,
+            "merged_toml": merged_toml_in_path,
             "verbosity": verbosity,
         }
         display_tool_settings(curvctx)
@@ -548,6 +665,13 @@ def show_profiles(curvctx: CurvContext) -> None:
     short_help="Show interpolated paths",
 )
 @click.option(
+    "--profile",
+    type=profile_type,
+    required=False,
+    help="Profile name or path to TOML profile.",
+    expose_value=False,
+)
+@click.option(
     "--board",
     "board_name",
     type=board_type,
@@ -572,6 +696,8 @@ def show_curvpaths(
     curv_paths = curvctx.make_paths()
 
     if int(curvctx.args.get("verbosity", 0)) >= 2:
+        profile = curvctx.profile
+        profile_name = profile.stem if profile.is_fully_resolved() and profile.to_path().exists() else None
         board_toml = curv_paths["CURV_CONFIG_BOARD_TOML_PATH"]
         board_name = curv_paths["CURV_CONFIG_BOARD_TOML_PATH"].to_path().parent.name
         device_toml = curv_paths["CURV_CONFIG_DEVICE_TOML_PATH"]
@@ -579,6 +705,8 @@ def show_curvpaths(
         show_args: dict[str, Any] = {
             "curv_root_dir": curvctx.curv_root_dir,
             "build_dir": curvctx.build_dir,
+            "profile": profile if profile.is_fully_resolved() and profile.to_path().exists() else None,
+            "profile_name": profile_name if profile_name != "$(PROFILE)" else None,
             "board_toml": board_toml if board_toml.is_fully_resolved() and board_toml.to_path().exists() else None,
             "board_name": board_name if board_name != "$(BOARD)" else None,
             "device_toml": device_toml if device_toml.is_fully_resolved() and device_toml.to_path().exists() else None,
@@ -602,17 +730,113 @@ def main(argv: Optional[list[str]] = None) -> int:
     """
     import click
     install(show_locals=True, word_wrap=True, width=get_console_width(), suppress=[click])
+
+    def _process_early_args(argv: Optional[list[str]] = sys.argv[1:]) -> list[EarlyArg]:
+        repo_fallback_curv_root_dir = None
+        build_dir_fallback = Path.cwd() / "build"
+        try:
+            repo_fallback_curv_root_dir = str(try_get_curvrootdir_git_fallback() or "")
+        except Exception:
+            pass
+        early_curv_root_dir = EarlyArg(
+            ["--curv-root-dir"], 
+            env_var_fallback="CURV_ROOT_DIR", 
+            default_value_fallback=repo_fallback_curv_root_dir
+        )
+        early_build_dir = EarlyArg(
+            ["--build-dir"],
+            env_var_fallback="CURV_BUILD_DIR",
+            default_value_fallback=build_dir_fallback
+        )
+        early_profile_name = EarlyArg(
+            ["--profile"],
+            env_var_fallback="CURV_PROFILE",
+        )
+        early_board_name = EarlyArg(
+            ["--board"],
+            env_var_fallback="CURV_BOARD",
+        )
+        early_device_name = EarlyArg(
+            ["--device"],
+            env_var_fallback="CURV_DEVICE",
+        )
+        early_merged_toml_name = EarlyArg(
+            ["--merged-toml"],
+            env_var_fallback="CURV_MERGED_TOML",
+        )
+        preparse([early_curv_root_dir, early_build_dir, early_profile_name, early_board_name, early_device_name, early_merged_toml_name], argv=argv)
+        return [early_curv_root_dir, early_build_dir, early_profile_name, early_board_name, early_device_name, early_merged_toml_name]
+
     try:
-        ctx_obj: dict = {}
-        default_map: dict = {}
-        default_map["curv_root_dir"] = str(try_get_curvrootdir_git_fallback() or "")
-        default_map["build_dir"] = str(Path.cwd() / "build")
-        default_map["verbosity"] = 0
+        ctx_obj_kwargs = {}
+        default_map_args = DefaultMapArgs()
+        default_map_args.verbosity = 0
+        epilog_fn_arg_list: list[tuple[str, str, ParameterSource]] = []
+        (
+            early_curv_root_dir, 
+            early_build_dir,
+            early_profile_name, 
+            early_board_name, 
+            early_device_name, 
+            early_merged_toml_name
+        ) = _process_early_args()
+        if early_curv_root_dir.valid:
+            epilog_fn_arg_list.append(("CURV_ROOT_DIR", early_curv_root_dir.value, early_curv_root_dir.source))
+            ctx_obj_kwargs["curv_root_dir"] = early_curv_root_dir.value
+            default_map_args.curv_root_dir = early_curv_root_dir.value
+        if early_build_dir.valid:
+            epilog_fn_arg_list.append(("CURV_BUILD_DIR", early_build_dir.value, early_build_dir.source))
+            ctx_obj_kwargs["build_dir"] = early_build_dir.value
+            default_map_args.build_dir = early_build_dir.value
+        if early_profile_name.valid:
+            epilog_fn_arg_list.append(("CURV_PROFILE", early_profile_name.value, early_profile_name.source))
+            ctx_obj_kwargs["profile"] = early_profile_name.value
+            # tb merge --profile=... and soc merge --profile=...
+            default_map_args.profile = early_profile_name.value
+        if early_board_name.valid:
+            epilog_fn_arg_list.append(("CURV_BOARD", early_board_name.value, early_board_name.source))
+            ctx_obj_kwargs["board"] = early_board_name.value
+            # board merge --board=... and show curvpaths --board=...
+            default_map_args.board = early_board_name.value
+        if early_device_name.valid:
+            epilog_fn_arg_list.append(("CURV_DEVICE", early_device_name.value, early_device_name.source))
+            ctx_obj_kwargs["device"] = early_device_name.value
+            # board merge --device=...
+            default_map_args.board = early_device_name.value
+        if early_merged_toml_name.valid:
+            epilog_fn_arg_list.append(("CURV_MERGED_TOML", early_merged_toml_name.value, early_merged_toml_name.source))
+            ctx_obj_kwargs["merged_toml"] = early_merged_toml_name.value
+            # tb generate --merged-toml=... and soc generate --merged-toml=... and show vars --merged-toml=...
+            default_map_args.merged_toml = early_merged_toml_name.value
+        
+        ctx_obj: CurvContext = CurvContext(**ctx_obj_kwargs)
+
+        if ctx_obj and ctx_obj.curvpaths is None:
+            ctx_obj.curvpaths = get_curv_paths(ctx=None, curv_root_dir=early_curv_root_dir.value, build_dir=early_build_dir.value)
+
+        profile_type_obj = profile_type(early_profile_name.value) if early_profile_name.valid else None
+        if profile_type_obj:
+            ctx_obj.profile = profile_type_obj
+        board_type_obj = board_type(early_board_name.value) if early_board_name.valid else None
+        if board_type_obj:
+            ctx_obj.board = board_type_obj
+        device_type_obj = device_type(early_device_name.value) if early_device_name.valid else None
+        if device_type_obj:
+            ctx_obj.device = device_type_obj
+        input_merged_toml_type_obj = input_merged_toml_type(early_merged_toml_name.value) if early_merged_toml_name.valid else None
+        if input_merged_toml_type_obj:
+            ctx_obj.merged_toml = input_merged_toml_type_obj
+        if len(epilog_fn_arg_list) > 0:
+            set_epilog_fn(epilog_fn_arg_list)
+        
+        default_map = default_map_args.to_default_map()
+        from rich import print as rprint
+        rprint(default_map)
         curvcfg.main(
             args=argv, 
             standalone_mode=True, 
             obj=ctx_obj,
-            default_map=default_map,
+            default_map=default_map
         )
     except SystemExit as e:
         return int(e.code)

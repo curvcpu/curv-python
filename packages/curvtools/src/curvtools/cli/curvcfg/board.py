@@ -7,7 +7,7 @@ from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
 from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
 from curvtools.cli.curvcfg.cli_helpers.opts import FsPathType
 from curvtools.cli.curvcfg.lib.globals.console import console
-from curvtools.cli.curvcfg.lib.util.combinetomls import combine_tomls, merge_tomls
+from curvtools.cli.curvcfg.lib.util.config_parsing.combine_merge_tomls import combine_tomls, merge_tomls
 from rich.pretty import pprint
 
 def merge_board_impl(curvctx: CurvContext, board_name: BoardResolvable, device_name: DeviceResolvable, schemas: list[FsPathType], merged_board_toml_out_path: Path, dep_file_out: Path):    

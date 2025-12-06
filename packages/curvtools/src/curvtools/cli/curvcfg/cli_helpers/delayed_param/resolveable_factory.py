@@ -45,16 +45,19 @@ def make_resolvable_param_type(
                 return Resolvable(_value=obj, raw=value)
 
             # 2) name, maybe we can resolve now (if CurvPaths already exists)
-            curvctx: CurvContext | None = ctx.find_object(CurvContext)
-            curvpaths = getattr(curvctx, "curvpaths", None) if curvctx else None
             need_deferred = False
-            if curvpaths is not None:
-                try:
-                    obj = from_name(value, curvpaths)
-                except click.ClickException as e:
-                    need_deferred = True
-                if not need_deferred:
-                    return Resolvable(_value=obj, raw=value)
+            try:
+                curvctx: CurvContext | None = ctx.find_object(CurvContext) if ctx else None
+                curvpaths = getattr(curvctx, "curvpaths", None) if curvctx else None
+                if curvpaths is not None:
+                    try:
+                        obj = from_name(value, curvpaths)
+                    except click.ClickException as e:
+                        need_deferred = True
+                    if not need_deferred:
+                        return Resolvable(_value=obj, raw=value)
+            except Exception as e:
+                need_deferred = True
 
             # 3) name, but no CurvPaths yet → make it deferred
             if curvpaths is None or need_deferred:

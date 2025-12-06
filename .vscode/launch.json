@@ -42,5 +42,23 @@
             "args": []
         },
 
+        {
+            "name": "Python Debugger: curvcfg (board merge)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/packages/curvtools/src/curvtools/cli/curvcfg/cli.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "args": [
+                "board",
+                "merge",
+                "--board=ulx3s",
+                "--device=85f",
+                "--schema=/home/mwg/ecp5-first-steps/my-designs/riscv-soc/boards/schema/schema.toml",
+                "--schema=/home/mwg/ecp5-first-steps/my-designs/riscv-soc/boards/schema/schema_flash.toml",
+                "--merged-board-toml-out=build/generated/config/merged_board.toml",
+                "--dep-file-out=build/generated/make/board.mk.d"
+            ]
+        }
     ]
 }
