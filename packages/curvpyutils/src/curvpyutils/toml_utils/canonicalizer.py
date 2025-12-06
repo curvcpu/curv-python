@@ -1,4 +1,5 @@
 from __future__ import annotations
+import os
 import subprocess
 from curvpyutils.shellutils import Which
 from pathlib import Path
@@ -10,7 +11,20 @@ from typing import Optional
 from collections import OrderedDict
 
 class TomlCanonicalizer:
-    def __init__(self, input_file: Path) -> None:
+    @staticmethod
+    def _is_readable(path: Path) -> bool:
+        """Check if the file at path is readable."""
+        return os.access(path, os.R_OK)
+
+    @staticmethod
+    def _is_writable(path: Path) -> bool:
+        """Check if the file at path is writable."""
+        return os.access(path, os.W_OK)
+
+    def __init__(self, input_file: Path, silent: bool = False) -> None:
+        assert Path(input_file).is_absolute(), "input_file must be an absolute path"
+        assert Path(input_file).exists() and Path(input_file).is_file() and self._is_readable(Path(input_file)), "input_file must be a file that exists and is readable"
+        self.silent = silent
         self.input_file = input_file
         self.temp_file = self._copy_input_file_to_temp_file()
         self.taplo_cmd = self._get_taplo_cmd()
@@ -18,6 +32,18 @@ class TomlCanonicalizer:
             self._taplo_in_place_rewrite()
         else:
             self._canonicalize_with_python_toml()
+
+    def overwrite_input_file(self) -> bool:
+        """
+        Overwrite the input file with the canonicalized version.
+        """
+        assert self.temp_file.exists() and self.temp_file.is_file() and self._is_readable(self.temp_file), "temp_file must be a file that exists and is readable"
+        assert Path(self.input_file).exists() and Path(self.input_file).is_file() and self._is_writable(Path(self.input_file)), "input_file must be a file that exists and is writable"
+        try:
+            os.rename(self.temp_file, self.input_file)
+        except Exception as e:
+            raise Exception(f"failed to overwrite input file: {e}")
+        return True
 
     def _get_taplo_cmd(self) -> Optional[Path]:
         try:
@@ -62,11 +88,12 @@ class TomlCanonicalizer:
             )
         except CalledProcessError as e:
             raise CalledProcessError(f"taplo returned non-zero (exit code {e.returncode}): {e.stderr}")
-        print(f"taplo output: {result.stdout}")
-        print(f"taplo stderr: {result.stderr}")
-        print(f"taplo return code: {result.returncode}")
-        print(f"taplo temp file: {self.temp_file}")
-        print(f"taplo input file: {self.input_file}")
+        if not self.silent:
+            print(f"taplo output: {result.stdout}")
+            print(f"taplo stderr: {result.stderr}")
+            print(f"taplo return code: {result.returncode}")
+            print(f"taplo temp file: {self.temp_file}")
+            print(f"taplo input file: {self.input_file}")
 
     def _canonicalize_with_python_toml(self) -> None:
         """
@@ -84,7 +111,8 @@ class TomlCanonicalizer:
             else:
                 return x
         
-        print(f"canonicalizing with python-toml: {self.temp_file}")
+        if not self.silent:
+            print(f"canonicalizing with python-toml: {self.temp_file}")
         d = read_toml_file(str(self.temp_file))
         data = sort_obj(d)
         s = dump_dict_to_toml_str(data)
