@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, Protocol, runtime_checkable
 import sys
 from pathlib import Path
+from typing import BinaryIO
 from ._canonicalizer import canonicalize_toml_str
 
 # Global variable storing the TOML backend object that is loaded.
@@ -165,6 +166,18 @@ def loadf(path: str|Path) -> Dict[str, Any]:
         data = _load_toml_bytes(f.read())
     return data
 
+def load(f: BinaryIO) -> Dict[str, Any]:  # type: ignore[reportIncompatibleMethodOverride]
+    """
+    Load a TOML file from a file object opened in binary mode.
+    
+    Args: 
+        f: the file object opened in binary mode
+    
+    Returns: 
+        A dictionary that can be used to read the TOML file.
+    """
+    data = _load_toml_bytes(f.read())
+    return data
 
 def loads(s: str) -> Dict[str, Any]:
     """
@@ -179,7 +192,6 @@ def loads(s: str) -> Dict[str, Any]:
     """
     backend = _ensure_backend()
     return backend.loads(s)
-
 
 __all__ = [
     "dumps",

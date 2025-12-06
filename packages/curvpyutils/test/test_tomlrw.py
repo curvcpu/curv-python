@@ -61,3 +61,13 @@ b = [
         s = "a = 1\nb = 2\n"
         d = tomlrw.loads(s)
         assert d == {"a": 1, "b": 2}
+
+    def test_load(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "test.toml")
+            with open(path, "w") as f:
+                f.write("a = 1\nb = 2\n")
+            
+            with open(path, "rb") as f:
+                d = tomlrw.load(f)
+            assert d == {"a": 1, "b": 2}
