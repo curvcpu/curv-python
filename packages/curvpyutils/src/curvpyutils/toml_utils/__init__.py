@@ -1,6 +1,4 @@
 from .toml_backend_rw import (
-    dict_to_toml_str, 
-    toml_file_to_dict,
     read_toml_file, 
     dump_dict_to_toml_str, 
 )
@@ -16,7 +14,4 @@ __all__ = [
     # Legacy/deprecated public TOML helper API
     "read_toml_file",
     "dump_dict_to_toml_str",
-    # New public TOML helper API
-    "dict_to_toml_str",
-    "toml_file_to_dict",
 ]
