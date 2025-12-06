@@ -12,33 +12,63 @@ import inspect
 from curvtools.cli.curvcfg.lib.util import get_config_values
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
 from .curvpath import CurvPath
+# from .curvcontext import CurvContext
 from ..util.cfgvalue import CfgValues, CfgValue
 
 curvpaths: Optional[Dict[str, CurvPath]] = None
 _curvroot_dir_source: Optional[ParameterSource] = None
 
 class CurvPaths(dict[str, CurvPath]):
-    def __init__(self, curv_root_dir: str|Path, build_dir: str | None = None, profile: str | None = None, board: str | None = None, device: str | None = None, merged_toml: [FsPathType | dict[str, Any]]= None):
+    def __init__(self, curv_root_dir: str|Path, build_dir: Optional[str] = None, profile: Optional[str] = None, board: Optional[str] = None, device: Optional[str] = None, merged_toml: Optional[FsPathType | dict[str, Any]]= None):
         super().__init__()
         self.curv_root_dir = Path(curv_root_dir).resolve() if curv_root_dir is not None else None
         self.env_file = self.curv_root_dir / PATHS_RAW_ENV_FILE_REL_PATH
         self.build_dir = Path(build_dir).resolve() if build_dir is not None else None
-        self.profile = profile
-        self.board = board
-        self.device = device
-        self.cfg_values = None
+        self._profile = profile
+        self._board = board
+        self._device = device
+        self._cfg_values = None
         if merged_toml is not None:
             if isinstance(merged_toml, dict[str, CfgValue]):
-                self.cfg_values = CfgValues(vals=merged_toml)
+                self._cfg_values = CfgValues(vals=merged_toml)
             elif isinstance(merged_toml, (str, Path, FsPathType, dict[str, Any])):
-                self.cfg_values = get_config_values(
+                self._cfg_values = get_config_values(
                     config=merged_toml, 
                     schema=None, 
                     is_combined_toml=True)
             else:
                 raise ValueError(f"merged_toml must be a dictionary of CfgValue objects, a string, a path, or a FsPathType, but got {type(merged_toml)}")
         self._refresh_from_path_env_file()
-        
+
+    @property
+    def profile(self) -> str:
+        return self._profile
+    @profile.setter
+    def profile(self, value: str):
+        self.update_and_refresh(profile=value)
+
+    @property
+    def board(self) -> str:
+        return self._board
+    @board.setter
+    def board(self, value: str):
+        self.update_and_refresh(board=value)
+
+    @property
+    def device(self) -> str:
+        return self._device
+    @device.setter
+    def device(self, value: str):
+        self.update_and_refresh(device=value)
+
+    @property
+    def merged_toml(self) -> Optional[FsPathType | dict[str, Any]]:
+        return self._cfg_values
+    @merged_toml.setter
+    def merged_toml(self, value: Optional[FsPathType | dict[str, Any]]):
+        self.update_and_refresh(merged_toml=value)
+
+
     def _refresh_from_path_env_file(self):
         """
         Read a path_raw.env file and return a dictionary of the variables with their values interpreted where possible.
@@ -48,27 +78,29 @@ class CurvPaths(dict[str, CurvPath]):
 
         # now replace and $(VAR_NAME) with the value of VAR_NAME
         replacement_vals = { 
-            'PROFILE': self.profile, 
-            'BOARD': self.board, 
-            'DEVICE': self.device,
+            'PROFILE': self._profile, 
+            'BOARD': self._board, 
+            'DEVICE': self._device,
             'BUILD_DIR': self.build_dir, 
             'CURV_ROOT_DIR': self.curv_root_dir,
         }
-        if self.cfg_values is not None:
-            for k, v in self.cfg_values.items():
+        if self._cfg_values is not None:
+            for k, v in self._cfg_values.items():
                 replacement_vals[k] = str(v)
         self.clear()
         for k, v in env_values.items():
             if v is None:
                 continue
+            if ".." in v:
+                v = (Path(v).resolve()).as_posix()
             new_value = CurvPath(
                 path=v, 
-                PROFILE=self.profile, 
-                BOARD=self.board, 
-                DEVICE=self.device,
+                PROFILE=self._profile, 
+                BOARD=self._board, 
+                DEVICE=self._device,
                 BUILD_DIR=self.build_dir, 
                 CURV_ROOT_DIR=self.curv_root_dir, 
-                cfgvalues=self.cfg_values,
+                cfgvalues=self._cfg_values,
                 uninterpolated_value_info=(
                     env_values_uninterpolated.get(k, None),
                     env_values_uninterpolated
@@ -76,29 +108,35 @@ class CurvPaths(dict[str, CurvPath]):
             )
             self[k] = new_value
     
-    def update_and_refresh(self, profile: str | None = None, board: str | None = None, device: str | None = None, build_dir: str | None = None, curv_root_dir: str | None = None, merged_toml: FsPathType | dict[str, Any] | None = None) -> None:
+    def update_and_refresh(self, profile: Optional[str] = None, board: Optional[str] = None, device: Optional[str] = None, build_dir: Optional[str] = None, curv_root_dir: Optional[str] = None, merged_toml: Optional[FsPathType | dict[str, Any]] = None) -> None:
         """
         Update the paths and re-read the path_raw.env file.
         """
-        self.profile = profile if profile is not None else self.profile 
-        self.board = board if board is not None else self.board 
-        self.device = device if device is not None else self.device
-        self.build_dir = Path(build_dir).resolve() if build_dir is not None else self.build_dir
-        self.curv_root_dir = Path(curv_root_dir).resolve() if curv_root_dir is not None else self.curv_root_dir
-        if merged_toml is not None:
+        self._profile = profile if (profile is not None and self._profile is None) else self._profile 
+        self._board = board if (board is not None and self._board is None) else self._board 
+        self._device = device if (device is not None and self._device is None) else self._device
+        self.build_dir = Path(build_dir).resolve() if (build_dir is not None and self.build_dir is None) else self.build_dir
+        self.curv_root_dir = Path(curv_root_dir).resolve() if (curv_root_dir is not None and self.curv_root_dir is None) else self.curv_root_dir
+        if merged_toml is not None and self._cfg_values is None:
             if isinstance(merged_toml, dict[str, CfgValue]):
-                self.cfg_values.update(merged_toml)
+                self._cfg_values.update(merged_toml)
             elif isinstance(merged_toml, (str, Path, FsPathType)):
-                self.cfg_values.update(get_config_values(
+                self._cfg_values.update(get_config_values(
                     config=merged_toml, 
                     schema=None, 
                     is_combined_toml=True))
         self._refresh_from_path_env_file()
 
     def __str__(self):
-        s = ""
+        s = "CurvPaths:\n"
+        max_key_len = max(len(k) for k in self.keys())
+        max_value_len = max(len(v.to_str()) for v in self.values())
         for k,v in self.items():
-            s += f"{k}: {v}\n"
+            if v.is_fully_resolved():
+                resolved_str = "[resolved]"
+            else:
+                resolved_str = "[unresolved]"
+            s += f"  {k:{max_key_len}} = {v.to_str():{max_value_len}} {resolved_str}\n"
         s = s[:-1]
         return s
 
@@ -158,7 +196,7 @@ class CurvPaths(dict[str, CurvPath]):
         """
         return CurvPaths._try_make_relative_to_dir(path, self.get_config_dir())
 
-def get_curv_paths(ctx: Context) -> CurvPaths:
+def get_curv_paths(ctx: Optional[Context]) -> CurvPaths:
     """
     Get the paths commonly used in this build system, and track where CURV_ROOT_DIR was obtained from.
     """
@@ -176,7 +214,7 @@ def get_curv_paths(ctx: Context) -> CurvPaths:
             "or cd'ing any directory under the curvcpu/curv repo root.)"
         )
 
-        curv_root_dir = ctx.obj.get("curv_root_dir", None)
+        curv_root_dir = ctx.obj.curv_root_dir if ctx is not None else None
         _curvroot_dir_source = ctx.get_parameter_source("curv_root_dir")
 
         kwargs = {'curv_root_dir': curv_root_dir}

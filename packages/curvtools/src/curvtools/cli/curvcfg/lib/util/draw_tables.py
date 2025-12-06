@@ -8,12 +8,12 @@ from rich.style import Style
 from rich.table import Table
 from rich.markup import escape
 from rich.tree import Tree
+from rich.text import Text
 from pathlib import Path
 from curvtools.cli.curvcfg.lib.globals.console import console
-from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
 import click
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
 from curvtools.cli.curvcfg.lib.globals.constants import PATHS_RAW_ENV_FILE_REL_PATH
@@ -27,78 +27,80 @@ def get_box(use_ascii_box: bool = False) -> Box:
 #
 ###############################################################################
 
-def display_merged_toml_table(config_values: CfgValues, target_path: str, use_ascii_box: bool = False, verbosity: int = 0) -> None:
+def display_merged_toml_table(config_values: CfgValues, merged_toml_path: str, use_ascii_box: bool = False, verbose_table: bool = False) -> None:
     """
     Display the merged TOML table.
     
     Args:
         config_values: the config values
-        target_path: the target path
-        verbosity: the verbosity level
+        merged_toml_path: the merged toml path as a string
+        verbose_table: whether to display the verbose table
 
     Returns:
         None
     """
-    if verbosity >= 1:
-        # Color helpers copied from existing CLI display
-        color_for_makefile_type = {
-            "decimal": {"open": "[yellow]", "close": "[/yellow]"},
-            "hex32": {"open": "[green]", "close": "[/green]"},
-            "hex16": {"open": "[green]", "close": "[/green]"},
-            "hex8": {"open": "[green]", "close": "[/green]"},
-            "hex": {"open": "[green]", "close": "[/green]"},
-            "string": {"open": "[bold white]", "close": "[/bold white]"},
-            "default": {"open": "[white]", "close": "[/white]"},
-            "int": {"open": "[bold magenta]", "close": "[/bold magenta]"},
-            "int enum": {"open": "[bold red]", "close": "[/bold red]"},
-            "string enum": {"open": "[bold green]", "close": "[/bold green]"},
-            "string": {"open": "[bold white]", "close": "[/bold white]"},
-        }
-        def colorize_key(s: str, color: str = "bold yellow") -> str:
-            return f"[{color}]" + s + f"[/{color}]"
-        def colorize_value(makefile_type: str, s: str) -> str:
-            m = color_for_makefile_type.get(makefile_type, color_for_makefile_type["default"])
-            return m["open"] + s + m["close"]
+    # Color helpers copied from existing CLI display
+    color_for_makefile_type = {
+        "decimal": {"open": "[yellow]", "close": "[/yellow]"},
+        "hex32": {"open": "[green]", "close": "[/green]"},
+        "hex16": {"open": "[green]", "close": "[/green]"},
+        "hex8": {"open": "[green]", "close": "[/green]"},
+        "hex": {"open": "[green]", "close": "[/green]"},
+        "string": {"open": "[bold white]", "close": "[/bold white]"},
+        "default": {"open": "[white]", "close": "[/white]"},
+        "int": {"open": "[bold magenta]", "close": "[/bold magenta]"},
+        "int enum": {"open": "[bold red]", "close": "[/bold red]"},
+        "string enum": {"open": "[bold green]", "close": "[/bold green]"},
+        "string": {"open": "[bold white]", "close": "[/bold white]"},
+    }
+    def colorize_key(s: str, color: str = "bold yellow") -> str:
+        return f"[{color}]" + s + f"[/{color}]"
+    def colorize_value(makefile_type: str, s: str) -> str:
+        m = color_for_makefile_type.get(makefile_type, color_for_makefile_type["default"])
+        return m["open"] + s + m["close"]
 
-        from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
-        table_options = {}
-        # table_options["title"] = f"{target_path}"
-        # table_options["title_style"] = Style(color="green", bold=True)
-        table_options["box"] = get_box(use_ascii_box)
-        table_options["caption"] = f"config hash: {config_values.hash()}"
+    from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
+    table_options = {}
+    table_options["box"] = get_box(use_ascii_box)
+    table_options["caption"] = f"config hash: {config_values.hash()}"
+    TitleWithSourceText = Text.assemble(
+        Text("Variable Values\n", style="bold white"),
+        Text("(source: "),
+        Text(f"{merged_toml_path}", style="bold green"),
+        Text(")")
+    )
+    TitleText = Text("Variable Values", style="bold white")
 
-        if verbosity >= 2:
-            table = Table(expand=False, **table_options)
-            table.add_column(f"Variable [dim](source: [green]{CurvPaths.mk_rel_to_cwd(target_path)}[/green])[/dim]", overflow="fold")
-            table.add_column("Value", overflow="fold")
-            table.add_column("Type", overflow="fold")
-            table.add_column("Constraints", overflow="fold")
-            table.add_column("Locations", overflow="fold")
-            for k in sorted(config_values.keys()):
-                if not k.startswith("CFG_"):
-                    continue
-                v = config_values[k]
-                table.add_row(
-                    f"{colorize_key(k)}\n{v.meta.toml_path}",
-                    f"{colorize_value(v.meta.makefile_type, str(v))}",
-                    colorize_value(v.schema_meta.get_type_str()[0], v.schema_meta.get_type_str()[0]),
-                    colorize_value(v.schema_meta.get_type_str()[1], v.schema_meta.get_type_str()[1]),
-                    v.locations_str(),
-                )
-        else:
-            table = Table(expand=False, **table_options)
-            table.add_column(f"Variable [dim](source: [green]{CurvPaths.mk_rel_to_cwd(target_path)}[/green])[/dim]", overflow="fold")
-            table.add_column("Value", overflow="fold")
-            for k in sorted(config_values.keys()):
-                if not k.startswith("CFG_"):
-                    continue
-                v = config_values[k]
-                table.add_row(
-                    f"{colorize_key(k)}",
-                    f"{colorize_value(v.meta.makefile_type, str(v))}",
-                )
-        console.print(table)
-        console.print()
+    if verbose_table:
+        table_options["title"] = TitleWithSourceText
+        table = Table(expand=False, **table_options)
+        table.add_column(f"Variable", overflow="fold")
+        table.add_column("Value", overflow="fold")
+        table.add_column("Type", overflow="fold")
+        table.add_column("Constraints", overflow="fold", max_width=40)
+        table.add_column("Locations", overflow="fold")
+        for k in sorted(config_values.keys()):
+            v = config_values[k]
+            table.add_row(
+                f"{colorize_key(k)}\n{v.meta.toml_path}",
+                f"{colorize_value(v.meta.makefile_type, str(v))}",
+                colorize_value(v.schema_meta.get_type_str()[0], v.schema_meta.get_type_str()[0]),
+                colorize_value(v.schema_meta.get_type_str()[1], v.schema_meta.get_type_str()[1]),
+                v.locations_str(),
+            )
+    else:
+        table_options["title"] = TitleText
+        table = Table(expand=False, **table_options)
+        table.add_column(f"Variable", overflow="fold")
+        table.add_column("Value", overflow="fold")
+        for k in sorted(config_values.keys()):
+            v = config_values[k]
+            table.add_row(
+                f"{colorize_key(k)}",
+                f"{colorize_value(v.meta.makefile_type, str(v))}",
+            )
+    console.print(table)
+    console.print()
 
 
 ###############################################################################
@@ -135,15 +137,20 @@ def display_dep_file_contents(contents: str, target_path: FsPathType, use_ascii_
 #
 ###############################################################################
 
-def display_tool_settings(ctx: click.Context, use_ascii_box: bool = False):
+def display_tool_settings(curvctx: CurvContext, use_ascii_box: bool = False):
     # print the tool's config settings
-    curvcfg_settings_path = ctx.obj.get('curvcfg_settings_path', None)
-    curvcfg_settings = ctx.obj.get('curvcfg_settings', None)
+    curvcfg_settings_path = curvctx.args.get('curvcfg_settings_path', None)
+    curvcfg_settings = curvctx.args.get('curvcfg_settings', None)
     if curvcfg_settings is not None:
         if curvcfg_settings_path is not None:
-            title: Optional[TextType]= f"[blue]from file: [bold]{curvcfg_settings_path}[/bold][/blue]"
+            title: Optional[Text]= Text.assemble(
+                Text("Tool Settings\n", style="bold white"),
+                Text("(source: "),
+                Text(f"{curvcfg_settings_path}", style="bold green"),
+                Text(")")
+            )
         else:
-            title: Optional[TextType]= None
+            title: Optional[Text]= Text("Tool Settings", style="bold white")
         table = Table(
             expand=False, 
             highlight=True, 
@@ -189,7 +196,7 @@ def display_curvpaths(curv_paths: CurvPaths, use_ascii_box: bool = False) -> Non
     table.add_column("Path Name", overflow="fold", highlight=False)
     table.add_column("Value", overflow="fold", highlight=False, style="deep_pink4")
     table.add_column("Resolved", overflow="fold", highlight=False)
-    for key, value in curv_paths.items():
+    for key, value in sorted(curv_paths.items()):
         key_table = Table.grid()
         key_table.add_column("Key", overflow="fold", highlight=False)
         key_table.add_row(f"{key}")
@@ -203,7 +210,9 @@ def display_curvpaths(curv_paths: CurvPaths, use_ascii_box: bool = False) -> Non
     console.print(table)
     console.print()
 
-def display_args_table(args: CurvCliArgs, title: str, use_ascii_box: bool = False):
+def display_args_table(args: dict[str, Any], title: str, use_ascii_box: bool = False):
+    NoneText = Text("None", style="bold red")
+
     # print the effective arguments
     table = Table(expand=False, 
         highlight=True, 
@@ -215,7 +224,9 @@ def display_args_table(args: CurvCliArgs, title: str, use_ascii_box: bool = Fals
     table.add_column("Argument")
     table.add_column("Value", overflow="fold")
     for key, value in args.items():
-        if isinstance(value, list):
+        if value is None:
+            table.add_row(f"{key}", NoneText)
+        elif isinstance(value, list):
             table.add_row(f"{key}", str(value[0]))
             for item in value[1:]:
                 table.add_row("", str(item))
@@ -231,3 +242,16 @@ def display_args_table(args: CurvCliArgs, title: str, use_ascii_box: bool = Fals
             expand=False,
             )
     console.print(p2)
+
+def display_profiles_table(profile_name_and_path_list: list[tuple[str, Path]], curv_root_dir: Path, use_ascii_box: bool = False) -> None:
+    """
+    Display the profiles table.
+    """
+    s = f"CURV_ROOT_DIR = {curv_root_dir}"
+    table = Table(expand=False, box=get_box(use_ascii_box), pad_edge=False, caption=f"{s}", caption_style="bold bright_green", width=len(s)+4)
+    table.add_column("Profile Name")
+    table.add_column("Profile Path", overflow="fold")
+    for profile_name, profile_path in profile_name_and_path_list:
+        table.add_row(profile_name, str(profile_path))
+    console.print(table)
+    console.print()

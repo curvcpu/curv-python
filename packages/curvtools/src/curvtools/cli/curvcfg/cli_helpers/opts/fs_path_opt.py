@@ -59,7 +59,7 @@ def shell_complete_file_path(ctx: click.Context, param: click.Parameter, incompl
     items.append(CompletionItem(None, type="file", help='path build base config toml'))
     return items
 
-def make_fs_path_param_type_class(dir_okay: bool = False, file_okay: bool = False, must_exist: bool = False, default_value_if_omitted: str = None, raw_string_handling: dict[str, str] = None) -> type[click.ParamType]:
+def make_fs_path_param_type_class(dir_okay: bool = False, file_okay: bool = False, exists: bool = False, default_value_if_omitted: str = None, raw_string_handling: dict[str, str] = None) -> type[click.ParamType]:
     class FsPathParamType(ClickPath):
         """
         Base class for any parameter that accepts a filesystem path, including special variables like <curv-root-dir>
@@ -75,7 +75,7 @@ def make_fs_path_param_type_class(dir_okay: bool = False, file_okay: bool = Fals
             kwargs['path_type'] = FsPathType
             kwargs['dir_okay'] = dir_okay
             kwargs['file_okay'] = file_okay
-            if must_exist:
+            if exists:
                 kwargs['exists'] = True
                 kwargs['resolve_path'] = True
             else:
@@ -83,7 +83,7 @@ def make_fs_path_param_type_class(dir_okay: bool = False, file_okay: bool = Fals
                 kwargs['resolve_path'] = False
             super().__init__(*args, **kwargs)
 
-            # handling for raw strings is done with 'raw_string_handling, a dict with keys 'prefix' and 'suffix'
+            # handling for raw strings is done with `raw_string_handling`, a dict with keys 'prefix' and 'suffix'
             # that we'll try to add to a simple name to turn it into a file path
             if raw_string_handling is not None:
                 raw_string_prefix = raw_string_handling.get("prefix", "")
@@ -126,8 +126,7 @@ def make_fs_path_param_type_class(dir_okay: bool = False, file_okay: bool = Fals
                     s = expand_curv_root_dir_vars(s, ctx)
                     s = expand_build_dir_vars(s, ctx)
                     return super().convert(s, param, ctx)
-                # self.fail(f"Unable to parse filesystem path {value!r} ({e})")
-                return None
+                self.fail(f"Unable to parse filesystem path {value!r}: {e}")
         
         def shell_complete(self, ctx: click.Context, param: click.Parameter, incomplete: str) -> list[CompletionItem]:
             #print(f"😀😀😀 shell_complete: {incomplete}", file=sys.stderr)

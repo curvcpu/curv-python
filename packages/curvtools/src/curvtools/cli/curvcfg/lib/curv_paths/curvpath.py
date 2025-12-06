@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import os
 from .replace_funcs import match_vars, replace_vars
 
-class CurvPath:
+class CurvPath():
     def __init__(self, path: str|Path, PROFILE: str = None, BOARD: str = None, DEVICE: str = None, BUILD_DIR: str = None, CURV_ROOT_DIR: str = None, cfgvalues: CfgValues = None, uninterpolated_value_info: tuple[str, dict[str, str]] = None):
         self.path_str = str(path)
         self.profile = PROFILE
@@ -13,11 +13,14 @@ class CurvPath:
         self.build_dir = BUILD_DIR
         self.curv_root_dir = CURV_ROOT_DIR
         self.cfgvalues = cfgvalues
+        self._set_uninterpolated_value(uninterpolated_value_info)
+        self._run_var_replacement()
+
+    def _set_uninterpolated_value(self, uninterpolated_value_info: tuple[str, dict[str, str]]) -> None:
         if uninterpolated_value_info is not None and isinstance(uninterpolated_value_info, tuple) and len(uninterpolated_value_info) == 2:
             self.uninterpolated_value = self._recursive_uninterpolate_value(uninterpolated_value_info[0], uninterpolated_value_info[1])
         else:
             self.uninterpolated_value = None
-        self._run_var_replacement()
 
     def _recursive_uninterpolate_value(self, value: str, env_values_uninterpolated: dict[str, str]) -> str:
         """
@@ -62,6 +65,9 @@ class CurvPath:
     def to_str(self, add_trailing_slash: bool = False) -> str:
         s = str(self)
         return CurvPath._add_trailing_slash(s) if add_trailing_slash else s
+
+    def to_path(self) -> Path:
+        return Path(str(self))
 
     def __repr__(self):
         resolved_str = "[resolved]" if self.is_fully_resolved() else "[unresolved]"

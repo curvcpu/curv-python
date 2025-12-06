@@ -1,60 +1,105 @@
-from dataclasses import dataclass
+from __future__ import annotations
+
+from dataclasses import dataclass, field
 import os
 import click
-from typing import Optional, TYPE_CHECKING
-# from curvtools.cli.curvcfg.cli_helpers import Profile
+from typing import Optional, TYPE_CHECKING, Any
 from curvtools.cli.curvcfg.lib.curv_paths import CurvPaths, get_curv_paths
 from pathlib import Path
+
 if TYPE_CHECKING:
     from curvtools.cli.curvcfg.cli_helpers.paramtypes.profile import Profile
+    from curvtools.cli.curvcfg.cli_helpers.paramtypes.board import Board
+    from curvtools.cli.curvcfg.cli_helpers.paramtypes.device import Device
+    from curvtools.cli.curvcfg.cli_helpers.paramtypes.merged_toml import MergedToml
 
 @dataclass
 class CurvContext:
-    curv_root_dir: Optional[str]       = None
-    build_dir:     Optional[str]       = None
-    profile:       Optional["Profile"] = None
-    board:         Optional[str]       = None
-    device:        Optional[str]       = None
-    merged_toml:   Optional[Path]      = None
+    curv_root_dir: Optional[Path]          = None
+    build_dir:     Optional[Path]          = None
+    profile:       Optional[Profile]       = None
+    board:         Optional[Board]         = None
+    device:        Optional[Device]        = None
+    merged_toml:   Optional[MergedToml]    = None
 
-    ctx: click.Context | None = None
-    
-    _curvpaths: CurvPaths | None = None
+    curvpaths:     Optional[CurvPaths]     = None
+
+    _ctx:          Optional[click.Context] = None
+    _args:         dict[str, Any]          = field(default_factory=dict)
 
     @property
-    def curvpaths(self) -> CurvPaths:
-        if self._curvpaths is None:
-            self._curvpaths = get_curv_paths(self.ctx)
-        if self._curvpaths is not None:
-            self._curvpaths.update_and_refresh(
-                curv_root_dir=self.ctx.params.get("curv_root_dir", self.curv_root_dir),
-                build_dir=self.ctx.params.get("build_dir", self.build_dir),
-                board=self.ctx.params.get("board", self.board),
-                device=self.ctx.params.get("device", self.device),
-                profile=self.ctx.params.get("profile", self.profile),
-                merged_toml=self.ctx.params.get("merged_toml", self.merged_toml),
-            )
-        return self._curvpaths
+    def args(self) -> dict[str, Any]:
+        """
+        The arguments passed to the command
+        """
+        return self._args
 
-    def make_paths_tb(self) -> CurvPaths:
+    @property
+    def ctx(self) -> click.Context:
+        """
+        The click context object
+        """
+        return self._ctx
+    
+    @ctx.setter
+    def ctx(self, ctx: click.Context):
+        """
+        Set the click context object; on every set we use
+        it to refresh the internal curvpaths object.
+        """
+        assert isinstance(ctx, click.Context), "ctx argumentmust be a click.Context object"
+        self._ctx = ctx
+        self._update_and_retrieve_curvpaths()
+
+    def _update_and_retrieve_curvpaths(self) -> CurvPaths:
+        if self.curvpaths is None:
+            assert self._ctx is not None, "self._ctx must be set to update curvpaths"
+            self.curvpaths = get_curv_paths(self._ctx)
+        else:
+            kwargs = {}
+            for k, v in [
+                ("curv_root_dir", self._ctx.params.get("curv_root_dir", self.curv_root_dir)),
+                ("build_dir", self._ctx.params.get("build_dir", self.build_dir)),
+                ("board", self._ctx.params.get("board", self.board)),
+                ("device", self._ctx.params.get("device", self.device)),
+                ("profile", self._ctx.params.get("profile", self.profile)),
+            ]:
+                if v is not None:
+                    kwargs[k] = v
+            self.curvpaths.update_and_refresh(**kwargs)
+        return self.curvpaths
+
+    def make_paths(self) -> CurvPaths:
         if not self.curv_root_dir or not self.build_dir:
             raise click.UsageError(
                 "--curv-root-dir and --build-dir are required"
             )
-        return self.curvpaths
+        return self._update_and_retrieve_curvpaths()
 
-    def make_paths_soc(self) -> CurvPaths:
-        missing = [
-            name for name, value in [
-                ("--curv-root-dir", self.curv_root_dir),
-                ("--build-dir", self.build_dir),
-                ("--board", self.board),
-                ("--device", self.device),
-                ("--profile", self.profile),
-            ] if not value
-        ]
-        if missing:
-            raise click.UsageError(
-                "Missing required options for 'soc' commands: " + ", ".join(missing)
-            )
-        return self.curvpaths
+
+    # def make_paths_tb(self) -> CurvPaths:
+    #     if not self.curv_root_dir or not self.build_dir:
+    #         raise click.UsageError(
+    #             "--curv-root-dir and --build-dir are required"
+    #         )
+    #     return self._update_and_retrieve_curvpaths()
+
+    # def make_paths_show(self) -> CurvPaths:
+    #     if not self.curv_root_dir or not self.build_dir:
+    #         raise click.UsageError(
+    #             "--curv-root-dir and --build-dir are required"
+    #         )
+    #     return self._update_and_retrieve_curvpaths()
+
+    # def make_paths_soc(self) -> CurvPaths:
+    #     missing = [
+    #         name for name, value in [
+    #             ("--curv-root-dir", self.curv_root_dir),
+    #             ("--build-dir", self.build_dir),
+    #         ] if not value
+    #     ]
+    #     if missing:
+    #         raise click.UsageError(
+    #             "Missing required options for 'soc' commands: " + ", ".join(missing)
+    #         )
+    #     return self._update_and_retrieve_curvpaths()

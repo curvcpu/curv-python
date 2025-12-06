@@ -17,6 +17,8 @@ from .profile_file_opt import profile_file_opt
 from .schema_file_opt import schema_file_opt
 from .version_opt import version_opt
 from .board_device_opts import kind_opts, board_device_opts
+from .fs_path_opt import make_fs_path_param_type_class, FsPathType
+
 __all__ = [
     "build_dir_opt",
     "overlay_opts_for_paths_list",
@@ -32,4 +34,6 @@ __all__ = [
     "version_opt",
     "kind_opts",
     "board_device_opts",
+    "FsPathType",
+    "make_fs_path_param_type_class",
 ]
