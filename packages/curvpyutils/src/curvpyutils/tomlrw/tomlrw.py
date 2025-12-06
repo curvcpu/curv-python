@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, Protocol, runtime_checkable
 import sys
 from pathlib import Path
+from ._canonicalizer import canonicalize_toml_str
 
 # Global variable storing the TOML backend object that is loaded.
 # Initialized on first use.
@@ -126,23 +127,32 @@ def _load_toml_bytes(b: bytes) -> Dict[str, Any]:
 ################################################################################
 
 
-def dumps(d: Dict[str, Any]) -> str:
+def dumps(d: Dict[str, Any], should_canonicalize: bool = False, should_sort_if_canonicalizing: bool = False) -> str:
     """
-    Dispatch to whichever TOML backend we found.
-    
+    Write a dict[str,Any] to toml format. Dispatch to whichever TOML backend 
+    we found. Optionally canonicalize the TOML string if `taplo` or python 
+    `tomli`/`toml` libraries are available.
+
     Args: 
         d: the dictionary to dump into a TOML string
-    
+        should_canonicalize: whether to canonicalize the TOML string using `taplo` 
+        if available. If `False`, `should_sort_if_canonicalizing` is ignored.
+        should_sort_if_canonicalizing: whether to sort the keys of the dictionary before 
+        canonicalizing. If `False`, the keys are not sorted.
     Returns: 
         A TOML string that can be written to a .toml file. 
     """
     backend = _ensure_backend()
-    return backend.dumps(d)
+    s = backend.dumps(d)
+    if should_canonicalize:
+        s = canonicalize_toml_str(s, should_sort=should_sort_if_canonicalizing)
+    return s
 
 
 def loadf(path: str|Path) -> Dict[str, Any]:
     """
-    Dispatch to whichever TOML backend we found.
+    Load a TOML file into a dict[str,Any]. Dispatch to whichever TOML backend 
+    we find on this system.
     
     Args: 
         path: the path to the TOML file
@@ -150,15 +160,16 @@ def loadf(path: str|Path) -> Dict[str, Any]:
     Returns: 
         A dictionary that can be used to read the TOML file.
     """
-    if isinstance(path, Path):
-        path = str(path)
+    if isinstance(path, Path): path = str(path) # type: ignore[assignment]
     with open(path, "rb") as f:
         data = _load_toml_bytes(f.read())
     return data
 
+
 def loads(s: str) -> Dict[str, Any]:
     """
-    Dispatch to whichever TOML backend we found.
+    Load a TOML string into a dict[str,Any]. Dispatch to whichever TOML backend 
+    we find on this system.
     
     Args: 
         s: the TOML string

@@ -63,11 +63,10 @@ class TomlCanonicalizer:
         """
         Run taplo to canonicalize a single TOML file.
         """
-        if not self.temp_file.exists():
-            raise FileNotFoundError(f"TOML file not found: {self.temp_file}")
-        # IMPORTANT:  taplo can go crazy and reformat everything recursively under cwd,
-        # so it's essential to pass it a single file!
-        if not self.temp_file.is_file():
+        # IMPORTANT:  taplo can go berserk and reformat everything recursively under 
+        # the current working directory, so it's essential to make sure you pass it
+        # only the path to a single, extant file!
+        if not self.temp_file.exists() or not self.temp_file.is_file():
             raise ValueError(f"TOML file is not a file: {self.temp_file}")
 
         try:
