@@ -4,43 +4,41 @@ from pathlib import Path
 
 _epilog_fn: Callable[[], str] = lambda: None
 
-def _make_epilog_fn(curv_root_dir: Optional[str|Path], curv_root_dir_source: ParameterSource) -> Callable[[], str]:
+def _get_source_str(source: ParameterSource) -> str:
+    match source:
+        case ParameterSource.ENVIRONMENT:
+            return "(env)"
+        case ParameterSource.COMMANDLINE:
+            return "(cli)"
+        case ParameterSource.DEFAULT_MAP:
+            return "(repo)"
+        case ParameterSource.DEFAULT:
+            return "(repo)"
+        case _:
+            return "(not set)"
+
+def _make_epilog_fn(set_epilog_fn_arg_list: list[tuple[str, Optional[str|Path], ParameterSource]]) -> Callable[[], str]:
     """
     Make a function that returns the epilog string for the given curv_root_dir and curv_root_dir_source.
     """
     def _epilog_fn() -> str:
-        EPILOG = """
-        {curv_root_dir} {curv_root_dir_source_str}
-        """
-        match curv_root_dir_source:
-            case ParameterSource.ENVIRONMENT:
-                curv_root_dir_source_str = "(env)"
-            case ParameterSource.COMMANDLINE:
-                curv_root_dir_source_str = "(cli)"
-            case ParameterSource.DEFAULT:
-                curv_root_dir_source_str = "(repo)"
-            case _:
-                curv_root_dir_source_str = "(unknown)"
-
-        if curv_root_dir is None:
-            curv_root_dir_str = "not set(use --curv-root-dir to set)"
-        elif not Path(curv_root_dir).absolute().resolve().is_dir():
-            curv_root_dir_str = f"ERROR: not a valid directory: {curv_root_dir})"
-        else:
-            curv_root_dir_str = f"'{curv_root_dir}'"
-        
-        return EPILOG.format(
-            curv_root_dir=curv_root_dir_str,
-            curv_root_dir_source_str=curv_root_dir_source_str,
-        )
+        max_key_len = max(len(key) for key, _, _ in set_epilog_fn_arg_list)
+        EPILOG = ""
+        for key, value, source in set_epilog_fn_arg_list:
+            if value is None:
+                dir_str = "not set (use cli arguments or env var {key}=<path> to set)"
+            else:
+                dir_str = f"{Path(value).resolve().as_posix()}"
+            EPILOG += f"{key:<{max_key_len}} = {dir_str} {_get_source_str(source)}\n"
+        return EPILOG
     return _epilog_fn
 
-def set_epilog_fn(curv_root_dir: Optional[str|Path], curv_root_dir_source: ParameterSource) -> None:
+def set_epilog_fn(set_epilog_fn_arg_list: list[tuple[str, Optional[str|Path], ParameterSource]]) -> None:
     """
     Set the epilog function.
     """
     global _epilog_fn
-    _epilog_fn = _make_epilog_fn(curv_root_dir, curv_root_dir_source)
+    _epilog_fn = _make_epilog_fn(set_epilog_fn_arg_list)
 
 def get_epilog_fn() -> Callable[[], str]:
     """

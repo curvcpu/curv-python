@@ -329,7 +329,7 @@ class CurvcfgHelpFormatterCommand(click.Command):
         else:
             epilog = f"CURV_ROOT_DIR is not set.\n\nUse `{get_program_name()} --curv-root-dir <path> [...other args...]` to set it."
         formatter.write_paragraph()
-        with formatter.section("CURV_ROOT_DIR"):
+        with formatter.section("Environment Variables"):
             formatter.write_text(epilog, is_error=epilog.lower().startswith("error"))
 
 
@@ -355,6 +355,6 @@ class CurvcfgHelpFormatterGroup(click.Group):
         else:
             epilog = f"CURV_ROOT_DIR is not set.\n\nUse `{get_program_name()} --curv-root-dir <path> [...other args...]` to set it."
         formatter.write_paragraph()
-        with formatter.section("CURV_ROOT_DIR"):
+        with formatter.section("Environment Variables"):
             formatter.write_text(epilog, is_error=epilog.lower().startswith("error"))
 
