@@ -1,0 +1,46 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "Python Debugger: curvcfg show profiles",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/packages/curvtools/src/curvtools/cli/curvcfg/cli.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/packages/curvtools/src",
+                "CURV_ROOT_DIR": "/home/mwg/ecp5-first-steps/my-designs/riscv-soc",
+                "CURV_BUILD_DIR": "/home/mwg/ecp5-first-steps/my-designs/riscv-soc/build"
+            },
+            "args": [
+                "show",
+                "--board",
+                "ulx3s",
+                "--device",
+                "85f",
+                "profiles"
+            ]
+        },
+
+        {
+            "name": "Python Debugger: curvcfg (no args)",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${workspaceFolder}/packages/curvtools/src/curvtools/cli/curvcfg/cli.py",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/packages/curvtools/src",
+                "CURV_ROOT_DIR": "/home/mwg/ecp5-first-steps/my-designs/riscv-soc",
+                "CURV_BUILD_DIR": "/home/mwg/ecp5-first-steps/my-designs/riscv-soc/build"
+            },
+            "args": []
+        },
+
+    ]
+}
