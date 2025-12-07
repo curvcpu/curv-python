@@ -4,7 +4,7 @@ import re
 from pathlib import Path
 from functools import partial
 from typing import TypeVar, Callable
-from curvtools.cli.curvcfg.lib.curv_paths import CurvPaths
+from curvtools.cli.curvcfg.lib.curv_paths import CurvPaths, CurvPath
 from curvtools.cli.curvcfg.lib.curv_paths.curvcontext import CurvContext
 from curvtools.cli.curvcfg.cli_helpers.delayed_param.resolveable import Resolvable
 
@@ -28,6 +28,9 @@ def make_resolvable_param_type(
         name = type_name
 
         def convert(self, value, param, ctx) -> Resolvable[T]:
+            if isinstance(value, CurvPath):
+                return value
+            
             # 1) path-like?
             if os.path.sep in value:
                 p = Path(value)

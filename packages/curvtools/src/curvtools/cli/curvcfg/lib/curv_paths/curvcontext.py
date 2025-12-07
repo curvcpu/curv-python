@@ -50,7 +50,6 @@ class CurvContext:
         assert isinstance(ctx, click.Context), "ctx argumentmust be a click.Context object"
         self._ctx = ctx
         self._update_and_retrieve_curvpaths()
-        print(f"curvpaths: {self.curvpaths}")
         return
 
     def _update_and_retrieve_curvpaths(self) -> CurvPaths:
@@ -58,8 +57,6 @@ class CurvContext:
             assert self._ctx is not None, "self._ctx must be set to update curvpaths"
             self.curvpaths = get_curv_paths(self._ctx)
         else:
-            print(f"type of _ctx: {type(self._ctx)}")
-            print(f"type of _ctx.params: {type(self._ctx.params)}")
             kwargs = {}
             for k, v in [
                 ("curv_root_dir", self._ctx.params.get("curv_root_dir", self.curv_root_dir)),
@@ -71,12 +68,10 @@ class CurvContext:
                 if v is not None:
                     # if getattr(self, k, None) is None:
                         # setattr(self, k, v)
-                    print(f"setting {k} to {v} (type of v: {type(v)})")
                     kwargs[k] = v
             if len(kwargs) > 0:
                 self.curvpaths.update_and_refresh(**kwargs)
         retval = self.curvpaths
-        print(f"retval: {retval}")
         return retval
 
     def make_paths(self) -> CurvPaths:

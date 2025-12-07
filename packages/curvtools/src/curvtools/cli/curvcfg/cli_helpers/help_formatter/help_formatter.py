@@ -6,7 +6,7 @@ import click
 from click.formatting import measure_table, iter_rows, wrap_text
 from click._compat import term_len
 from click._textwrap import TextWrapper
-from .epilog import get_epilog_fn
+from .epilog import get_epilog_str, update_epilog_env_vars
 from curvtools.cli.curvcfg.version import get_program_name
 
 ###############################################################################
@@ -296,6 +296,15 @@ class CurvcfgHelpFormatterContext(click.Context):
             width=self.terminal_width, max_width=self.max_content_width
         )
 
+def _epilog_writer(self, ctx:click.Context, formatter:CurvcfgAnsiHelpFormatter) -> None:
+        """Writes the epilog into the formatter if it exists."""
+        import inspect
+        epilog_str = get_epilog_str()
+        epilog = inspect.cleandoc(epilog_str)
+        formatter.write_paragraph()
+        with formatter.section("Environment Variables"):
+            formatter.write_text(epilog_str)
+
 class CurvcfgHelpFormatterCommand(click.Command):
     """ Command that uses our context """
     context_class = CurvcfgHelpFormatterContext
@@ -307,30 +316,21 @@ class CurvcfgHelpFormatterCommand(click.Command):
         self.format_usage(ctx, formatter)
         self.format_help_text(ctx, formatter)
         self.format_options(ctx, formatter)
-        self.format_expansion_variables(ctx, formatter)
+        # self.format_expansion_variables(ctx, formatter)
         self.format_epilog(ctx, formatter)
-    def format_expansion_variables(self, ctx, formatter:CurvcfgAnsiHelpFormatter) -> None:
-        """Writes all the expansion variables into the formatter if they exist."""
-        opts = []
-        with formatter.no_placeholder_protection():
-            with formatter.section("Expansion Variables"):
-                formatter.write_text("These angle-bracket variables will be expanded with the values of other arguments or env vars when used in a quoted path:")
-                formatter.write_dl_with_markup([
-                    ("[cyan]<curv-root-dir>[/]", "expanded to value of --curv-root-dir or $CURV_ROOT_DIR"),
-                    ("[cyan]<build-dir>[/]", "expanded to value of --build-dir"),
-                ])
-    def format_epilog(self, ctx, formatter:CurvcfgAnsiHelpFormatter) -> None:
+    # def format_expansion_variables(self, ctx, formatter:CurvcfgAnsiHelpFormatter) -> None:
+    #     """Writes all the expansion variables into the formatter if they exist."""
+    #     opts = []
+    #     with formatter.no_placeholder_protection():
+    #         with formatter.section("Expansion Variables"):
+    #             formatter.write_text("These angle-bracket variables will be expanded with the values of other arguments or env vars when used in a quoted path:")
+    #             formatter.write_dl_with_markup([
+    #                 ("[cyan]<curv-root-dir>[/]", "expanded to value of --curv-root-dir or $CURV_ROOT_DIR"),
+    #                 ("[cyan]<build-dir>[/]", "expanded to value of --build-dir"),
+    #             ])
+    def format_epilog(self, ctx:click.Context, formatter:CurvcfgAnsiHelpFormatter) -> None:
         """Writes the epilog into the formatter if it exists."""
-        import inspect
-        epilog_fn = get_epilog_fn()
-        self.epilog = epilog_fn()
-        if self.epilog:
-            epilog = inspect.cleandoc(self.epilog)
-        else:
-            epilog = f"CURV_ROOT_DIR is not set.\n\nUse `{get_program_name()} --curv-root-dir <path> [...other args...]` to set it."
-        formatter.write_paragraph()
-        with formatter.section("Environment Variables"):
-            formatter.write_text(epilog, is_error=epilog.lower().startswith("error"))
+        _epilog_writer(self, ctx, formatter)
 
 
 class CurvcfgHelpFormatterGroup(click.Group):
@@ -347,14 +347,5 @@ class CurvcfgHelpFormatterGroup(click.Group):
         self.format_epilog(ctx, formatter)
     def format_epilog(self, ctx, formatter:CurvcfgAnsiHelpFormatter) -> None:
         """Writes the epilog into the formatter if it exists."""
-        import inspect
-        epilog_fn = get_epilog_fn()
-        self.epilog = epilog_fn()
-        if self.epilog:
-            epilog = inspect.cleandoc(self.epilog)
-        else:
-            epilog = f"CURV_ROOT_DIR is not set.\n\nUse `{get_program_name()} --curv-root-dir <path> [...other args...]` to set it."
-        formatter.write_paragraph()
-        with formatter.section("Environment Variables"):
-            formatter.write_text(epilog, is_error=epilog.lower().startswith("error"))
+        _epilog_writer(self, ctx, formatter)
 

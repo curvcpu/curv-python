@@ -1,5 +1,5 @@
 from typing import Dict, Any, Optional
-from dataclasses import dataclass
+from curvtools.cli.curvcfg.lib.curv_paths import CurvPaths
 
 class DefaultMapArgs:
     verbosity: Optional[int] = None
@@ -8,10 +8,28 @@ class DefaultMapArgs:
     profile: Optional[str] = None
     board: Optional[str] = None
     device: Optional[str] = None
-    merged_toml: Optional[str] = None
-    dep_file_out: Optional[str] = None
-    merged_board_toml: Optional[str] = None
-    board_dep_file_out: Optional[str] = None
+
+    # internal
+    _curvpaths: Optional[CurvPaths] = None
+
+    # these can be computed once the main args above are set and curvpaths is available
+    _merged_config_toml: Optional[str] = None
+    _config_mk_dep: Optional[str] = None
+    _merged_board_toml: Optional[str] = None
+    _board_mk_dep: Optional[str] = None
+    _merged_toml: Optional[str] = None
+
+    @property
+    def curvpaths(self) -> CurvPaths:
+        return self._curvpaths
+    @curvpaths.setter
+    def curvpaths(self, value: CurvPaths):
+        self._curvpaths = value
+        self._merged_config_toml = self._curvpaths["DEFAULT_INTERMEDIATE_MERGED_CFGVARS_TOML_PATH"].to_str()
+        self._merged_board_toml = self._curvpaths["DEFAULT_INTERMEDIATE_MERGED_BOARD_TOML_PATH"].to_str()
+        self._merged_toml = self._curvpaths["DEFAULT_MERGED_TOML_PATH"].to_str()
+        self._config_mk_dep = self._curvpaths["CONFIG_MK_DEP"].to_str()
+        self._board_mk_dep = self._curvpaths["BOARD_MK_DEP"].to_str()
 
     def to_default_map(self) -> Dict[str, Any]:
         """
@@ -32,12 +50,12 @@ class DefaultMapArgs:
                     "board": self.board,
                     "device": self.device,
                     "schema": None,              # repeated option -> list at runtime
-                    "merged_board_toml": self.merged_board_toml,
-                    "dep_file_out": self.board_dep_file_out,
+                    "merged_board_toml": self._merged_board_toml,
+                    "board_mk_dep": self._board_mk_dep,
                 },
                 # curvcfg board generate --merged_board_toml_in=...
                 "generate": {
-                    "merged_board_toml": self.merged_board_toml,
+                    "merged_board_toml": self._merged_board_toml,
                 },
             },
 
@@ -48,12 +66,12 @@ class DefaultMapArgs:
                     "profile": self.profile,
                     "overlay": None,             # repeated -> list at runtime
                     "schema": None,              # repeated -> list at runtime
-                    "merged_toml_out": self.merged_toml,
-                    "dep_file_out": self.dep_file_out,
+                    "merged_toml_out": self._merged_toml,
+                    "config_mk_dep": self._config_mk_dep,
                 },
                 # curvcfg tb generate --merged-toml-in=...
                 "generate": {
-                    "merged_toml_in": self.merged_toml,
+                    "merged_toml_in": self._merged_toml,
                 },
             },
 
@@ -64,12 +82,12 @@ class DefaultMapArgs:
                     "profile": self.profile,
                     "overlay": None,
                     "schema": None,
-                    "merged_toml_out": self.merged_toml,
-                    "dep_file_out": self.dep_file_out,
+                    "merged_toml_out": self._merged_toml,
+                    "config_mk_dep": self._config_mk_dep,
                 },
                 # curvcfg soc generate --merged-toml-in=...
                 "generate": {
-                    "merged_toml_in": self.merged_toml,
+                    "merged_toml_in": self._merged_toml,
                 },
             },
 
@@ -86,7 +104,7 @@ class DefaultMapArgs:
                 },
                 # curvcfg show vars --merged-toml-in=...
                 "vars": {
-                    "merged_toml_in": self.merged_toml,
+                    "merged_toml_in": self._merged_toml,
                 },
             },
         }

@@ -1,9 +1,9 @@
 from .help_formatter import CurvcfgHelpFormatterGroup, CurvcfgHelpFormatterCommand
-from .epilog import set_epilog_fn, get_epilog_fn
+from .epilog import update_epilog_env_vars, get_epilog_str
 
 __all__ = [
     "CurvcfgHelpFormatterGroup", 
     "CurvcfgHelpFormatterCommand",
-    "set_epilog_fn",
-    "get_epilog_fn",
+    "update_epilog_env_vars",
+    "get_epilog_str",
 ]
