@@ -255,3 +255,10 @@ def display_profiles_table(profile_name_and_path_list: list[tuple[str, Path]], c
         table.add_row(profile_name, str(profile_path))
     console.print(table)
     console.print()
+
+def display_default_map(default_map: dict[str, Any], use_ascii_box: bool = False):
+    from rich.pretty import Pretty
+    pretty_content = Pretty(default_map, expand_all=True)
+    p = Panel(pretty_content, title="Default Map", border_style="blue", highlight=True, padding=(0, 1), box=get_box(use_ascii_box), expand=False)
+    console.print(p)
+    console.print()

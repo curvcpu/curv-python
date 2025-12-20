@@ -4,6 +4,9 @@
 # ULX3S LEDs
 #
 
+[arrays_metadata."board.leds"]
+lpf_name = "leds"
+
 [[board.leds]]
 # this is the 0th element of the array
 name="RT_RED_LED"

@@ -1,6 +1,9 @@
 from pathlib import Path
+from typing import TYPE_CHECKING, List, Mapping, Optional, Any
+
+from jinja2 import Template
+
 from .types import Artifact, ValueSource, _Domain, ParseType
-from typing import List, Mapping, Optional, Any
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -11,7 +14,11 @@ __all__ = [
     "_parse_artifacts",
     "_get_domain_and_src_generic",
     "_lookup_dotted",
+    "render_template_to_str",
 ]
+
+if TYPE_CHECKING:
+    from ..parse_schema import SchemaOracle
 
 
 # ---------------------------------------------------------------------------
@@ -32,8 +39,6 @@ def _parse_artifacts(raw: Optional[List[str]]) -> List[Artifact]:
         if not isinstance(s, str):
             raise TypeError("artifacts entries must be strings")
         try:
-            if s.upper() == "SVPKG":
-                s = Artifact.SV.value
             res.append(Artifact[s])
         except KeyError:
             # if you want to be strict, raise here instead.
@@ -130,15 +135,69 @@ def _get_domain_and_src_generic(
 # Utility: lookup dotted path
 # ---------------------------------------------------------------------------
 
+def _split_toml_path(path: str) -> list[str]:
+    """
+    Split a TOML dotted path, respecting quoted keys.
+    
+    E.g., 'arrays_metadata."board.buttons".lpf_name' becomes
+    ['arrays_metadata', 'board.buttons', 'lpf_name']
+    """
+    parts: list[str] = []
+    current = ""
+    in_quotes = False
+    
+    i = 0
+    while i < len(path):
+        c = path[i]
+        if c == '"':
+            in_quotes = not in_quotes
+            i += 1
+        elif c == '.' and not in_quotes:
+            if current:
+                parts.append(current)
+                current = ""
+            i += 1
+        else:
+            current += c
+            i += 1
+    
+    if current:
+        parts.append(current)
+    
+    return parts
+
+
 def _lookup_dotted(root: Mapping[str, Any], path: str) -> Any:
     """
     Resolve a dotted TOML path like "board.sdram.native_row_width"
-    inside a nested dict.
+    or 'arrays_metadata."board.buttons".lpf_name' inside a nested dict.
     Returns None if any component is missing.
     """
     cur: Any = root
-    for part in path.split("."):
+    for part in _split_toml_path(path):
         if not isinstance(cur, Mapping) or part not in cur:
             return None
         cur = cur[part]
     return cur
+
+
+# ---------------------------------------------------------------------------
+# Utility: Jinja2 rendering helpers
+# ---------------------------------------------------------------------------
+
+def render_template_to_str(
+    template_path: str | Path,
+    schema_oracle: "SchemaOracle",
+) -> str:
+    """
+    Render a Jinja2 template with all variables that declare the JINJA2 artifact.
+
+    The SchemaOracle provides the variable names (keys) and values, so templates
+    can simply reference whatever the schema defines without hardcoding names
+    here.
+    """
+    path = Path(template_path)
+    jinja2_values = schema_oracle.get_values_for_artifact(Artifact.JINJA2)
+
+    template = Template(path.read_text(), keep_trailing_newline=True)
+    return template.render(**jinja2_values)

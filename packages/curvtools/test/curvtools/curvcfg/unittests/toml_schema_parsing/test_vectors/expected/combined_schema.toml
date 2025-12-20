@@ -3,24 +3,24 @@ artifacts = [
   "JINJA2",
 ]
 
-[_schema.arrays.BOARD_BTNS._classvars.lpf_name.src]
-constant_value = "btn"
-parse          = "string"
+[_schema.arrays.BOARD_BTNS._arrayvars.lpf_name.src]
+parse     = "string"
+toml_path = "arrays_metadata.\"board.buttons\".lpf_name"
 
-[_schema.arrays.BOARD_BTNS._instancevars.active_state.domain]
+[_schema.arrays.BOARD_BTNS._vars.active_state.domain]
 choices = [
   0,
   1,
 ]
 default = 1
 
-[_schema.arrays.BOARD_BTNS._instancevars.active_state.src]
+[_schema.arrays.BOARD_BTNS._vars.active_state.src]
 parse     = "int"
 toml_path = "active_state"
 
-[_schema.arrays.BOARD_BTNS._instancevars.name.domain]
+[_schema.arrays.BOARD_BTNS._vars.name.domain]
 
-[_schema.arrays.BOARD_BTNS._instancevars.name.src]
+[_schema.arrays.BOARD_BTNS._vars.name.src]
 parse     = "string"
 toml_path = "name"
 
@@ -33,13 +33,13 @@ artifacts = [
   "JINJA2",
 ]
 
-[_schema.arrays.BOARD_LEDS._classvars.lpf_name.src]
-constant_value = "leds"
-parse          = "string"
+[_schema.arrays.BOARD_LEDS._arrayvars.lpf_name.src]
+parse     = "string"
+toml_path = "arrays_metadata.\"board.leds\".lpf_name"
 
-[_schema.arrays.BOARD_LEDS._instancevars.name.domain]
+[_schema.arrays.BOARD_LEDS._vars.name.domain]
 
-[_schema.arrays.BOARD_LEDS._instancevars.name.src]
+[_schema.arrays.BOARD_LEDS._vars.name.src]
 parse     = "string"
 toml_path = "name"
 
@@ -50,7 +50,7 @@ toml_path = "board.leds"
 [_schema.vars.CFG_CACHE_HEX_FILES_BASE_ADDR]
 artifacts = [
   "MK",
-  "SV",
+  "SVPKG",
   "ENV",
 ]
 

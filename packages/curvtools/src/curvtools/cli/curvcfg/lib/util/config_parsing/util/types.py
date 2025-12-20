@@ -21,7 +21,7 @@ class Artifact(Enum):
     MK = "MK"
     ENV = "ENV"
     SVH = "SVH"
-    SV = "SV"
+    SVPKG = "SVPKG"
     JINJA2 = "JINJA2"
     NONE = "NONE"  # used when artifacts = []
 

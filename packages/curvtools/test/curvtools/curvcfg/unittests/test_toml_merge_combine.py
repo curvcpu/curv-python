@@ -6,28 +6,7 @@ import sys
 import pytest
 pytestmark = [pytest.mark.unit]
 
-from curvtools.cli.curvcfg.lib.util.combinetomls import merge_tomls, combine_tomls
-
-def _import_merge_combine_tomls():
-    """
-    Locate and import the standalone `merge_combine_tomls.py` helper.
-
-    We walk up from this test file looking for a `scripts/merge_combine_tomls.py`
-    sibling directory, which in this workspace is `/home/mwg/scripts`.
-    """
-    here = Path(__file__).resolve()
-    for parent in here.parents:
-        candidate = parent / "scripts" / "merge_combine_tomls.py"
-        if candidate.is_file():
-            scripts_dir = candidate.parent
-            if str(scripts_dir) not in sys.path:
-                sys.path.append(str(scripts_dir))
-            from merge_combine_tomls import merge_combine_tomls  # type: ignore[import]
-
-            return merge_combine_tomls
-
-    raise RuntimeError("Could not locate scripts/merge_combine_tomls.py from test file.")
-
+from curvtools.cli.curvcfg.lib.util.config_parsing.combine_merge_tomls import merge_tomls, combine_tomls
 
 def _several_overlay_toml_paths() -> list[Path]:
     """
@@ -35,9 +14,9 @@ def _several_overlay_toml_paths() -> list[Path]:
     """
     # .../curvcfg/unittests/test_toml_merge_combine.py
     curvcfg_dir = Path(__file__).resolve().parent.parent
-    base_dir = curvcfg_dir / "inputs" / "several_overlay_tomls"
+    base_dir = curvcfg_dir / "unittests" / "test_vectors" / "inputs" / "merge_combine"
     return [
-        base_dir / "profiles" / "base.toml",
+        base_dir / "base.toml",
         base_dir / "overlay1.toml",
         base_dir / "overlay2.toml",
         base_dir / "overlay3.toml",

@@ -59,35 +59,20 @@ class DefaultMapArgs:
                 },
             },
 
-            # `curvcfg tb ...`
-            "tb": {
-                # curvcfg tb merge --profile=... --overlay=... --schema=... --merged-toml-out=... --dep-file-out=...
+            # `curvcfg cfgvars ...`
+            "cfgvars": {
+                # curvcfg cfgvars merge --profile=... --overlay=... --schema=... --merged-config-toml-out=... --dep-file-out=...
                 "merge": {
+                    "tb": False,
                     "profile": self.profile,
-                    "overlay": None,             # repeated -> list at runtime
-                    "schema": None,              # repeated -> list at runtime
-                    "merged_toml_out": self._merged_toml,
+                    "overlays": None,            # repeated -> list at runtime
+                    "schemas": None,             # repeated -> list at runtime
+                    "merged_config_toml": self._merged_config_toml,
                     "config_mk_dep": self._config_mk_dep,
                 },
-                # curvcfg tb generate --merged-toml-in=...
+                # curvcfg cfgvars generate --merged-config-toml-in=...
                 "generate": {
-                    "merged_toml_in": self._merged_toml,
-                },
-            },
-
-            # `curvcfg soc ...`
-            "soc": {
-                # curvcfg soc merge --profile=... --overlay=... --schema=... --merged-toml-out=... --dep-file-out=...
-                "merge": {
-                    "profile": self.profile,
-                    "overlay": None,
-                    "schema": None,
-                    "merged_toml_out": self._merged_toml,
-                    "config_mk_dep": self._config_mk_dep,
-                },
-                # curvcfg soc generate --merged-toml-in=...
-                "generate": {
-                    "merged_toml_in": self._merged_toml,
+                    "merged_config_toml": self._merged_config_toml,
                 },
             },
 
@@ -99,6 +84,7 @@ class DefaultMapArgs:
                 },
                 # curvcfg show curvpaths [--board=...] [--device=...]
                 "curvpaths": {
+                    "profile": self.profile,
                     "board": self.board,
                     "device": self.device,
                 },
@@ -108,4 +94,29 @@ class DefaultMapArgs:
                 },
             },
         }
+
+        def _prune_nones(obj: Any) -> Any:
+            """
+            Recursively drop any dict entries whose value is None.
+            Leaves non-None values untouched; cleans nested dicts/lists in place.
+            """
+            if isinstance(obj, dict):
+                for k in list(obj.keys()):
+                    v = obj[k]
+                    if v is None:
+                        obj.pop(k, None)
+                    else:
+                        _prune_nones(v)
+            elif isinstance(obj, list):
+                # remove None elements and recurse into nested containers
+                i = 0
+                while i < len(obj):
+                    if obj[i] is None:
+                        obj.pop(i)
+                    else:
+                        _prune_nones(obj[i])
+                        i += 1
+            return obj
+
+        _prune_nones(ret_val)
         return ret_val

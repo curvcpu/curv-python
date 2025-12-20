@@ -1,0 +1,4 @@
+[cpu]
+xlen = 128
+reset_vector = "0x0000_00ff"
+mtvec_base = "0x0000_ffff"

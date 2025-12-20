@@ -16,13 +16,12 @@ from curvtools.cli.curvcfg.cli_helpers.opts.build_dir_opts import shell_complete
 from curvtools.cli.curvcfg.cli_helpers.opts.version_opt import version_opt
 from curvtools.cli.curvcfg.lib.curv_paths.curvcontext import CurvContext
 from curvtools.cli.curvcfg.lib.curv_paths import try_get_curvrootdir_git_fallback
-from typing import Optional
+from typing import Any, Optional
 from curvtools.cli.curvcfg.cli_helpers.paramtypes import ( 
     ProfileResolvable, 
     DeviceResolvable, 
     BoardResolvable, 
     InputMergedTomlResolvable,
-    OutputMergedTomlResolvable,
     profile_type, 
     device_type, 
     board_type,
@@ -31,7 +30,6 @@ from curvtools.cli.curvcfg.cli_helpers.paramtypes import (
     input_merged_config_toml_type,
     output_merged_config_toml_type,
     input_merged_toml_type,
-    output_merged_toml_type,
     schema_file_type,
 )
 from curvtools.cli.curvcfg.lib.util.draw_tables import ( 
@@ -40,6 +38,7 @@ from curvtools.cli.curvcfg.lib.util.draw_tables import (
     display_merged_toml_table,
     display_dep_file_contents,
     display_tool_settings,
+    display_default_map,
 )
 from curvtools.cli.curvcfg.cli_helpers.opts import (
     verbosity_opts, 
@@ -52,12 +51,63 @@ from curvtools.cli.curvcfg.show import (
 from curvtools.cli.curvcfg.board import (
     merge_board_impl,
 )
+from curvtools.cli.curvcfg.generate import (
+    generate_board_artifacts_impl,
+    generate_config_artifacts_impl,
+)
+from curvtools.cli.curvcfg.merge import merged_cfgvars_impl
 from curvtools.cli.curvcfg.cli_helpers.default_map import DefaultMapArgs
 import sys
+from curvtools.cli.curvcfg.lib.globals.constants import (
+    REL_BUILD_DIR_DEFAULT,
+)
 
 CONTEXT_SETTINGS = {
     "help_option_names": ["-h", "--help"],
 }
+
+_TEMPLATE_SUFFIX_TO_KEY = {
+    ".sv.jinja2": "sv_template",
+    ".svh.jinja2": "svh_template",
+    ".mk.jinja2": "mk_template",
+    ".env.jinja2": "env_template",
+}
+
+
+def _bucket_templates_by_suffix(
+    templates: tuple[str, ...],
+    option_name: str = "--template",
+) -> dict[str, Optional[Path]]:
+    """
+    Ensure each template ends with an allowed suffix and bucket by type.
+    """
+    buckets: dict[str, Optional[Path]] = {
+        value: None for value in _TEMPLATE_SUFFIX_TO_KEY.values()
+    }
+
+    for template in templates:
+        template_path = Path(template)
+        matched_suffix = next(
+            (suffix for suffix in _TEMPLATE_SUFFIX_TO_KEY if template_path.name.endswith(suffix)),
+            None,
+        )
+        if matched_suffix is None:
+            allowed_suffixes = ", ".join(sorted(_TEMPLATE_SUFFIX_TO_KEY.keys()))
+            raise click.BadParameter(
+                f"Template '{template_path}' must end with one of: {allowed_suffixes}",
+                param_hint=option_name,
+            )
+
+        key = _TEMPLATE_SUFFIX_TO_KEY[matched_suffix]
+        if buckets[key] is not None:
+            raise click.BadParameter(
+                f"Multiple templates supplied for '*{matched_suffix}'",
+                param_hint=option_name,
+            )
+        buckets[key] = template_path
+
+    return buckets
+
 
 ################################################################################################################################################################################################################
 #
@@ -67,16 +117,11 @@ CONTEXT_SETTINGS = {
 # Intended usage patterns:
 #   curvcfg --curv-root-dir=... --build-dir=... [-vvv] board                               merge     --board=... --device=...                                      --schema=... --schema=... --merged-board-toml-out=... --dep-file-out=...
 #     👆 produces generated/{config/intermediates/merged_board.toml, make/board.mk.d}
-#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] board                               generate  --merged_board_toml=...
+#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] board                               generate  --merged_board_toml=...     [--template=[*.sv.jinja2|.svh.jinja2|.env.jinja2|.mk.jinja2]]
 #     👆 generated/{make/board.mk, hdl/board.sv, hdl/board.svh}
 #
-#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] tb                                  merge     --profile=...               --overlay=... --overlay=... [...] --schema=... --schema=... --merged-config-toml-out=... --merged-board-toml-out=...       --dep-file-out=...
-#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] tb                                  combine   --merged-config-toml-in=... [--merged-board-toml-in=...]                                                             --merged-toml-out=...
-#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] tb                                  generate  --merged-toml-in=...
-#
-#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] soc                                 merge     --profile=...               --overlay=... --overlay=... [...] --schema=... --schema=... --merged-config-toml-out=... --merged-board-toml-out=...       --dep-file-out=...
-#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] soc                                 combine   --merged-config-toml-in=... --merged-board-toml-in=...                                                               --merged-toml-out=...
-#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] soc                                 generate  --merged-toml-in=...
+#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] cfgvars                             merge     [--tb] --profile=...        --overlay=... --overlay=... [...] --schema=... --schema=... --merged-config-toml-out=...                                --dep-file-out=...
+#   curvcfg --curv-root-dir=... --build-dir=... [-vvv] cfgvars                             generate  --merged-config-toml-in=... [--template=[*.sv.jinja2|.svh.jinja2|.env.jinja2|.mk.jinja2]]
 #
 #   curvcfg --curv-root-dir=... --build-dir=... [-vvv] show                                profiles
 #   curvcfg --curv-root-dir=... --build-dir=... [-vvv] show                                curvpaths [--profile=...] [--board=...] [--device=...]
@@ -99,7 +144,7 @@ CONTEXT_SETTINGS = {
     "--build-dir", '-B',
     type=click.Path(file_okay=False, dir_okay=True, resolve_path=True, exists=False),
     required=False,
-    help="Build output directory. Defaults to CURV_BUILD_DIR environment variable if set, otherwise 'build/' relative to the current working directory.",
+    help=f"Build output directory. Defaults to CURV_BUILD_DIR environment variable if set, otherwise '{REL_BUILD_DIR_DEFAULT}/' relative to the current working directory.",
     envvar="CURV_BUILD_DIR",
     shell_complete=shell_complete_build_dir,
 )
@@ -134,6 +179,9 @@ def curvcfg(ctx: click.Context, curv_root_dir: Optional[str], build_dir: Optiona
         p = Path(build_dir)
         update_epilog_env_vars("CURV_BUILD_DIR", build_dir, src)
     curvctx.args["verbosity"] = verbosity
+    default_map = ctx.default_map
+    if verbosity >= 2:
+        display_default_map(default_map)
 
 ########################################################
 #
@@ -154,31 +202,18 @@ def board(ctx: click.Context):
     """Board artifacts generation"""
     pass
 
-#######################
-# tb subcommand group #
-#######################
+##########################
+# cfgvars subcommand group #
+##########################
 
 @curvcfg.group(
     cls=CurvcfgHelpFormatterGroup, 
     context_settings=CONTEXT_SETTINGS,
 )
 @click.pass_obj
-def tb(curvctx: CurvContext):
-    """Testbench artifact generation"""
+def cfgvars(curvctx: CurvContext):
+    """Configuration variables merging and artifact generation"""
     # nothing else; we’ll call curvctx.make_paths() in subcommands
-    pass
-
-########################
-# soc subcommand group #
-########################
-
-@curvcfg.group(
-    cls=CurvcfgHelpFormatterGroup, 
-    context_settings=CONTEXT_SETTINGS,
-)
-@click.pass_context
-def soc(ctx: click.Context):
-    """SoC artifact generation"""
     pass
 
 #########################
@@ -277,13 +312,22 @@ def merge_board(curvctx: CurvContext, board_name: BoardResolvable, device_name: 
     required=True,
     help="Path to merged board config TOML input file",
 )
+@click.option(
+    "--template",
+    "templates",
+    type=click.Path(file_okay=True, dir_okay=False, resolve_path=True, exists=True),
+    multiple=True,
+    required=False,
+    help="Optional template override(s); may be given multiple times (.sv.jinja2, .svh.jinja2, .env.jinja2, .mk.jinja2).",
+)
 @click.pass_obj
-def generate_board(curvctx: CurvContext, merged_board_toml: InputMergedBoardTomlResolvable):
+def generate_board(curvctx: CurvContext, merged_board_toml: InputMergedBoardTomlResolvable, templates: tuple[str, ...]):
     """
-    Generate board configuration artifacts from merged_board.toml
+    Generate board configuration artifacts from <merged_board_toml>
     """
     merged_board_toml_path = merged_board_toml.resolve(curvctx.curvpaths).path
     verbosity = int(curvctx.args.get("verbosity", 0))
+    templates_by_suffix = _bucket_templates_by_suffix(templates)
     curv_paths = curvctx.make_paths()
 
     if verbosity >= 2:
@@ -291,179 +335,40 @@ def generate_board(curvctx: CurvContext, merged_board_toml: InputMergedBoardToml
             "curv_root_dir": curv_paths.curv_root_dir,
             "build_dir": curvctx.build_dir,
             "merged_board_toml": merged_board_toml_path,
+            "sv_template": templates_by_suffix["sv_template"],
+            "svh_template": templates_by_suffix["svh_template"],
+            "mk_template": templates_by_suffix["mk_template"],
+            "env_template": templates_by_suffix["env_template"],
             "verbosity": verbosity,
         }
         display_tool_settings(curvctx)
         display_args_table(show_args, "board generate")
 
-    pass
+    generate_board_artifacts_impl(
+        curvctx,
+        merged_board_toml_path,
+        sv_template=templates_by_suffix["sv_template"],
+        svh_template=templates_by_suffix["svh_template"],
+        mk_template=templates_by_suffix["mk_template"],
+        env_template=templates_by_suffix["env_template"],
+    )
 
-###############################
-# soc merge         subcommand #
-###############################
+##############################
+# cfgvars merge subcommand   #
+##############################
 
-@soc.command(
+@cfgvars.command(
     name="merge",
     cls=CurvcfgHelpFormatterCommand,
     context_settings=CONTEXT_SETTINGS,
 )
 @click.option(
-    "--profile",
-    type=profile_type,
-    required=True,
-    help="Profile name or path to TOML profile.",
-)
-@click.option(
-    "--schema",
-    "schemas",
-    type=schema_file_type,
-    multiple=True,
-    required=True,
-    help="Schema TOML file(s); may be given multiple times; order matters.",
-)
-@click.option(
-    "--overlay",
-    "overlays",
-    type=click.Path(exists=True, dir_okay=False, resolve_path=True),
-    multiple=True,
-    help="Overlay TOML file(s); may be given multiple times; later overrides earlier.",
-)
-@click.option(
-    "--merged-config-toml",
-    "merged_config_toml",
-    type=output_merged_config_toml_type,
-    required=True,
-    help="Path to merged config intermediate TOML output file",
-)
-@click.option(
-    "--config-mk-dep",
-    "config_mk_dep",
-    type=click.Path(exists=False, dir_okay=False, resolve_path=True),
-    required=True,
-    help="Path to Makefile dependency file output file for merged config configuration",
-)
-@click.pass_obj
-def merge_soc(curvctx: CurvContext, profile: ProfileResolvable, schemas: list[FsPathType], overlays: list[click.Path], merged_config_toml: OutputMergedConfigTomlResolvable, config_mk_dep: click.Path):
-    """
-    Merge schemas/overlays for SoC configuration and write merged_config.toml + config.mk.d
-    """
-    merged_config_toml_out_path = merged_config_toml.resolve(curvctx.curvpaths).path
-    curvctx.profile = profile.resolve(curvctx.curvpaths)
-    curv_paths = curvctx.make_paths()
-    merge_config_impl(curvctx, profile, schemas, overlays, merged_config_toml_out_path, config_mk_dep)
-
-
-    # # merge overlays
-    # merged_overlay = merge_overlays(overlays)
-    #
-    # # read schemas
-    # schema_objs = [MergedToml.from_file(p) for p in schemas]
-    #
-    # # hypothetical API
-    # merged = merge_everything(
-    #     profile=profile,
-    #     schemas=schema_objs,
-    #     overlay=merged_overlay,
-    #     curv_paths=curv_paths,
-    # )
-    # same merging logic, but presumably different target paths/contents
-    pass
-
-####################################
-# soc combine subcommand           #
-####################################
-
-@soc.command(
-    name="combine",
-    cls=CurvcfgHelpFormatterCommand,
-    context_settings=CONTEXT_SETTINGS,
-)
-@click.option(
-    "--merged-board-toml",
-    "merged_board_toml",
-    type=input_merged_board_toml_type,
-    required=True,
-    help="Path to merged board intermediate TOML output file",
-)
-@click.option(
-    "--merged-config-toml",
-    "merged_config_toml",
-    type=input_merged_config_toml_type,
-    required=True,
-    help="Path to merged config intermediate TOML output file",
-)
-@click.option(
-    "--merged-toml",
-    "merged_toml",
-    type=output_merged_toml_type,
-    required=True,
-    help="Path to merged config TOML output file",
-)
-@click.pass_obj
-def combine_soc(curvctx: CurvContext, merged_board_toml: InputMergedBoardTomlResolvable, merged_config_toml: InputMergedConfigTomlResolvable, merged_toml: OutputMergedTomlResolvable):
-    """
-    Combine all merged intermediate TOML files into a single merged.toml file
-    """
-    merged_board_toml_path = merged_board_toml.resolve(curvctx.curvpaths).path
-    merged_config_toml_path = merged_config_toml.resolve(curvctx.curvpaths).path
-    merged_toml_out_path = merged_toml.resolve(curvctx.curvpaths).path
-    curv_paths = curvctx.make_paths()
-
-    print("--------------------------------")
-    print(f"curv_paths = {str(curv_paths)}")
-
-
-############################
-# soc generate subcommand  #
-############################
-
-@soc.command(
-    name="generate",
-    cls=CurvcfgHelpFormatterCommand,
-    context_settings=CONTEXT_SETTINGS,
-)
-@click.option(
-    "--merged-toml",
-    "merged_toml",
-    type=input_merged_toml_type,
-    required=True,
-    help="Path to merged config TOML input file",
-)
-@click.pass_obj
-def generate_soc(curvctx: CurvContext, merged_toml: InputMergedTomlResolvable):
-    """
-    Generate SoC artifacts from merged.toml
-    """
-    merged_toml_in_path = merged_toml.resolve(curvctx.curvpaths).path
-    verbosity = int(curvctx.args.get("verbosity", 0))
-    curv_paths = curvctx.make_paths()
-
-    if verbosity >= 2:
-        show_args: dict[str, Any] = {
-            "curv_root_dir": curv_paths.curv_root_dir,
-            "build_dir": curvctx.build_dir,
-            "merged_toml": merged_toml_in_path,
-            "verbosity": verbosity,
-        }
-        display_tool_settings(curvctx)
-        display_args_table(show_args, "soc generate")
-
-    #
-    # TODO
-    # 
-    pass
-
-
-
-
-##############################
-# tb merge subcommand        #
-##############################
-
-@tb.command(
-    name="merge",
-    cls=CurvcfgHelpFormatterCommand,
-    context_settings=CONTEXT_SETTINGS,
+    "--tb",
+    "is_tb",
+    is_flag=True,
+    default=False,
+    hidden=True,
+    help="Treat configuration variables as testbench-oriented; defaults to deployment context.",
 )
 @click.option(
     "--profile",
@@ -501,112 +406,71 @@ def generate_soc(curvctx: CurvContext, merged_toml: InputMergedTomlResolvable):
     help="Path to Makefile dependency file output file for merged config configuration",
 )
 @click.pass_obj
-def merge_tb(curvctx: CurvContext, profile: ProfileResolvable, schemas: list[FsPathType], overlays: list[click.Path], merged_config_toml: OutputMergedConfigTomlResolvable, config_mk_dep: click.Path):
+def merge_cfgvars(curvctx: CurvContext, is_tb: bool, profile: ProfileResolvable, schemas: list[FsPathType], overlays: list[click.Path], merged_config_toml: OutputMergedConfigTomlResolvable, config_mk_dep: click.Path):
     """
-    Merge schemas/overlays for testbench configuration and write merged_config.toml + config.mk.d
+    Merge schemas/overlays for configuration variables and write merged_config.toml + config.mk.d
     """
-    curvctx.profile = profile.resolve(curvctx.curvpaths)
+    merged_config_toml_out_path = merged_config_toml.resolve(curvctx.curvpaths).path
+    curvctx.profile = profile.resolve(curvctx.curvpaths).name
     curv_paths = curvctx.make_paths()
+    merged_cfgvars_impl(curvctx, profile, schemas, overlays, merged_config_toml_out_path, config_mk_dep, is_tb=is_tb)
 
-    # # merge overlays
-    # merged_overlay = merge_overlays(overlays)
-    #
-    # # read schemas
-    # schema_objs = [MergedToml.from_file(p) for p in schemas]
-    #
-    # # hypothetical API
-    # merged = merge_everything(
-    #     profile=profile,
-    #     schemas=schema_objs,
-    #     overlay=merged_overlay,
-    #     curv_paths=curv_paths,
-    # )
-    # merged_path = curv_paths.tb_merged_toml_path()
-    # mkd_path    = curv_paths.tb_config_mkd_path()
-    # merged.write(merged_path)
-    # write_config_mk_d(merged, mkd_path)
+###############################
+# cfgvars generate subcommand #
+###############################
 
-####################################
-# tb combine subcommand            #
-####################################
-
-@tb.command(
-    name="combine",
+@cfgvars.command(
+    name="generate",
     cls=CurvcfgHelpFormatterCommand,
     context_settings=CONTEXT_SETTINGS,
-)
-@click.option(
-    "--merged-board-toml",
-    "merged_board_toml",
-    type=input_merged_board_toml_type,
-    required=False,
-    help="Path to merged board intermediate TOML output file",
 )
 @click.option(
     "--merged-config-toml",
     "merged_config_toml",
     type=input_merged_config_toml_type,
     required=True,
-    help="Path to merged config intermediate TOML output file",
-)
-@click.option(
-    "--merged-toml",
-    "merged_toml",
-    type=output_merged_toml_type,
-    required=True,
-    help="Path to merged config TOML output file",
-)
-@click.pass_obj
-def combine_tb(curvctx: CurvContext, merged_config_toml: InputMergedConfigTomlResolvable, merged_toml: OutputMergedTomlResolvable):
-    """
-    Combine all merged intermediate TOML files into a single merged.toml file
-    """
-    merged_config_toml_path = merged_config_toml.resolve(curvctx.curvpaths).path
-    merged_toml_out_path = merged_toml.resolve(curvctx.curvpaths).path
-    curv_paths = curvctx.make_paths()
-
-    print("--------------------------------")
-    print(f"curv_paths = {str(curv_paths)}")
-
-
-##########################
-# tb generate subcommand #
-##########################
-
-@tb.command(
-    name="generate",
-    cls=CurvcfgHelpFormatterCommand,
-    context_settings=CONTEXT_SETTINGS,
-)
-@click.option(
-    "--merged-toml",
-    "merged_toml",
-    type=input_merged_toml_type,
-    required=True,
     help="Path to merged config TOML input file",
 )
+@click.option(
+    "--template",
+    "templates",
+    type=click.Path(file_okay=True, dir_okay=False, resolve_path=True, exists=True),
+    multiple=True,
+    required=False,
+    help="Optional template override(s); may be given multiple times (.sv.jinja2, .svh.jinja2, .env.jinja2, .mk.jinja2).",
+)
 @click.pass_obj
-def generate_tb(curvctx: CurvContext, merged_toml: InputMergedTomlResolvable):
+def generate_cfgvars(curvctx: CurvContext, merged_config_toml: InputMergedConfigTomlResolvable, templates: tuple[str, ...]):
     """
-    Generate testbench artifacts from merged.toml
+    Generate configuration variable artifacts from merged_config.toml
     """
-    merged_toml_path = merged_toml.resolve(curvctx.curvpaths).path
+    merged_config_toml_path = merged_config_toml.resolve(curvctx.curvpaths).path
     verbosity = int(curvctx.args.get("verbosity", 0))
+    templates_by_suffix = _bucket_templates_by_suffix(templates)
     curv_paths = curvctx.make_paths()
 
     if verbosity >= 2:
         show_args: dict[str, Any] = {
             "curv_root_dir": curv_paths.curv_root_dir,
             "build_dir": curvctx.build_dir,
-            "merged_toml": merged_toml_path,
+            "merged_config_toml": merged_config_toml_path,
+            "sv_template": templates_by_suffix["sv_template"],
+            "svh_template": templates_by_suffix["svh_template"],
+            "mk_template": templates_by_suffix["mk_template"],
+            "env_template": templates_by_suffix["env_template"],
             "verbosity": verbosity,
         }
         display_tool_settings(curvctx)
-        display_args_table(show_args, "tb generate")
+        display_args_table(show_args, "cfgvars generate")
 
-    #
-    # TODO: implement
-    # 
+    generate_config_artifacts_impl(
+        curvctx,
+        merged_config_toml_path,
+        sv_template=templates_by_suffix["sv_template"],
+        svh_template=templates_by_suffix["svh_template"],
+        mk_template=templates_by_suffix["mk_template"],
+        env_template=templates_by_suffix["env_template"],
+    )
 
 
 # ########################
@@ -618,7 +482,7 @@ def generate_tb(curvctx: CurvContext, merged_toml: InputMergedTomlResolvable):
     cls=CurvcfgHelpFormatterCommand, 
     context_settings=CONTEXT_SETTINGS,
     short_help="Show active configuration variables",
-    help="Show active configuration variables that apply in the current build environment based on the build directory's merged.toml file. If such a file does not exist, then nothing is shown.")
+    help=f"Show active configuration variables that apply in the current build environment based on the build directory's <merged_toml> file. If such a file does not exist, then nothing is shown.")
 @click.option(
     "--merged-toml",
     "merged_toml",
@@ -697,21 +561,21 @@ def show_profiles(curvctx: CurvContext) -> None:
 @click.option(
     "--profile",
     type=profile_type,
-    required=False,
+    required=True,
     help="Profile name or path to TOML profile.",
     expose_value=False,
 )
 @click.option(
     "--board",
     type=board_type,
-    required=False,
+    required=True,
     help="Board name or path to board directory or path to board TOML file",
     expose_value=False,
 )
 @click.option(
     "--device",
     type=device_type,
-    required=False,
+    required=True,
     help="Device name or path to device TOML file",
     expose_value=False,
 )
@@ -725,7 +589,7 @@ def show_curvpaths(
 
     if int(curvctx.args.get("verbosity", 0)) >= 2:
         profile = curvctx.profile
-        profile_name = profile.stem if profile.is_fully_resolved() and profile.to_path().exists() else None
+        profile_name = profile.name
         board_toml = curv_paths["CURV_CONFIG_BOARD_TOML_PATH"]
         board_name = curv_paths["CURV_CONFIG_BOARD_TOML_PATH"].to_path().parent.name
         device_toml = curv_paths["CURV_CONFIG_DEVICE_TOML_PATH"]
@@ -761,7 +625,7 @@ def main(argv: Optional[list[str]] = None) -> int:
 
     def _process_early_args(argv: Optional[list[str]] = sys.argv[1:]) -> list[EarlyArg]:
         repo_fallback_curv_root_dir = None
-        build_dir_fallback = Path.cwd() / "build"
+        build_dir_fallback = Path.cwd() / REL_BUILD_DIR_DEFAULT
         try:
             repo_fallback_curv_root_dir = str(try_get_curvrootdir_git_fallback() or "")
         except Exception:
@@ -813,7 +677,7 @@ def main(argv: Optional[list[str]] = None) -> int:
         if early_profile_name.valid:
             update_epilog_env_vars("CURV_PROFILE", early_profile_name.value, early_profile_name.source)
             ctx_obj_kwargs["profile"] = early_profile_name.value
-            # tb merge --profile=... and soc merge --profile=...
+            # cfgvars merge --profile=...
             default_map_args.profile = early_profile_name.value
         if early_board_name.valid:
             update_epilog_env_vars("CURV_BOARD", early_board_name.value, early_board_name.source)
@@ -845,8 +709,6 @@ def main(argv: Optional[list[str]] = None) -> int:
             ctx_obj.device = device_type_obj.resolve(ctx_obj.curvpaths)
         
         default_map = default_map_args.to_default_map()
-        from rich import print as rprint
-        rprint(default_map)
         curvcfg.main(
             args=argv, 
             standalone_mode=True, 

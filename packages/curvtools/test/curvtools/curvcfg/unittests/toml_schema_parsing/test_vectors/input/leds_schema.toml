@@ -9,20 +9,19 @@ src = { toml_path = "board.leds", parse="array[object]" }
 # not used elsewhere.  Therefore, the only permitted artifact is JINJA2 currently.
 artifacts = ["JINJA2"]
 
-# class variables are fields that are the same on every element in the array of objects;
-# they always use src.constant_value=..., but parse can influence how that value is parsed
-[_schema.arrays.BOARD_LEDS._classvars.lpf_name]
-# constant_value is a special source type that sets the value in the schema and ignores
-# any setting specified in the toml file that we use this schema to parse.
-src = { constant_value = "leds", parse="string" }
-# domain not allowed on class variables
-# display not allowed on class variables
+# array variables are fields that are the same on every element in the array of objects;
+# they use src.toml_path=... to specify where to find the value in the config file.
+[_schema.arrays.BOARD_LEDS._arrayvars.lpf_name]
+# toml_path specifies where to find the value for this array-level variable
+src = { toml_path = "arrays_metadata.\"board.leds\".lpf_name", parse="string" }
+# domain not allowed on array variables
+# display not allowed on array variables
 # artifacts not allowed at the field level.
 
-# instance variables are fields that are different on each element in the array of objects;
+# vars are fields that are different on each element in the array of objects;
 # they are defined the same ways as anything in _schema.vars.*, e.g. src.toml_path=...,
 # src.parse=..., etc. But artifacts is now allowed at the field level.
-[_schema.arrays.BOARD_LEDS._instancevars.name]
+[_schema.arrays.BOARD_LEDS._vars.name]
 # because this is a field within an array of objects, the toml_path is relative
 # to the array path, i.e., this is [[board.leds]].name for each element in the array.
 src = { toml_path = "name", parse="string" }

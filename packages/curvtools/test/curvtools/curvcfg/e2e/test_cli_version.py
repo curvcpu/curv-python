@@ -1,7 +1,7 @@
 from curvcfg_e2e_testcase import CurvCfgE2ETestCase
 import pytest
 
-pytestmark = pytest.mark.e2e
+pytestmark = [ pytest.mark.e2e ]
 
 class TestVersionCommand(CurvCfgE2ETestCase):
     def test_version_exit_code_zero(self) -> None:

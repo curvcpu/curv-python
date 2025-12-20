@@ -7,14 +7,14 @@ import shutil
 from curvtools.cli.curvcfg.lib.util.config_parsing.combine_merge_tomls import combine_tomls, merge_tomls
 import curvpyutils.tomlrw as tomlrw
 from curvtools.cli.curvcfg.lib.util.config_parsing import (
-    parse_dict_to_schema_vars, 
-    SchemaOracle, 
-    SCHEMA_ROOT_KEY,
+    schema_oracle_from_merged_toml,
+    SchemaOracle,
     Artifact,
     ValueSource,
     ParseType,
 )
-from curvpyutils.test_helpers import compare_toml_files
+from curvtools.cli.curvcfg.lib.util.config_parsing.util import render_template_to_str
+from curvpyutils.test_helpers import compare_toml_files, compare_files
 from rich import print as rprint
 from conftest import class_had_failures
 
@@ -125,17 +125,7 @@ class TestWithFixture:
         Builds a SchemaOracle from the merged schema vars TOML file.
         """
         merged_path = self._make_merged_schema_vars_toml()
-        merged_dict = tomlrw.loadf(merged_path)
-
-        # Build schema objects from the _schema.* section
-        schema_dict = parse_dict_to_schema_vars(merged_dict, merged_path)
-        schema_oracle = SchemaOracle(vars_by_name=schema_dict)
-
-        # Everything that is not "_schema" is config
-        config_root = {k: v for k, v in merged_dict.items() if k != SCHEMA_ROOT_KEY}
-
-        # Feed config into oracle
-        schema_oracle.feed_config(config_root)
+        schema_oracle = schema_oracle_from_merged_toml(merged_path)
 
         # Ensure all required vars got resolved (either via config or default)
         unresolved = list(schema_oracle.iter_unresolved())
@@ -199,24 +189,34 @@ class TestWithFixture:
 
         # Smoke-check config array values and display
         config_array_values = schema_oracle.get_values_for_artifact(Artifact.JINJA2)
-        assert len(config_array_values) == 2
-        assert config_array_values["BOARD_BTNS"] == [
-            {"name": "B1", "active_state": 0, "lpf_name": "btn"},
-            {"name": "B2", "active_state": 0, "lpf_name": "btn"},
-            {"name": "UP", "active_state": 1, "lpf_name": "btn"},
-            {"name": "DOWN", "active_state": 1, "lpf_name": "btn"},
-            {"name": "LEFT", "active_state": 1, "lpf_name": "btn"},
-            {"name": "RIGHT", "active_state": 1, "lpf_name": "btn"},
-        ]
-        assert config_array_values["BOARD_LEDS"] == [
-            {"name": "RT_RED_LED", "lpf_name": "leds"},
-            {"name": "RT_ORNG_LED", "lpf_name": "leds"},
-            {"name": "RT_GRN_LED", "lpf_name": "leds"},
-            {"name": "RT_BLU_LED", "lpf_name": "leds"},
-            {"name": "LFT_RED_LED", "lpf_name": "leds"},
-            {"name": "LFT_ORNG_LED", "lpf_name": "leds"},
-            {"name": "LFT_GRN_LED", "lpf_name": "leds"},
-            {"name": "LFT_BLU_LED", "lpf_name": "leds"},
+        assert set(config_array_values.keys()) == {"BOARD_BTNS", "BOARD_LEDS"}
+
+        btns = config_array_values["BOARD_BTNS"]
+        leds = config_array_values["BOARD_LEDS"]
+
+        assert len(btns) == 6
+        assert len(leds) == 8
+
+        # Array-level metadata should live on the array, not per element
+        assert btns.meta["lpf_name"] == "btn"
+        assert leds.meta["lpf_name"] == "leds"
+
+        # Elements should not carry array-level metadata
+        assert all("lpf_name" not in elem for elem in btns)
+        assert all("lpf_name" not in elem for elem in leds)
+
+        assert [b["name"] for b in btns] == ["B1", "B2", "UP", "DOWN", "LEFT", "RIGHT"]
+        assert [b["active_state"] for b in btns] == [0, 0, 1, 1, 1, 1]
+
+        assert [l["name"] for l in leds] == [
+            "RT_RED_LED",
+            "RT_ORNG_LED",
+            "RT_GRN_LED",
+            "RT_BLU_LED",
+            "LFT_RED_LED",
+            "LFT_ORNG_LED",
+            "LFT_GRN_LED",
+            "LFT_BLU_LED",
         ]
 
     def test_merged_schema_vars_toml_file_contents(self):
@@ -236,39 +236,19 @@ class TestWithFixture:
         assert build_schema_oracle is not None
         schema_oracle = build_schema_oracle
 
-        jinja2_val_dict = schema_oracle.get_values_for_artifact(Artifact.JINJA2)
-        # jinja2_val_dict is a dict of var_name -> list[dict[str, Any]]
-        # Example of jinja2_val_dict:
-        # {
-        #     'BOARD_BTNS': [
-        #         {'lpf_name': 'btn', 'active_state': 0, 'name': 'B1'},
-        #         {'lpf_name': 'btn', 'active_state': 0, 'name': 'B2'},
-        #         {'lpf_name': 'btn', 'active_state': 1, 'name': 'UP'},
-        #         {'lpf_name': 'btn', 'active_state': 1, 'name': 'DOWN'},
-        #         {'lpf_name': 'btn', 'active_state': 1, 'name': 'LEFT'},
-        #         {'lpf_name': 'btn', 'active_state': 1, 'name': 'RIGHT'}
-        #     ],
-        #     'BOARD_LEDS': [
-        #         {'lpf_name': 'leds', 'name': 'RT_RED_LED'},
-        #         {'lpf_name': 'leds', 'name': 'RT_ORNG_LED'},
-        #         {'lpf_name': 'leds', 'name': 'RT_GRN_LED'},
-        #         {'lpf_name': 'leds', 'name': 'RT_BLU_LED'},
-        #         {'lpf_name': 'leds', 'name': 'LFT_RED_LED'},
-        #         {'lpf_name': 'leds', 'name': 'LFT_ORNG_LED'},
-        #         {'lpf_name': 'leds', 'name': 'LFT_GRN_LED'},
-        #         {'lpf_name': 'leds', 'name': 'LFT_BLU_LED'}
-        #     ]
-        # }
+        template_path = INPUT_DIR / "boardpkg.sv.jinja2"
+        rendered_template = render_template_to_str(template_path, schema_oracle)
 
-        assert "BOARD_BTNS" in jinja2_val_dict
-        assert "BOARD_LEDS" in jinja2_val_dict
+        generated_path = self.temp_dir / "boardpkg.sv"
+        generated_path.write_text(rendered_template)
 
-        # from jinja2 import Template
-        # jinja2_template = Template(
-        #     (INPUT_DIR / "boardpkg.sv.jinja2").read_text()
-        # )
-        # rendered_template = jinja2_template.render(btns=schema_oracle.get_values_for_artifact(Artifact.JINJA2)["BOARD_BTNS"])
-        # print(rendered_template)
-        # #cmp = compare_toml_files(self.boardpkg_sv_file, self.expected_boardpkg_sv_file, show_delta=True, debug_output_silent=True)
-        # #assert cmp is True
-        # assert 0==1
+        expected_path = EXPECTED_DIR / "boardpkg.sv"
+
+        cmp_ok = compare_files(
+            generated_path,
+            expected_path,
+            show_delta=True,
+            verbose=True,
+        )
+        if not cmp_ok:
+            assert cmp_ok, "Jinja2 template test failed"

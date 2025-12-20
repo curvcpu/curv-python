@@ -1,67 +1,92 @@
 from __future__ import annotations
-import os
-from typing import Optional, Dict, Union
 from pathlib import Path
+from typing import Optional, Mapping, Any
+from curvtools.cli.curvcfg.lib.curv_paths.curvcontext import CurvContext
+from curvtools.cli.curvcfg.cli_helpers.paramtypes import ProfileResolvable
+from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
+from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
 from curvtools.cli.curvcfg.lib.globals.console import console
-from curvpyutils.toml_utils import MergedTomlDict
-from curvtools.cli.curvcfg.lib.util import get_config_values, emit_config_files
-from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
+from curvtools.cli.curvcfg.lib.util.artifact_emitter import emit_artifacts
+from curvtools.cli.curvcfg.lib.util.config_parsing import schema_oracle_from_merged_toml
 
-def generate(args: CurvCliArgs, ctx_obj: dict) -> int:
-    """
-    Generate output files from a merged config TOML and a schema.
 
-    Args:
-        args: parsed CLI args
+def generate_config_artifacts_impl(
+    curvctx: CurvContext,
+    merged_cfgvars_input_path: Path,
+    svpkg_template: Optional[Path] = None,
+    svh_template: Optional[Path] = None,
+    mk_template: Optional[Path] = None,
+    env_template: Optional[Path] = None,
+    is_tb: bool = False,
+) -> None:
+    curvpaths: CurvPaths = curvctx.curvpaths
+    assert curvpaths is not None, "curvpaths not found in context object"
+    verbosity = int(curvctx.args.get("verbosity", 0))
+    # is_tb is reserved for future testbench-specific handling
 
-    Returns:
-        Exit code
-    """
-    curv_paths: CurvPaths = ctx_obj.get("CurvPaths")
-    assert curv_paths is not None, "CurvPaths not found in context object"
+    # 1) read the merged config toml into a SchemaOracle
+    schema_oracle: SchemaOracle = schema_oracle_from_merged_toml(merged_cfgvars_input_path)
 
-    # Resolve inputs
-    merged_toml_path = str(args.get("merged_file"))
-    
+    # 2) get names out output files
+    cfgvars_pkg_out_path = curvpaths["CONFIG_SVPKG"].to_path()
+    cfgvars_svh_out_path = curvpaths["CONFIG_SVH"].to_path()
+    cfgvars_env_out_path = curvpaths["CONFIG_ENV"].to_path()
+    cfgvars_mk_out_path = curvpaths["CONFIG_MK"].to_path()
 
-    # Validate readable input
-    if not (os.path.isfile(merged_toml_path) and os.access(merged_toml_path, os.R_OK)):
-        console.print(f"[red]error:[/red] merged toml not found or unreadable: {merged_toml_path}")
-        return 1
+    # 3) emit the artifacts
+    emit_artifacts(
+        schema_oracle,
+        cfgvars_pkg_out_path,
+        cfgvars_svh_out_path,
+        cfgvars_env_out_path,
+        cfgvars_mk_out_path,
+        svpkg_template=svpkg_template,
+        svh_template=svh_template,
+        mk_template=mk_template,
+        env_template=env_template,
+    )
 
-    verbosity = int(args.get("verbosity", 0) or 0)
+    # 4) print success message
+    if verbosity >= 1:
+        console.print(f"[green]Successfully generated configuration artifacts from <{merged_cfgvars_input_path}>[/green]")
 
-    try:
-        merged = MergedTomlDict(merged_toml_path)
-        outdir_path = args.get("build_dir") / "generated"
-    except Exception as exc:
-        console.print(f"[red]error:[/red] failed reading merged config: {exc}")
-        return 1
 
-    # If merged already has schema information in it, then we don't need the separate schema file and will ignore it.
-    if '_schema' not in merged.keys():
-        # we need the file, so get it and validate it
-        schema_file_path_list = args.get("schema_file_list")
-        assert all(isinstance(schema_file_path, (str, Path)) for schema_file_path in schema_file_path_list), "all schema file paths must be strings or Path objects"
-        assert all(os.path.isfile(schema_file_path) and os.access(schema_file_path, os.R_OK) for schema_file_path in schema_file_path_list), "all schema files must be found and readable"
-        is_combined_toml = False
-    else:
-        schema_file_path_list = None
-        is_combined_toml = True
-    
-    # Collect values and emit
-    try:
-        cfg_values = get_config_values(merged, schema_file_path_list, is_combined_toml=is_combined_toml)
-        files_emitted, files_unchanged = emit_config_files(cfg_values, outdir_path=outdir_path, verbosity=verbosity)
-        if verbosity == 1:
-            for file in files_emitted:
-                console.print(f"[green]emitted:[/green] {CurvPaths.mk_rel_to_cwd(file)}")
-            for file in files_unchanged:
-                console.print(f"[yellow]unchanged:[/yellow] {CurvPaths.mk_rel_to_cwd(file)}")
-    except SystemExit:
-        raise
-    except Exception as exc:
-        console.print(f"[red]error:[/red] generation failed: {exc}")
-        return 1
+def generate_board_artifacts_impl(
+    curvctx: CurvContext,
+    merged_board_input_path: Path,
+    svpkg_template: Optional[Path] = None,
+    svh_template: Optional[Path] = None,
+    mk_template: Optional[Path] = None,
+    env_template: Optional[Path] = None,
+    is_tb: bool = False,
+) -> None:
+    curvpaths: CurvPaths = curvctx.curvpaths
+    assert curvpaths is not None, "curvpaths not found in context object"
+    verbosity = int(curvctx.args.get("verbosity", 0))
+    # is_tb is reserved for future testbench-specific handling
 
-    return 0
+    # 1) read the merged board toml into a dict[str, Any]
+    schema_oracle: SchemaOracle = schema_oracle_from_merged_toml(merged_board_input_path)
+
+    # 2) get names out output files
+    board_pkg_out_path = curvpaths["BOARD_SVPKG"].to_path()
+    board_svh_out_path = curvpaths["BOARD_SVH"].to_path()
+    board_env_out_path = curvpaths["BOARD_ENV"].to_path()
+    board_mk_out_path = curvpaths["BOARD_MK"].to_path()
+
+    # 3) emit the board artifacts
+    emit_artifacts(
+        schema_oracle,
+        board_pkg_out_path,
+        board_svh_out_path,
+        board_env_out_path,
+        board_mk_out_path,
+        svpkg_template=svpkg_template,
+        svh_template=svh_template,
+        mk_template=mk_template,
+        env_template=env_template,
+    )
+
+    # 4) print success message
+    if verbosity >= 1:
+        console.print(f"[green]Successfully generated board artifacts from <{merged_board_input_path}>[/green]")

@@ -4,6 +4,9 @@
 # ULX3S Buttons
 #
 
+[arrays_metadata."board.buttons"]
+lpf_name = "btn"
+
 [[board.buttons]]
 name = "B1"
 active_state = 0

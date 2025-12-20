@@ -14,7 +14,7 @@ from curvtools.cli.curvcfg.lib.globals.constants import (
 from curvpyutils.test_helpers import compare_files
 from curvpyutils.shellutils import print_delta, Which
 
-pytestmark = pytest.mark.e2e
+pytestmark = [ pytest.mark.e2e ]
 
 def _write_filtered_copy(src_path: str, regex_prefixes: list[str], replacement_comment: str) -> str:
     """
@@ -42,11 +42,11 @@ class TestCliMergeGenerate(CurvCfgE2ETestCase):
         self.register_temp_path(build_dir)
 
         # Paths (expected depends on mode for some files)
-        expected_build_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "..", "expected", "good", "seperate_base_schema_dirs"))
+        expected_build_dir = os.path.normpath(os.path.join(os.path.dirname(__file__), "expected", "good", "seperate_base_schema_dirs"))
         merged_toml_path = os.path.join(build_dir, DEFAULT_MERGED_TOML_DIR, DEFAULT_MERGED_TOML_NAME)
 
         # 0) Setup args depending on mode
-        base_dir = Path(__file__).resolve().parent.parent
+        base_dir = Path(__file__).resolve().parent
         merge_args = [
             "-vvv",
             "merge",
@@ -141,11 +141,11 @@ class TestMergeWithOverlayPathList(CurvCfgE2ETestCase):
 
         # Paths
         expected_build_dir = os.path.normpath(
-            os.path.join(os.path.dirname(__file__), "..", "expected", "several_overlay_tomls"))
+            os.path.join(os.path.dirname(__file__), "expected", "several_overlay_tomls"))
         merged_toml_path = os.path.join(build_dir, DEFAULT_MERGED_TOML_DIR, DEFAULT_MERGED_TOML_NAME)
 
         # 0) Setup args
-        base_dir = Path(__file__).resolve().parent.parent
+        base_dir = Path(__file__).resolve().parent
         merge_args = [
             "-vvv",
             "merge",

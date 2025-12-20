@@ -1,3 +1,9 @@
+[arrays_metadata."board.buttons"]
+lpf_name = "btn"
+
+[arrays_metadata."board.leds"]
+lpf_name = "leds"
+
 [board]
 buttons = [
   { active_state = 0, name = "B1" },

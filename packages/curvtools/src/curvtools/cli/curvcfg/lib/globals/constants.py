@@ -16,5 +16,12 @@ DEFAULT_SCHEMA_TOML_PATH = f"<curv-root-dir>/config/schema/schema.toml"
 DEFAULT_DEP_FILE_PATH = f"<build-dir>/{DEFAULT_DEP_FILE_DIR}/{DEFAULT_DEP_FILE_NAME}"
 DEFAULT_MERGED_TOML_PATH = f"<build-dir>/{DEFAULT_MERGED_TOML_DIR}/{DEFAULT_MERGED_TOML_NAME}"
 
+# --------------------------------------------------------------------------------------------------
+
+####################################
+# default values for CLI options
+####################################
+REL_BUILD_DIR_DEFAULT = "build"
+
 # where the `paths_raw.env` env file can be located, relative to CURV_ROOT_DIR
 PATHS_RAW_ENV_FILE_REL_PATH = "scripts/make/paths_raw.env"

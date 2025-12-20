@@ -122,13 +122,43 @@ class SchemaObjectArrayElementVar:
 # SchemaObjectArrayVar
 # ---------------------------------------------------------------------------
 
+class ArrayRenderView:
+    """
+    Jinja-friendly wrapper for array elements plus array-level metadata.
+
+    - Iterable (for element loops)
+    - len() works (for |length)
+    - .meta (and .arrayvars) exposes array-level fields (e.g., lpf_name)
+    """
+
+    __slots__ = ("_elements", "meta", "arrayvars")
+
+    def __init__(self, elements: List[dict[str, Any]], meta: Mapping[str, Any]) -> None:
+        self._elements = list(elements)
+        # Jinja attribute -> dict key fallback lets dot-lookup work: meta.lpf_name
+        self.meta = dict(meta)
+        self.arrayvars = self.meta
+
+    def __iter__(self):
+        return iter(self._elements)
+
+    def __len__(self):
+        return len(self._elements)
+
+    def __getitem__(self, idx):
+        return self._elements[idx]
+
+    def __repr__(self) -> str:  # pragma: no cover - debug helper
+        return f"ArrayRenderView(len={len(self)}, meta_keys={list(self.meta.keys())})"
+
+
 class SchemaObjectArrayVar(SchemaBaseVar):
     """
     Represents an object-array variable. Iterable over element dicts.
     Each element is { field_name : value }.
     """
 
-    __slots__ = ("toml_path", "classvars", "instancevars", "elements", "artifacts")
+    __slots__ = ("toml_path", "arrayvars", "vars", "elements", "array_metadata", "artifacts")
 
     def __init__(
         self,
@@ -136,16 +166,17 @@ class SchemaObjectArrayVar(SchemaBaseVar):
         var_name: str,
         schema_filepath: Path,
         toml_path: str,
-        classvars: Dict[str, SchemaObjectArrayElementVar],
-        instancevars: Dict[str, SchemaObjectArrayElementVar],
+        arrayvars: Dict[str, SchemaObjectArrayElementVar],
+        vars: Dict[str, SchemaObjectArrayElementVar],
         artifacts: List[Artifact],
     ) -> None:
         super().__init__(var_name, schema_filepath)
         self.toml_path = toml_path
-        self.classvars = classvars
-        self.instancevars = instancevars
+        self.arrayvars = arrayvars
+        self.vars = vars
         self.artifacts = list(artifacts)
         self.elements: List[Dict[str, Any]] = []
+        self.array_metadata: Dict[str, Any] = {}
     
 
     @classmethod
@@ -162,8 +193,8 @@ class SchemaObjectArrayVar(SchemaBaseVar):
             {
                 'src': {'toml_path': 'board.buttons', 'parse': 'array[object]'},
                 'artifacts': ['JINJA2'],
-                '_classvars': {'lpf_name': {'src': {'constant_value': 'btn', 'parse': 'string'}}},
-                '_instancevars': {
+                '_arrayvars': {'lpf_name': {'src': {'toml_path': 'arrays_metadata."board.buttons".lpf_name', 'parse': 'string'}}},
+                '_vars': {
                     'name': {'src': {'toml_path': 'name', 'parse': 'string'}, 'domain': {}},
                     'active_state': {
                         'src': {'toml_path': 'active_state', 'parse': 'int'},
@@ -206,9 +237,9 @@ class SchemaObjectArrayVar(SchemaBaseVar):
         if artifacts != [Artifact.JINJA2]:
             raise ValueError(f"{array_var_name}: artifacts must be [JINJA2] (was {artifacts})")
 
-        # Build classvars
-        classvars: Dict[str, SchemaObjectArrayElementVar] = {}
-        for name, subentry in entry.get("_classvars", {}).items():
+        # Build arrayvars (array-level variables with toml_path lookup)
+        arrayvars: Dict[str, SchemaObjectArrayElementVar] = {}
+        for name, subentry in entry.get("_arrayvars", {}).items():
             src_dict = subentry.get("src", {})
             domain_raw = subentry.get("domain")
             dom, tp, const, val_src, ptype = _get_domain_and_src_generic(
@@ -217,7 +248,7 @@ class SchemaObjectArrayVar(SchemaBaseVar):
                 var_name=name,
                 schema_filepath=schema_filepath,
             )
-            classvars[name] = SchemaObjectArrayElementVar(
+            arrayvars[name] = SchemaObjectArrayElementVar(
                 name,
                 domain=dom,
                 toml_path=tp,
@@ -226,9 +257,9 @@ class SchemaObjectArrayVar(SchemaBaseVar):
                 parse_type=ptype,
             )
 
-        # Build instancevars
-        instancevars: Dict[str, SchemaObjectArrayElementVar] = {}
-        for name, subentry in entry.get("_instancevars", {}).items():
+        # Build vars (per-element variables)
+        vars_dict: Dict[str, SchemaObjectArrayElementVar] = {}
+        for name, subentry in entry.get("_vars", {}).items():
             src_dict = subentry.get("src", {})
             domain_raw = subentry.get("domain")
             dom, tp, const, val_src, ptype = _get_domain_and_src_generic(
@@ -237,7 +268,7 @@ class SchemaObjectArrayVar(SchemaBaseVar):
                 var_name=name,
                 schema_filepath=schema_filepath,
             )
-            instancevars[name] = SchemaObjectArrayElementVar(
+            vars_dict[name] = SchemaObjectArrayElementVar(
                 name,
                 domain=dom,
                 toml_path=tp,
@@ -250,26 +281,39 @@ class SchemaObjectArrayVar(SchemaBaseVar):
             var_name=array_var_name,
             schema_filepath=schema_filepath,
             toml_path=toml_path,
-            classvars=classvars,
-            instancevars=instancevars,
+            arrayvars=arrayvars,
+            vars=vars_dict,
             artifacts=artifacts,
         )
 
     # -------------------------------------------------------
 
-    def parse(self, items: List[dict[str, Any]]) -> None:
+    def parse(self, items: List[dict[str, Any]], config_root: Mapping[str, Any] = None) -> None:
         """
         items = list of dicts from TOML, one per element.
+        config_root = the full config dict for looking up arrayvars.
         Build self.elements = [element_dict, ...]
         """
         out: List[Dict[str, Any]] = []
+        
+        # Pre-compute arrayvar values (same for all elements); keep at array-level
+        arrayvar_values: Dict[str, Any] = {}
+        for name, scalar in self.arrayvars.items():
+            if scalar.toml_path and config_root is not None:
+                raw = _lookup_dotted(config_root, scalar.toml_path)
+                arrayvar_values[name] = SchemaObjectArrayElementVar.apply_parse(scalar.parse_type, raw)
+            elif scalar.val_source == ValueSource.CONSTANT:
+                arrayvar_values[name] = scalar.extract_value({})
+            else:
+                raise ValueError(f"arrayvar {name} requires either toml_path with config_root, or constant_value")
+
+        self.array_metadata = dict(arrayvar_values)
+
         for obj in items:
             elem: Dict[str, Any] = {}
 
-            for name, scalar in self.classvars.items():
-                elem[name] = scalar.extract_value(obj)
-
-            for name, scalar in self.instancevars.items():
+            # Add per-element vars
+            for name, scalar in self.vars.items():
                 elem[name] = scalar.extract_value(obj)
 
             out.append(elem)
@@ -465,6 +509,38 @@ class SchemaScalarVar(SchemaBaseVar):
             self.value = self._coerce(None)
         return self.value
 
+    def sv_literal(self, for_macro: bool = False) -> str:
+        """
+        Return the literal portion for SystemVerilog emission.
+
+        - Bit-vectors use width'h<hex> with 2's complement masking.
+        - Strings are quoted; for_macro wraps with backtick-quotes for `define.
+        - Fallback returns str(value).
+        """
+        v = self._ensure_value()
+        sv_type = self._display_sv.strip()
+        if not sv_type:
+            return str(v)
+
+        m = re.search(r"\[(\d+)\s*:\s*(\d+)\]", sv_type)
+        if m and isinstance(v, int):
+            msb = int(m.group(1))
+            lsb = int(m.group(2))
+            width = abs(msb - lsb) + 1
+            hex_digits = (width + 3) // 4
+
+            mask = (1 << width) - 1
+            vv = v & mask
+
+            return f"{width}'h{vv:0{hex_digits}x}"
+
+        if "string" in sv_type.lower() or isinstance(v, str):
+            if for_macro:
+                return f'`"{v}`"'
+            return f'"{v}"'
+
+        return str(v)
+
     def sv_display(self) -> str:
         """
         Return SystemVerilog localparam representation.
@@ -477,32 +553,12 @@ class SchemaScalarVar(SchemaBaseVar):
             display.sv containing "string" ->
                 "localparam string CFG_... = \"asm\";"
         """
-        v = self._ensure_value()
         sv_type = self._display_sv.strip()
         if not sv_type:
-            return str(v)
+            return str(self._ensure_value())
 
-        # bit-vector case: "logic [31:0]" etc.
-        m = re.search(r"\[(\d+)\s*:\s*(\d+)\]", sv_type)
-        if m and isinstance(v, int):
-            msb = int(m.group(1))
-            lsb = int(m.group(2))
-            width = abs(msb - lsb) + 1
-            hex_digits = (width + 3) // 4
-
-            # 2's complement for negative values
-            mask = (1 << width) - 1
-            vv = v & mask
-
-            literal = f"{width}'h{vv:0{hex_digits}x}"
-            return f"localparam {sv_type} {self.var_name} = {literal};"
-
-        # string-like types
-        if "string" in sv_type.lower():
-            return f'localparam {sv_type} {self.var_name} = "{v}";'
-
-        # plain scalar type (int, etc.)
-        return f"localparam {sv_type} {self.var_name} = {v};"
+        literal = self.sv_literal(for_macro=False)
+        return f"localparam {sv_type} {self.var_name} = {literal};"
 
     def mk_display(self) -> str:
         """
@@ -621,7 +677,7 @@ class SchemaOracle(Mapping[str, SchemaBaseVar]):
                     raise TypeError(
                         f"{var.var_name} expects an array[object] at {path}, got {type(raw)}"
                     )
-                var.parse(raw)
+                var.parse(raw, config_root)
             else:
                 # future subclasses?
                 raise TypeError(f"Unsupported schema var type: {type(var)}")
@@ -663,7 +719,7 @@ class SchemaOracle(Mapping[str, SchemaBaseVar]):
             elif isinstance(var, SchemaObjectArrayVar):
                 # Only meaningful for JINJA2 right now
                 if artifact == Artifact.JINJA2:
-                    out[name] = var.elements or []
+                    out[name] = ArrayRenderView(var.elements or [], var.array_metadata or {})
             # else ignore other subclasses for now
 
         return out
@@ -685,8 +741,9 @@ def parse_dict_to_schema_vars(data: dict[str, Any], schema_filepath: Path) -> Di
     Parse a dict[str, Any] and return a dict[str, SchemaBaseVar], mapping variable
     names onto SchemaBaseVar-derived objects.
 
-    Only tables under [_schema.*] are considered. schema_filepath is used to
-    construct the SchemaBaseVar objects.
+    Only tables under [_schema.*] are considered. 
+    
+    schema_filepath is not read; it is used to construct the SchemaBaseVar objects so they can point back to their source.
     """
     
     schema = data.get(SCHEMA_ROOT_KEY, {})
