@@ -120,7 +120,7 @@ class TestWithFixture:
         assert self._make_merged_schema_vars_toml().exists()
 
     @pytest.fixture(scope="class")
-    def build_schema_oracle(self):
+    def build_schema_oracle(self, temp_combine_and_merge_tomls):
         """
         Builds a SchemaOracle from the merged schema vars TOML file.
         """

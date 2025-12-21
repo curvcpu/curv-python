@@ -74,7 +74,7 @@ For example, if you want to publish `curvtools`:
 Output will look something like this:
 
     ```shell
-    $ make publish-advice PKG=curvtools -v
+    $ make publish-advice PKG=curvtools
 
                         If you want to publish curvtools...                        
     ┏━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━┓
