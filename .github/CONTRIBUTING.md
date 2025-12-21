@@ -8,7 +8,7 @@ To tweak the code and contribute to `curv-python`, you'll want to follow the ste
 
  2. Install [`uv`](https://docs.astral.sh/uv/getting-started/installation/).
 
- 3. Install `slang`, `verilator` and `delta` so they are in your `PATH`. See the CurvCPU [installs.md](https://github.com/curvcpu/curv/blob/main/docs/installs.md) for help.
+ 3. Install `slang`, `verilator`, `delta` and `taplo` so they are in your `PATH`. See the CurvCPU [installs.md](https://github.com/curvcpu/curv/blob/main/docs/installs.md) for help.
 
  4. Clone this repo and set up the developer environment (packages installed editable and CLIs on PATH):
 
