@@ -1,0 +1,33 @@
+# leds.toml
+
+#
+# ULX3S LEDs
+#
+
+[arrays_metadata."board.leds"]
+lpf_name = "leds"
+
+[[board.leds]]
+# this is the 0th element of the array
+name="RT_RED_LED"
+
+[[board.leds]]
+name="RT_ORNG_LED"
+
+[[board.leds]]
+name="RT_GRN_LED"
+
+[[board.leds]]
+name="RT_BLU_LED"
+
+[[board.leds]]
+name="LFT_RED_LED"
+
+[[board.leds]]
+name="LFT_ORNG_LED"
+
+[[board.leds]]
+name="LFT_GRN_LED"
+
+[[board.leds]]
+name="LFT_BLU_LED"

@@ -1,0 +1,23 @@
+//
+// boardpkg package (machine generated)
+//
+package boardpkg;
+
+    // used by top module's port definitions
+    localparam int LEDS_COUNT = {{ BOARD_LEDS|length }}; // lpf_name = {{ BOARD_LEDS.meta.lpf_name }}
+    localparam int BTN_COUNT  = {{ BOARD_BTNS|length }}; // lpf_name = {{ BOARD_BTNS.meta.lpf_name }}
+
+    typedef enum logic [$clog2(BTN_COUNT+1)-1:0] {
+{%- for btn in BOARD_BTNS %}
+        {{ btn.name }} = {{ loop.index0 }},
+{%- endfor %}
+        BTN_NONE = BTN_COUNT // this constant should always be set to 1 greater than the highest button index
+    } btn_id_t;
+
+   typedef struct packed {
+         logic [BTN_COUNT-1:0] pressed;  // high for 1 cycle upon short press+release of any button or combo
+         logic is_shift_down;            // flag that indicates the press event occurred with the shift button held
+         logic is_long_press;            // flag that indicates the press event was a long press
+   } btn_event_t;
+
+endpackage

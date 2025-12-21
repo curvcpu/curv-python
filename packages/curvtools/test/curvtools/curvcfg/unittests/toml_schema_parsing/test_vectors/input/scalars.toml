@@ -1,0 +1,7 @@
+[cache]
+tags_in_lutram = 0
+sets = 128
+
+[cache.hex_files]
+base_addr = "0x0000_FFFC"
+src.type = "asm"

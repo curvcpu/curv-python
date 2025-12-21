@@ -6,7 +6,7 @@ that may alter how the main CLI parsing occurs.
 
 There are two situations:
   1.  Some arguments set a global value that must override an environment variable of the same name which would otherwise have been used during CLI parsing
-        - Mote: `--env-vars`/`-e` files can also provide environment overrides variables, so we read them early looking only for special variables of interest
+        - Note: `--env-vars`/`-e` files can also provide environment overrides variables, so we read them early looking only for special variables of interest
   2.  Some arguments provide a value that is needed to decide which CLI configuration to use
 
 This library does not attempt to fully parse or validate the CLI arguments. It only extracts a limited number of values
@@ -44,6 +44,10 @@ class EarlyArg:
   def set_value(self, value: str, source: ParameterSource):
     self.value = value
     self.source = source
+
+  @property
+  def valid(self) -> bool:
+    return self.value is not None and self.source is not None
   
   def __str__(self):
     return f"EarlyArg(value={str(self.value)}, source={str(self.source)}, param_decls={str(self.param_decls)}, env_var_fallback={str(self.env_var_fallback)}, default_value_fallback={str(self.default_value_fallback)})"

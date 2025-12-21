@@ -23,7 +23,7 @@ def pytest_sessionstart(session):
     if str(this_dir) not in sys.path:
         sys.path.insert(0, str(this_dir))
 
-    REL_FAKE_CURV_ROOT = "packages/curvtools/test/curvtools/curvcfg/fake_curv_root"
+    REL_FAKE_CURV_ROOT = "packages/curvtools/test/curvtools/curvcfg/e2e/fake_curv_root"
 
     repo_root = _compute_repo_root()
     fake_root = os.path.join(repo_root, REL_FAKE_CURV_ROOT)

@@ -1,0 +1,13 @@
+#
+# Flash configuration
+#
+
+[_schema.vars.BLD_FLASH_SPI]
+src = { toml_path = "device.flash.spi", parse="int" }
+domain = { choices = [1, 4], default = 1 }
+artifacts = ["MK", "ENV"]
+
+[_schema.vars.BLD_FLASH_CHIP]
+src = { toml_path = "device.flash.chip", parse="string" }
+domain = { choices = ["w25q128jv", "w25q64jv", "w25q32jv", "w25q16jv"], default = "w25q128jv" }
+artifacts = ["MK", "ENV"]

@@ -6,6 +6,8 @@ import click
 from click.formatting import measure_table, iter_rows, wrap_text
 from click._compat import term_len
 from click._textwrap import TextWrapper
+from .epilog import get_epilog_str, update_epilog_env_vars
+from curvtools.cli.curvcfg.version import get_program_name
 
 ###############################################################################
 #
@@ -205,7 +207,7 @@ class CurvcfgAnsiHelpFormatter(click.HelpFormatter):
     def write_usage(self, prog: str, args: str = "", prefix: str = "Usage: ") -> None:
         super().write_usage(prog, args, prefix=self._ansi(f"[bold]{escape(prefix)}[/]"))
 
-    def write_text(self, text: str) -> None:
+    def write_text(self, text: str, is_error: bool = False) -> None:
         indent = " " * self.current_indent
         if self._placeholder_protection_enabled:
             text = self._protect_placeholders(text)
@@ -218,7 +220,7 @@ class CurvcfgAnsiHelpFormatter(click.HelpFormatter):
         )
         lines = wrapped.splitlines()
         for line in lines:
-            self.write(self._ansi(escape(line)))
+            self.write(self._ansi(escape(line)) if not is_error else self._ansi(f"[bright_red]{escape(line)}[/]"))
             self.write("\n")
         self.write("\n")
 
@@ -282,7 +284,7 @@ class CurvcfgAnsiHelpFormatter(click.HelpFormatter):
 #
 ###############################################################################
 
-class CurvcfgContext(click.Context):
+class CurvcfgHelpFormatterContext(click.Context):
     """ 
     Context that supplies our formatter to Click's help pipeline
     """
@@ -294,9 +296,18 @@ class CurvcfgContext(click.Context):
             width=self.terminal_width, max_width=self.max_content_width
         )
 
-class CurvcfgCommand(click.Command):
+def _epilog_writer(self, ctx:click.Context, formatter:CurvcfgAnsiHelpFormatter) -> None:
+        """Writes the epilog into the formatter if it exists."""
+        import inspect
+        epilog_str = get_epilog_str()
+        epilog = inspect.cleandoc(epilog_str)
+        formatter.write_paragraph()
+        with formatter.section("Environment Variables"):
+            formatter.write_text(epilog_str)
+
+class CurvcfgHelpFormatterCommand(click.Command):
     """ Command that uses our context """
-    context_class = CurvcfgContext
+    context_class = CurvcfgHelpFormatterContext
     def get_help(self, ctx):
         f = CurvcfgAnsiHelpFormatter(width=ctx.terminal_width, max_width=ctx.max_content_width)
         self.format_help(ctx, f)
@@ -305,34 +316,26 @@ class CurvcfgCommand(click.Command):
         self.format_usage(ctx, formatter)
         self.format_help_text(ctx, formatter)
         self.format_options(ctx, formatter)
-        self.format_expansion_variables(ctx, formatter)
+        # self.format_expansion_variables(ctx, formatter)
         self.format_epilog(ctx, formatter)
-    def format_expansion_variables(self, ctx, formatter:CurvcfgAnsiHelpFormatter) -> None:
-        """Writes all the expansion variables into the formatter if they exist."""
-        opts = []
-        with formatter.no_placeholder_protection():
-            with formatter.section("Expansion Variables"):
-                formatter.write_text("These angle-bracket variables will be expanded with the values of other arguments or env vars when used in a quoted path:")
-                formatter.write_dl_with_markup([
-                    ("[cyan]<curv-root-dir>[/]", "expanded to value of --curv-root-dir or $CURV_ROOT_DIR"),
-                    ("[cyan]<build-dir>[/]", "expanded to value of --build-dir"),
-                ])
-    def format_epilog(self, ctx, formatter:CurvcfgAnsiHelpFormatter) -> None:
+    # def format_expansion_variables(self, ctx, formatter:CurvcfgAnsiHelpFormatter) -> None:
+    #     """Writes all the expansion variables into the formatter if they exist."""
+    #     opts = []
+    #     with formatter.no_placeholder_protection():
+    #         with formatter.section("Expansion Variables"):
+    #             formatter.write_text("These angle-bracket variables will be expanded with the values of other arguments or env vars when used in a quoted path:")
+    #             formatter.write_dl_with_markup([
+    #                 ("[cyan]<curv-root-dir>[/]", "expanded to value of --curv-root-dir or $CURV_ROOT_DIR"),
+    #                 ("[cyan]<build-dir>[/]", "expanded to value of --build-dir"),
+    #             ])
+    def format_epilog(self, ctx:click.Context, formatter:CurvcfgAnsiHelpFormatter) -> None:
         """Writes the epilog into the formatter if it exists."""
-        import inspect
-        from curvtools.cli.curvcfg.cli import epilog_fn
-        global epilog_fn
-        self.epilog = epilog_fn()
-        if self.epilog:
-            epilog = inspect.cleandoc(self.epilog)
-            formatter.write_paragraph()
-            with formatter.section("CURV_ROOT_DIR"):
-                formatter.write_text(epilog)
+        _epilog_writer(self, ctx, formatter)
 
 
-class CurvcfgGroup(click.Group):
+class CurvcfgHelpFormatterGroup(click.Group):
     """ Group that uses our context """
-    context_class = CurvcfgContext
+    context_class = CurvcfgHelpFormatterContext
     def get_help(self, ctx):
         f = CurvcfgAnsiHelpFormatter(width=ctx.terminal_width, max_width=ctx.max_content_width)
         self.format_help(ctx, f)
@@ -344,13 +347,5 @@ class CurvcfgGroup(click.Group):
         self.format_epilog(ctx, formatter)
     def format_epilog(self, ctx, formatter:CurvcfgAnsiHelpFormatter) -> None:
         """Writes the epilog into the formatter if it exists."""
-        import inspect
-        from curvtools.cli.curvcfg.cli import epilog_fn
-        global epilog_fn
-        self.epilog = epilog_fn()
-        if self.epilog:
-            epilog = inspect.cleandoc(self.epilog)
-            formatter.write_paragraph()
-            with formatter.section("CURV_ROOT_DIR"):
-                formatter.write_text(epilog)
+        _epilog_writer(self, ctx, formatter)
 

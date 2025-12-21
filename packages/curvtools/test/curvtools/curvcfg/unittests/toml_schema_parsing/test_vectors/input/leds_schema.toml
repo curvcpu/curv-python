@@ -1,0 +1,30 @@
+# leds_schema.toml
+
+[_schema.arrays.BOARD_LEDS]
+# parse type "array[object]" means we are defining a variable called BOARD_LEDS that
+# is an array of objects, and each object has the fields defined below in this schema.
+# (Note that array[object] is currently the only array type supported.)
+src = { toml_path = "board.leds", parse="array[object]" }
+# display not allowed on arrays; they can be looped over in a jinja2 template but
+# not used elsewhere.  Therefore, the only permitted artifact is JINJA2 currently.
+artifacts = ["JINJA2"]
+
+# array variables are fields that are the same on every element in the array of objects;
+# they use src.toml_path=... to specify where to find the value in the config file.
+[_schema.arrays.BOARD_LEDS._arrayvars.lpf_name]
+# toml_path specifies where to find the value for this array-level variable
+src = { toml_path = "arrays_metadata.\"board.leds\".lpf_name", parse="string" }
+# domain not allowed on array variables
+# display not allowed on array variables
+# artifacts not allowed at the field level.
+
+# vars are fields that are different on each element in the array of objects;
+# they are defined the same ways as anything in _schema.vars.*, e.g. src.toml_path=...,
+# src.parse=..., etc. But artifacts is now allowed at the field level.
+[_schema.arrays.BOARD_LEDS._vars.name]
+# because this is a field within an array of objects, the toml_path is relative
+# to the array path, i.e., this is [[board.leds]].name for each element in the array.
+src = { toml_path = "name", parse="string" }
+domain = { }
+# artifacts not allowed on individual fields
+

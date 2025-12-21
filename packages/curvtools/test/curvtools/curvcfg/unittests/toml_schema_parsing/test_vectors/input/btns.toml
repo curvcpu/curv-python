@@ -1,0 +1,32 @@
+# btns.toml
+
+#
+# ULX3S Buttons
+#
+
+[arrays_metadata."board.buttons"]
+lpf_name = "btn"
+
+[[board.buttons]]
+name = "B1"
+active_state = 0
+
+[[board.buttons]]
+name = "B2"
+active_state = 0
+
+[[board.buttons]]
+name = "UP"
+active_state = 1
+
+[[board.buttons]]
+name = "DOWN"
+active_state = 1
+
+[[board.buttons]]
+name = "LEFT"
+active_state = 1
+
+[[board.buttons]]
+name = "RIGHT"
+active_state = 1

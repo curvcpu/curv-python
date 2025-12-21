@@ -4,6 +4,7 @@ from rich.traceback import install
 from rich.logging import RichHandler
 import logging
 import os
+from dataclasses import dataclass, field
 
 log = logging.getLogger(__name__)
 
@@ -38,14 +39,8 @@ class LoggingLevels:
                 stderr_level = logging.ERROR
         return cls(stderr_level=stderr_level, file_level=logging.NOTSET)
     @property
-    def stderr_level(self) -> int:
-        return self.stderr_level
-    @property
     def stderr_level_str(self) -> str:
         return self._stderr_level_str
-    @property
-    def file_level(self) -> int:
-        return self.file_level
     @property
     def file_level_str(self) -> str:
         return self._file_level_str
@@ -107,7 +102,7 @@ def configure_rich_root_logger(
 
     if err_console is None:
         err_console = Console(stderr=True)
-    if verbosity.is_stderr_quiet:
+    if verbosity.stderr_quiet:
         err_console.quiet = True
     if log_file_path is not None:
         file_console = Console(file=open(log_file_path, "a", encoding="utf-8"), width=log_file_width)

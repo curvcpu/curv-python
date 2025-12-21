@@ -1,0 +1,7 @@
+# myfile2.toml
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_ICACHE]
+src = { toml_path = "cache.hex_files.subdirs.icache", parse="string" }
+domain = { default = "icache" }
+display = { sv = "string", mk = "string" }
+artifacts = [ "ENV" ]
+

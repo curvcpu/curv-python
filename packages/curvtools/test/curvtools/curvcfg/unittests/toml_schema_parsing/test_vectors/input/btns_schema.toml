@@ -1,0 +1,20 @@
+# btns_schema.toml
+
+[_schema.arrays.BOARD_BTNS]
+src = { toml_path = "board.buttons", parse="array[object]" }
+artifacts = ["JINJA2"]
+
+[_schema.arrays.BOARD_BTNS._arrayvars.lpf_name]
+src = { toml_path = "arrays_metadata.\"board.buttons\".lpf_name", parse="string" }
+
+[_schema.arrays.BOARD_BTNS._vars.name]
+src = { toml_path = "name", parse="string" }
+domain = { }
+# artifacts not allowed on individual fields
+
+[_schema.arrays.BOARD_BTNS._vars.active_state]
+# this field defines, for each button, whether it is considered 
+# active high (1) or active low (0).
+src = { toml_path = "active_state", parse="int" }
+domain = { choices = [0, 1], default = 1 }
+

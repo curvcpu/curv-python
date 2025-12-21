@@ -26,6 +26,20 @@ cd test
 python multi_progress_demos.py
 ```
 
+## TOML helper functions
+
+- `curvpyutils.tomlrw` provides helper functions for working with TOML files across multiple Python versions:
+
+    ```python
+    import curvpyutils.tomlrw as tomlrw
+
+    d = {"a": 1, "b": 2}
+    s = tomlrw.dumps(d)
+    print(s)
+    ```
+
+- Other functions include `loadf` and `loads` for reading TOML files and strings into dictionaries.  See [test_tomlrw.py](test/test_tomlrw.py) for examples.
+
 
 
 

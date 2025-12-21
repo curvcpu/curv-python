@@ -48,7 +48,7 @@ The recommended installation method is to use [`pipx`](https://pipx.pypa.io/late
 Once installed with `pipx`, all the command line tools needed to build the Curv CPU will be in your `PATH`:
 
 ```shell
-curv-cfg --help
+curv-cfg --help # or curvcfg --help
 curv-cache-tool --help
 curv-cache-tool-tag-ram-way-interleaver --help
 curv-subst --help
@@ -58,6 +58,8 @@ curv-verilog-hex-reformat --help
 ```
 
 These tools are called automatically by the build process for the [Curv CPU](https://github.com/curvcpu/curv).  To simply get the CPU working, you really don't need to know anything about them.  Just make sure they are in your `PATH` and you're good to go.
+
+Additional information on `curvcfg` is available in the [curvcfg README](packages/curvtools/readme.md#curvcfg).
 
 # Contributing to `curv-python`
 

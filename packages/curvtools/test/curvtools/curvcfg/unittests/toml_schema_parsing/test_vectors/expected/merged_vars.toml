@@ -1,0 +1,35 @@
+[arrays_metadata."board.buttons"]
+lpf_name = "btn"
+
+[arrays_metadata."board.leds"]
+lpf_name = "leds"
+
+[board]
+buttons = [
+  { active_state = 0, name = "B1" },
+  { active_state = 0, name = "B2" },
+  { active_state = 1, name = "UP" },
+  { active_state = 1, name = "DOWN" },
+  { active_state = 1, name = "LEFT" },
+  { active_state = 1, name = "RIGHT" },
+]
+leds = [
+  { name = "RT_RED_LED" },
+  { name = "RT_ORNG_LED" },
+  { name = "RT_GRN_LED" },
+  { name = "RT_BLU_LED" },
+  { name = "LFT_RED_LED" },
+  { name = "LFT_ORNG_LED" },
+  { name = "LFT_GRN_LED" },
+  { name = "LFT_BLU_LED" },
+]
+
+[cache]
+sets           = 64
+tags_in_lutram = 0
+
+[cache.hex_files]
+base_addr = "0x0000_FFFC"
+
+[cache.hex_files.src]
+type = "asm"
