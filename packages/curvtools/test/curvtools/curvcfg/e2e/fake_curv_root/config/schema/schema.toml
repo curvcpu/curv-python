@@ -1,0 +1,136 @@
+# ----------------------------------------------------------------------------
+#
+# Schema for the Curv RISCV SoC configuration variables
+#
+# ----------------------------------------------------------------------------
+#
+# New format quick reference:
+#   [_schema.vars.VAR_NAME]
+#   src = { toml_path = "...", parse = "int|string" }
+#   domain = { choices=[...]/range=[min, max], default = ... }
+#   display = { sv = "<sv type text>", mk = "<python format or literal>" }
+#   artifacts = ["MK", "SVPKG", "SVH", "ENV", "JINJA2"] Note: JINJA2 is only 
+#   allowed on arrays only, not on scalar variables.
+# Notes:
+# - parse controls how the TOML value is coerced before validation.
+# - domain captures validity (choices or range) and the optional default.
+# - display.sv and display.mk are spliced into SV or Makefile artifacts; 
+#   if they contain curly brace text, then that means the numeric value of
+#   that variable is used as a Python format string that receives the parsed 
+#   value as `value` (e.g., "0x{value:08x}" for a 32-bit hex number prefixed by '0x').
+# - artifacts select which artifacts the variable will be inserted into
+#
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_TYPE]
+src = { toml_path = "cache.hex_files.src.type", parse = "string" }
+domain = { choices = ["asm", "c"], default = "asm" }
+display = { sv = "string", mk = "string" }
+artifacts = ["MK", "ENV"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_NAME]
+src = { toml_path = "cache.hex_files.src.name", parse = "string" }
+domain = { choices = ["count1234", "jumps", "jumps-small", "pic", "auipc-bypass", "jal-jalr", "branches", "brcomp-haz", "load-store"], default = "count1234" }
+display = { sv = "string", mk = "string" }
+artifacts = ["MK", "ENV"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_BASE_ADDR]
+src = { toml_path = "cache.hex_files.base_addr", parse = "int" }
+domain = { range = [ 0x0000_0000, 0xffff_fffc ], default = 0x0000_0000 }
+display = { sv = "logic [31:0]", mk = "0x{value:08x}" }
+artifacts = ["MK", "SVPKG", "ENV"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_ICACHE]
+src = { toml_path = "cache.hex_files.subdirs.icache", parse = "string" }
+domain = { default = "icache" }
+display = { sv = "string", mk = "string" }
+artifacts = ["ENV"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_DCACHE]
+src = { toml_path = "cache.hex_files.subdirs.dcache", parse = "string" }
+domain = { default = "dcache" }
+display = { sv = "string", mk = "string" }
+artifacts = ["ENV"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_CACHELINES]
+src = { toml_path = "cache.hex_files.subdirs.cachelines", parse = "string" }
+domain = { default = "cachelines" }
+display = { sv = "string", mk = "string" }
+artifacts = ["ENV"]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_TAGRAM]
+src = { toml_path = "cache.hex_files.subdirs.tagram", parse = "string" }
+domain = { default = "tagram" }
+display = { sv = "string", mk = "string" }
+artifacts = ["ENV"]
+
+[_schema.vars.CFG_CACHE_TAGS_IN_LUTRAM]
+src = { toml_path = "cache.tags_in_lutram", parse = "int" }
+domain = { choices = [0, 1], default = 1 }
+display = { sv = "int", mk = "int" }
+artifacts = ["MK", "SVPKG", "ENV", "SVH"]
+
+[_schema.vars.CFG_CACHE_SETS]
+src = { toml_path = "cache.sets", parse = "int" }
+domain = { choices = [4, 8, 16, 32, 64, 128], default = 4 }
+display = { sv = "int", mk = "int" }
+artifacts = ["MK", "SVPKG", "ENV"]
+
+[_schema.vars.CFG_CACHE_WAYS]
+src = { toml_path = "cache.ways", parse = "int" }
+domain = { choices = [2], default = 2 }
+display = { sv = "int", mk = "int" }
+artifacts = ["MK", "SVPKG", "ENV"]
+
+[_schema.vars.CFG_CACHE_CACHELINES_NUM_WORDS]
+src = { toml_path = "cache.cachelines.num_words", parse = "int" }
+domain = { choices = [16], default = 16 }
+display = { sv = "int", mk = "int" }
+artifacts = ["MK", "SVPKG", "ENV"]
+
+[_schema.vars.CFG_CACHE_TAGS_HAVE_VALID_DIRTY_BITS]
+src = { toml_path = "cache.tags_have_valid_dirty_bits", parse = "int" }
+domain = { choices = [0, 1], default = 0 }
+display = { sv = "int", mk = "int" }
+artifacts = ["MK", "SVPKG", "ENV"]
+
+[_schema.vars.CFG_CACHE_CACHELINES_INITIALLY_VALID]
+src = { toml_path = "cache.cachelines.initially_valid", parse = "int" }
+domain = { choices = [0, 1], default = 0 }
+display = { sv = "int", mk = "int" }
+artifacts = ["MK", "SVPKG", "ENV"]
+
+[_schema.vars.CFG_CACHE_CACHEABLE_ADDRESSES_WIDTH]
+src = { toml_path = "cache.cacheable_addresses.width", parse = "int" }
+domain = { range = [10, 32], default = 10 }
+display = { sv = "int", mk = "int" }
+artifacts = ["MK", "SVPKG", "ENV"]
+
+[_schema.vars.CFG_CPU_XLEN]
+src = { toml_path = "cpu.xlen", parse = "int" }
+domain = { choices = [32, 64], default = 32 }
+display = { sv = "int", mk = "int" }
+artifacts = ["MK", "SVPKG", "ENV"]
+
+[_schema.vars.CFG_REGFILE_USE_LUTRAM]
+src = { toml_path = "cpu.regfile.use_lutram", parse = "int" }
+domain = { choices = [0, 1], default = 1 }
+display = { sv = "int", mk = "int" }
+artifacts = ["SVPKG"]
+
+[_schema.vars.CFG_CPU_RESET_VECTOR]
+src = { toml_path = "cpu.reset_vector", parse = "uint" }
+domain = { range = [ 0x0000_0000, 0xffff_fffc ], default = 0x0000_0000 }
+display = { sv = "logic [31:0]", mk = "0x{value:08x}" }
+artifacts = ["MK", "SVPKG", "ENV"]
+
+[_schema.vars.CFG_CPU_MTVEC_BASE]
+src = { toml_path = "cpu.mtvec_base", parse = "uint" }
+domain = { range = [ 0x0000_0000, 0xffff_fffc ], default = 0x0000_0000 }
+display = { sv = "logic [31:0]", mk = "0x{value:08x}" }
+artifacts = ["SVPKG", "ENV"]
+
+[_schema.vars.CFG_CACHE_CACHELINES_LATENCY]
+src = { toml_path = "cache.cachelines.latency", parse = "int" }
+domain = { choices = [0, 1, 2], default = 0 }
+display = { sv = "int", mk = "int" }
+artifacts = ["SVPKG", "MK", "ENV", "SVH"]

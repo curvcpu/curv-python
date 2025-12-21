@@ -1,0 +1,36 @@
+# ----------------------------------------------------------------------------
+# Schema for extra variables used in some testbench configurations.
+# These all need to have default values, because not every testbench will
+# try to read them, so something has to fill them in with a dummy value.
+# Otherwise, some testbenches will fail to compile.
+# ----------------------------------------------------------------------------
+
+[_schema.vars.CFG_TB_CACHE_ICACHE_SIMULATE_LATENCY]
+src = { toml_path = "tb.cache.icache.simulate_latency", parse = "int" }
+domain = { choices = [0, 1], default = 0 }
+display = { sv = "int", mk = "int" }
+artifacts = ["SVPKG", "MK", "ENV"]
+
+[_schema.vars.CFG_TB_CACHE_DCACHE_SIMULATE_LATENCY]
+src = { toml_path = "tb.cache.dcache.simulate_latency", parse = "int" }
+domain = { choices = [0, 1], default = 0 }
+display = { sv = "int", mk = "int" }
+artifacts = ["SVPKG", "MK", "ENV"]
+
+[_schema.vars.CFG_TB_RISCVCPU_FINAL_VALIDATOR_TEST]
+src = { toml_path = "tb.riscvcpu.final_validator_test", parse = "string" }
+domain = { choices = ["none", "count1234", "jumps", "jumps-small", "pic", "auipc-bypass", "jal-jalr", "branches", "brcomp-haz", "load-store"], default = "none" }
+display = { sv = "string", mk = "string" }
+artifacts = ["MK"]
+
+[_schema.vars.CFG_TB_RISCVCPU_NUM_INSTRUCTIONS_TO_RUN]
+src = { toml_path = "tb.riscvcpu.num_instructions_to_run", parse = "int" }
+domain = { range = [1, 100_000], default = 100 }
+display = { sv = "int", mk = "int" }
+artifacts = ["MK"]
+
+[_schema.vars.CFG_TB_RISCVCPU_DISASM_IMM_FORMAT]
+src = { toml_path = "tb.riscvcpu.disasm.imm_format", parse = "string" }
+domain = { choices = ["do", "xo"], default = "do" }
+display = { sv = "string", mk = "string" }
+artifacts = ["MK"]

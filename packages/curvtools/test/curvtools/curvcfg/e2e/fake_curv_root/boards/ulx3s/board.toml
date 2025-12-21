@@ -1,0 +1,75 @@
+#
+# ULX3S LEDs
+#
+
+[arrays.metadata."board.leds"]
+lpf_name = "leds"
+
+[[board.leds]]
+# this is the 0th element of the array
+name="RT_RED_LED"
+
+[[board.leds]]
+name="RT_ORNG_LED"
+
+[[board.leds]]
+name="RT_GRN_LED"
+
+[[board.leds]]
+name="RT_BLU_LED"
+
+[[board.leds]]
+name="LFT_RED_LED"
+
+[[board.leds]]
+name="LFT_ORNG_LED"
+
+[[board.leds]]
+name="LFT_GRN_LED"
+
+[[board.leds]]
+name="LFT_BLU_LED"
+
+#
+# ULX3S Buttons
+#
+
+[arrays.metadata."board.buttons"]
+lpf_name = "buttons"
+
+[[board.buttons]]
+name = "B1"
+active_state = 1
+
+[[board.buttons]]
+name = "B2"
+active_state = 1
+
+[[board.buttons]]
+name = "UP"
+active_state = 1
+
+[[board.buttons]]
+name = "DOWN"
+active_state = 1
+
+[[board.buttons]]
+name = "LEFT"
+active_state = 1
+
+[[board.buttons]]
+name = "RIGHT"
+active_state = 1
+
+#
+# ULX3S SDRAM parameters
+#
+
+[board.sdram]
+native_addr_width = 13
+native_data_width = 16
+native_col_width = 9
+native_row_width = 13
+native_bank_width = 2
+native_dqm_width = 2
+

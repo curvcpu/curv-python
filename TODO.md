@@ -33,5 +33,5 @@ base_schema_parser.py (line 303: FileEmitter(...), and imports the types)
 All exports are used within base_schema_parser.py
 ```
 
-2.  Delete all e2e tests and start over from scratch with new schema.
 
+3.  Use ConfigArtifactNames, etc. in generate.py.  Look for other hardcoded locations see if we can use settings.py's structs instead.  Otherwise, delete the structs from settings.py.

@@ -1,0 +1,124 @@
+##########################################################################
+#
+# Board schema
+#
+##########################################################################
+
+#
+# LEDs
+#
+
+[_schema.arrays.BOARD_LEDS]
+# parse type "array[object]" means we are defining a variable called BOARD_LEDS that
+# is an array of objects, and each object has the fields defined below in this schema.
+# (Note that array[object] is currently the only array type supported.)
+src = { toml_path = "board.leds", parse="array[object]" }
+# display not allowed on arrays; they can be looped over in a jinja2 template but
+# not used elsewhere.  Therefore, the only permitted artifact is JINJA2 currently.
+artifacts = ["JINJA2"]
+
+# class variables are fields that are the same on all elements in the array of objects;
+[_schema.arrays.BOARD_LEDS._arrayvars.lpf_name]
+src = { toml_path = "arrays_metadata.\"board.leds\".lpf_name", parse="string" }
+# domain not allowed on class variables
+# display not allowed on class variables
+# artifacts not allowed at the field level.
+
+# instance variables are fields that are different on each element in the array of objects;
+# they are defined the same ways as anything in _schema.vars.*, e.g. src.toml_path=...,
+# src.parse=..., etc. But artifacts is not allowed at the field level.
+[_schema.arrays.BOARD_LEDS._vars.name]
+# because this is a field within an array of objects, the toml_path is relative
+# to the array path, i.e., this is [[board.leds]].name for each element in the array.
+src = { toml_path = "name", parse="string" }
+domain = { }
+# artifacts not allowed on individual fields
+
+#
+# Buttons
+#
+
+[_schema.arrays.BOARD_BTNS]
+src = { toml_path = "board.buttons", parse="array[object]" }
+artifacts = ["JINJA2"]
+
+[_schema.arrays.BOARD_BTNS._arrayvars.lpf_name]
+src = { toml_path = "arrays_metadata.\"board.buttons\".lpf_name", parse="string" }
+
+[_schema.arrays.BOARD_BTNS._vars.name]
+src = { toml_path = "name", parse="string" }
+domain = { }
+# artifacts not allowed on individual fields
+
+[_schema.arrays.BOARD_BTNS._vars.active_state]
+# this field defines, for each button, whether it is considered 
+# active high (1) or active low (0).
+src = { toml_path = "active_state", parse="int" }
+domain = { choices = [0, 1], default = 1 }
+
+#
+# Native SDRAM interface constants
+#
+
+[_schema.vars.SDRAM_NATIVE_ADDR_WIDTH]
+src = { toml_path = "board.sdram.native_addr_width", parse="int" }
+domain = { choices = [13], default = 13 }
+artifacts = ["SVH"]
+
+[_schema.vars.SDRAM_NATIVE_DATA_WIDTH]
+src = { toml_path = "board.sdram.native_data_width", parse="int" }
+domain = { choices = [16], default = 16 }
+artifacts = ["SVH"]
+
+[_schema.vars.SDRAM_NATIVE_COL_WIDTH]
+src = { toml_path = "board.sdram.native_col_width", parse="int" }
+domain = { choices = [9], default = 9 }
+artifacts = ["SVH"]
+
+[_schema.vars.SDRAM_NATIVE_ROW_WIDTH]
+src = { toml_path = "board.sdram.native_row_width", parse="int" }
+domain = { choices = [13], default = 13 }
+artifacts = ["SVH"]
+
+[_schema.vars.SDRAM_NATIVE_BANK_WIDTH]
+src = { toml_path = "board.sdram.native_bank_width", parse="int" }
+domain = { choices = [2], default = 2 }
+artifacts = ["SVH"]
+
+[_schema.vars.SDRAM_NATIVE_DQM_WIDTH]
+src = { toml_path = "board.sdram.native_dqm_width", parse="int" }
+domain = { choices = [2], default = 2 }
+artifacts = ["SVH"]
+
+##########################################################################
+#
+# Device schema
+#
+##########################################################################
+
+#
+# FPGA configuration
+#
+
+[_schema.vars.BLD_FPGA_SIZE]
+src = { toml_path = "device.fpga.size", parse="int" }
+domain = { choices = [12, 25, 45, 85] }
+artifacts = ["MK", "ENV"]
+
+[_schema.vars.BLD_FPGA_PACKAGE]
+src = { toml_path = "device.fpga.package", parse="string" }
+domain = { choices = ["6bg381c"], default = "6bg381c" }
+artifacts = ["MK", "ENV"]
+
+[_schema.vars.BLD_FPGA_CHIP]
+src = { toml_path = "device.fpga.chip", parse="string" }
+domain = { choices = ["lfe5u-12f", "lfe5u-25f", "lfe5u-45f", "lfe5u-85f"] }
+artifacts = ["MK", "ENV"]
+
+[_schema.vars.BLD_FPGA_CHIP_ID]
+src = { toml_path = "device.fpga.chip_id", parse="int" }
+domain = { choices = ["0x21111043", "0x41111043", "0x41112043", "0x41113043"] }
+display = { mk = "0x{value:08x}" }
+artifacts = ["MK", "ENV"]
+
+

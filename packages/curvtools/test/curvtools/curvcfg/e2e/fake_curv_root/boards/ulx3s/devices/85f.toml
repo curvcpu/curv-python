@@ -1,0 +1,18 @@
+#:schema ../../../config/.taplo/curv-vars-schema.json
+
+#
+# 85F device configuration
+#
+
+
+[device.fpga]
+chip    = "lfe5u-85f"        # needed by XCF file, XCF flash file and LDF files, and to locate .msk files in diamond
+chip_id = "0x41113043"       # needed by XCF file and XCF flash file
+size    = 85
+package = "6bg381c"
+
+[device.flash]
+spi    = 4
+chip   = "w25q128jv"
+
+
