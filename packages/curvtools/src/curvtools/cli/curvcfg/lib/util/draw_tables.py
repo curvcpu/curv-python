@@ -17,52 +17,130 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
 from curvtools.cli.curvcfg.lib.globals.constants import PATHS_RAW_ENV_FILE_REL_PATH
+from curvtools.cli.curvcfg.lib.util.config_parsing import SchemaOracle
+from curvtools.cli.curvcfg.lib.util.config_parsing.parse_schema import SchemaScalarVar
 
 def get_box(use_ascii_box: bool = False) -> Box:
     return ASCII2 if use_ascii_box else ROUNDED
 
-###############################################################################
-#
-# Display merged TOML table helper
-#
-###############################################################################
+def _extract_variable_info(schema_oracle: SchemaOracle) -> list[dict[str, Any]]:
+    """
+    Iterate over all variables in a SchemaOracle and extract their metadata.
+    
+    Returns a list of dicts, one per variable, with the following structure:
+    {
+        'var_name': str,               # e.g., 'CFG_CACHE_CACHELINES_LATENCY'
+        'artifacts': list[str],        # e.g., ['SVPKG', 'MK', 'ENV', 'SVH']
+        'display_mk': str,             # e.g., 'int'
+        'display_sv': str,             # e.g., 'int'
+        'domain_kind': str,            # 'none', 'choices', or 'range'
+        'domain_choices': list | None, # e.g., [0, 1, 2] or None
+        'domain_range': tuple | None,  # e.g., (0, 100) or None
+        'domain_range_display': 
+           tuple[str, str] | None,     # formatted range bounds using mk_display(), or None
+        'default': Any | None,         # e.g., 0 or None
+        'default_display': str | None, # formatted default using mk_display(), or None
+        'parse_type': str,             # e.g., 'int', 'string', 'uint'
+        'toml_path': str | None,       # e.g., 'cache.cachelines.latency'
+    }
+    """
+    results = []
+    
+    # Iterate over all variables in the SchemaOracle
+    for var_name, var in schema_oracle.items():
+        # Only process scalar variables (skip array variables for this example)
+        if not isinstance(var, SchemaScalarVar):
+            continue
+        
+        # Extract artifacts list (convert Artifact enum to string)
+        artifacts = [artifact.value for artifact in var.artifacts]
+        
+        # Extract display information
+        display_mk = var._display_mk  # e.g., 'int'
+        display_sv = var._display_sv  # e.g., 'int'
+        
+        # Extract domain information
+        domain = var._domain
+        domain_kind = domain.kind  # 'none', 'choices', or 'range'
+        domain_choices = domain.choices  # list or None
+        domain_range = domain.range  # tuple or None
+        default = domain.default  # any value or None
+        
+        # Extract parse type
+        parse_type = var._parse_type.value  # e.g., 'int', 'string', 'uint'
+        
+        # Extract toml_path
+        toml_path = var.toml_path  # e.g., 'cache.cachelines.latency' or None
+        
+        # Format default value using mk_display() if it exists
+        default_display = None
+        if default is not None and var._display_mk is not None:
+            default_display = var.mk_display(default)
+        
+        # Format domain_range bounds using mk_display() if it exists
+        domain_range_display = None
+        if domain_range is not None and var._display_mk is not None:
+            lower, upper = domain_range
+            domain_range_display = (var.mk_display(lower), var.mk_display(upper))
+        
+        # Build the result dict
+        var_info = {
+            'var_name': var_name,
+            'artifacts': artifacts,
+            'display_mk': display_mk,
+            'display_sv': display_sv,
+            'domain_kind': domain_kind,
+            'domain_choices': domain_choices,
+            'domain_range': domain_range,
+            'domain_range_display': domain_range_display,
+            'default': default,
+            'default_display': default_display,
+            'parse_type': parse_type,
+            'toml_path': toml_path,
+            'value': var.mk_display() if var._display_mk is not None else None
+        }
+        results.append(var_info)
+    return results
 
-def display_merged_toml_table(config_values: CfgValues, merged_toml_path: str, use_ascii_box: bool = False, verbose_table: bool = False) -> None:
+def display_merged_toml_table(
+    schema_oracle: SchemaOracle, 
+    merged_toml_path: Path, 
+    use_ascii_box: bool = False, 
+    verbose_table: bool = False
+) -> None:
     """
     Display the merged TOML table.
     
     Args:
-        config_values: the config values
+        schema_oracle: the schema oracle
         merged_toml_path: the merged toml path as a string
         verbose_table: whether to display the verbose table
 
     Returns:
         None
     """
-    # Color helpers copied from existing CLI display
-    color_for_makefile_type = {
-        "decimal": {"open": "[yellow]", "close": "[/yellow]"},
-        "hex32": {"open": "[green]", "close": "[/green]"},
-        "hex16": {"open": "[green]", "close": "[/green]"},
-        "hex8": {"open": "[green]", "close": "[/green]"},
-        "hex": {"open": "[green]", "close": "[/green]"},
-        "string": {"open": "[bold white]", "close": "[/bold white]"},
-        "default": {"open": "[white]", "close": "[/white]"},
-        "int": {"open": "[bold magenta]", "close": "[/bold magenta]"},
-        "int enum": {"open": "[bold red]", "close": "[/bold red]"},
-        "string enum": {"open": "[bold green]", "close": "[/bold green]"},
-        "string": {"open": "[bold white]", "close": "[/bold white]"},
-    }
+    # Color helpers
+    def get_color_for_makefile_type(makefile_type: str | None) -> dict[str, str]:
+        color_for_makefile_type = {
+            "int": {"open": "[yellow]", "close": "[/yellow]"},
+            "uint": {"open": "[bold red]", "close": "[/bold red]"},
+            "string": {"open": "[bold white]", "close": "[/bold white]"},
+            "default": {"open": "[bold green]", "close": "[/bold green]"},
+            "_magenta": {"open": "[magenta2]", "close": "[/magenta2]"},
+            "_blue": {"open": "[blue]", "close": "[/blue]"},
+        }
+        if makefile_type is not None and makefile_type in color_for_makefile_type:
+            return color_for_makefile_type[makefile_type]
+        return color_for_makefile_type["default"]
     def colorize_key(s: str, color: str = "bold yellow") -> str:
         return f"[{color}]" + s + f"[/{color}]"
     def colorize_value(makefile_type: str, s: str) -> str:
-        m = color_for_makefile_type.get(makefile_type, color_for_makefile_type["default"])
+        m = get_color_for_makefile_type(makefile_type)
         return m["open"] + s + m["close"]
 
     from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
     table_options = {}
     table_options["box"] = get_box(use_ascii_box)
-    table_options["caption"] = f"config hash: {config_values.hash()}"
     TitleWithSourceText = Text.assemble(
         Text("Variable Values\n", style="bold white"),
         Text("(source: "),
@@ -79,25 +157,33 @@ def display_merged_toml_table(config_values: CfgValues, merged_toml_path: str, u
         table.add_column("Type", overflow="fold")
         table.add_column("Constraints", overflow="fold", max_width=40)
         table.add_column("Locations", overflow="fold")
-        for k in sorted(config_values.keys()):
-            v = config_values[k]
+        var_infos = _extract_variable_info(schema_oracle)
+        for var_info in var_infos:
+            artifacts_str = ", ".join(var_info['artifacts'])
+            domain_str = ""#f"{var_info['domain_kind']}: "
+            if var_info['domain_choices'] is not None:
+                domain_str += f"{var_info['domain_choices']}"
+            elif var_info['domain_range_display'] is not None:
+                domain_str += f"{var_info['domain_range_display'][0]} - {var_info['domain_range_display'][1]}"
+            else:
+                domain_str = "*"
             table.add_row(
-                f"{colorize_key(k)}\n{v.meta.toml_path}",
-                f"{colorize_value(v.meta.makefile_type, str(v))}",
-                colorize_value(v.schema_meta.get_type_str()[0], v.schema_meta.get_type_str()[0]),
-                colorize_value(v.schema_meta.get_type_str()[1], v.schema_meta.get_type_str()[1]),
-                v.locations_str(),
+                f"{colorize_key(var_info['var_name'])}\n{var_info['toml_path']}",
+                f"{colorize_value(var_info['parse_type'], str(var_info['value']))}",
+                colorize_value(var_info['parse_type'], var_info['parse_type']),
+                colorize_value(var_info['parse_type'], domain_str),
+                colorize_value("_magenta", artifacts_str),
             )
     else:
         table_options["title"] = TitleText
         table = Table(expand=False, **table_options)
         table.add_column(f"Variable", overflow="fold")
         table.add_column("Value", overflow="fold")
-        for k in sorted(config_values.keys()):
-            v = config_values[k]
+        var_infos = _extract_variable_info(schema_oracle)
+        for var_info in var_infos:
             table.add_row(
-                f"{colorize_key(k)}",
-                f"{colorize_value(v.meta.makefile_type, str(v))}",
+                f"{colorize_key(var_info['var_name'])}\n{var_info['toml_path']}",
+                f"{colorize_value(var_info['display_mk'], str(var_info['value']))}",
             )
     console.print(table)
     console.print()

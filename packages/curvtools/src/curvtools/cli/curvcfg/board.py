@@ -62,11 +62,11 @@ def merge_board_impl(curvctx: CurvContext, board_name: BoardResolvable, device_n
     # debug output
     if verbosity >= 1:
         if merged_board_toml_overwritten:
-            console.print(f"[bright_yellow]wrote:[/bright_yellow] {merged_board_toml_out_path}")
+            console.print(f"[bright_yellow]wrote:[/bright_yellow] {CurvPaths.mk_rel_to_cwd(merged_board_toml_out_path)}")
         else:
-            console.print(f"[green]unchanged:[/green] {merged_board_toml_out_path}")
+            console.print(f"[green]unchanged:[/green] {CurvPaths.mk_rel_to_cwd(merged_board_toml_out_path)}")
         if dep_file_overwritten:
-            console.print(f"[bright_yellow]wrote:[/bright_yellow] {dep_file_out_path}")
+            console.print(f"[bright_yellow]wrote:[/bright_yellow] {CurvPaths.mk_rel_to_cwd(dep_file_out_path)}")
         else:
-            console.print(f"[green]unchanged:[/green] {dep_file_out_path}")
+            console.print(f"[green]unchanged:[/green] {CurvPaths.mk_rel_to_cwd(dep_file_out_path)}")
 

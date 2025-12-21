@@ -10,6 +10,15 @@ from curvtools.cli.curvcfg.lib.util.artifact_emitter import emit_artifacts
 from curvtools.cli.curvcfg.lib.util.config_parsing import schema_oracle_from_merged_toml
 
 
+def _print_artifact_status(path: Path, changed: bool, verbosity: int) -> None:
+    """Print status for a single artifact file."""
+    if verbosity >= 1:
+        if changed:
+            console.print(f"[bright_yellow]wrote:[/bright_yellow] {CurvPaths.mk_rel_to_cwd(path)}")
+        else:
+            console.print(f"[green]unchanged:[/green] {CurvPaths.mk_rel_to_cwd(path)}")
+
+
 def generate_config_artifacts_impl(
     curvctx: CurvContext,
     merged_cfgvars_input_path: Path,
@@ -34,7 +43,7 @@ def generate_config_artifacts_impl(
     cfgvars_mk_out_path = curvpaths["CONFIG_MK"].to_path()
 
     # 3) emit the artifacts
-    emit_artifacts(
+    svpkg_changed, svh_changed, env_changed, mk_changed = emit_artifacts(
         schema_oracle,
         cfgvars_pkg_out_path,
         cfgvars_svh_out_path,
@@ -46,9 +55,11 @@ def generate_config_artifacts_impl(
         env_template=env_template,
     )
 
-    # 4) print success message
-    if verbosity >= 1:
-        console.print(f"[green]Successfully generated configuration artifacts from <{merged_cfgvars_input_path}>[/green]")
+    # 4) print status for each artifact
+    _print_artifact_status(cfgvars_pkg_out_path, svpkg_changed, verbosity)
+    _print_artifact_status(cfgvars_svh_out_path, svh_changed, verbosity)
+    _print_artifact_status(cfgvars_env_out_path, env_changed, verbosity)
+    _print_artifact_status(cfgvars_mk_out_path, mk_changed, verbosity)
 
 
 def generate_board_artifacts_impl(
@@ -75,7 +86,7 @@ def generate_board_artifacts_impl(
     board_mk_out_path = curvpaths["BOARD_MK"].to_path()
 
     # 3) emit the board artifacts
-    emit_artifacts(
+    svpkg_changed, svh_changed, env_changed, mk_changed = emit_artifacts(
         schema_oracle,
         board_pkg_out_path,
         board_svh_out_path,
@@ -87,6 +98,8 @@ def generate_board_artifacts_impl(
         env_template=env_template,
     )
 
-    # 4) print success message
-    if verbosity >= 1:
-        console.print(f"[green]Successfully generated board artifacts from <{merged_board_input_path}>[/green]")
+    # 4) print status for each artifact
+    _print_artifact_status(board_pkg_out_path, svpkg_changed, verbosity)
+    _print_artifact_status(board_svh_out_path, svh_changed, verbosity)
+    _print_artifact_status(board_env_out_path, env_changed, verbosity)
+    _print_artifact_status(board_mk_out_path, mk_changed, verbosity)

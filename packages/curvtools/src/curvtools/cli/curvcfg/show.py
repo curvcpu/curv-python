@@ -3,13 +3,13 @@ import sys
 from typing import Dict, Union
 from curvtools.cli.curvcfg.lib.globals.console import console
 from rich.table import Table
-from curvtools.cli.curvcfg.lib.util import get_config_values
 from curvtools.cli.curvcfg.lib.util.draw_tables import (
     display_merged_toml_table,
     display_profiles_table,
 )
 from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
 from pathlib import Path
+from curvtools.cli.curvcfg.lib.util.config_parsing import SchemaOracle, schema_oracle_from_merged_toml
 
 def show_active_variables_impl(merged_toml_in_path: Path, curvpaths: CurvPaths, verbosity: int,  use_ascii_box: bool = False) -> int:
     """
@@ -22,13 +22,19 @@ def show_active_variables_impl(merged_toml_in_path: Path, curvpaths: CurvPaths, 
         Exit code
     """
 
-    # Get active config values from the build config TOML
-    config_values = get_config_values(merged_toml_in_path, None, is_combined_toml=True)
-
-    # Display the active config values
-    display_merged_toml_table(config_values, CurvPaths.mk_rel_to_cwd(merged_toml_in_path), use_ascii_box=use_ascii_box, verbose_table=verbosity >= 2)
-
-    return 0
+    # Get active config values from the merged toml file
+    if not merged_toml_in_path.exists():
+        console.print(f"File not found: {merged_toml_in_path}", style="bold red")
+        return 1
+    else:
+        schema_oracle: SchemaOracle = schema_oracle_from_merged_toml(merged_toml_in_path)
+        display_merged_toml_table(
+            schema_oracle, 
+            CurvPaths.mk_rel_to_cwd(merged_toml_in_path), 
+            use_ascii_box=use_ascii_box, 
+            verbose_table=verbosity >= 2
+        )
+        return 0
 
 def show_profiles_impl(curvpaths: CurvPaths, use_ascii_box: bool = False) -> int:
     """

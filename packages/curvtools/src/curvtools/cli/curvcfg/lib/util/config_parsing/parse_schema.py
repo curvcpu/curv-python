@@ -560,19 +560,28 @@ class SchemaScalarVar(SchemaBaseVar):
         literal = self.sv_literal(for_macro=False)
         return f"localparam {sv_type} {self.var_name} = {literal};"
 
-    def mk_display(self) -> str:
+    def mk_display(self, value: Any = None) -> str:
         """
         Return Python-style formatted string per display.mk.
 
+        Args:
+            value: Optional value to format. If None, uses self.value (or default).
+                   If provided, will be coerced to the appropriate type before formatting.
+
         Cases:
             - If display.mk contains "{...}", treat as format string and call
-              display.mk.format(value=self.value).
+              display.mk.format(value=v).
             - Otherwise, some simple keywords:
                 "int"    -> decimal int string
                 "string" -> str(...)
-            - Fallback: str(self.value)
+            - Fallback: str(v)
         """
-        v = self._ensure_value()
+        if value is None:
+            v = self._ensure_value()
+        else:
+            # Coerce the provided value to ensure it's the right type
+            v = self._coerce(value)
+        
         mk = self._display_mk.strip()
         if not mk:
             return str(v)
@@ -584,12 +593,12 @@ class SchemaScalarVar(SchemaBaseVar):
                 # fall through to simple handling
                 pass
 
-        if mk == "int":
+        if mk == "int" or mk == "uint":
             return str(int(v))
-        if mk == "string":
+        elif mk == "string":
             return str(v)
-
-        return str(v)
+        else:
+            return str(v)
 
     def __repr__(self) -> str:
         from_str = "constant_value" if self.value_source == ValueSource.CONSTANT else f"{self.schema_filepath.as_posix()}@{self.toml_path}"

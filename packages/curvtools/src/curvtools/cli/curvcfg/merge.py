@@ -64,10 +64,10 @@ def merged_cfgvars_impl(
     # debug output
     if verbosity >= 1:
         if merged_cfgvars_overwritten:
-            console.print(f"[bright_yellow]wrote:[/bright_yellow] {merged_cfgvars_out_path}")
+            console.print(f"[bright_yellow]wrote:[/bright_yellow] {CurvPaths.mk_rel_to_cwd(merged_cfgvars_out_path)}")
         else:
-            console.print(f"[green]unchanged:[/green] {merged_cfgvars_out_path}")
+            console.print(f"[green]unchanged:[/green] {CurvPaths.mk_rel_to_cwd(merged_cfgvars_out_path)}")
         if dep_file_overwritten:
-            console.print(f"[bright_yellow]wrote:[/bright_yellow] {dep_file_out_path}")
+            console.print(f"[bright_yellow]wrote:[/bright_yellow] {CurvPaths.mk_rel_to_cwd(dep_file_out_path)}")
         else:
-            console.print(f"[green]unchanged:[/green] {dep_file_out_path}")
+            console.print(f"[green]unchanged:[/green] {CurvPaths.mk_rel_to_cwd(dep_file_out_path)}")

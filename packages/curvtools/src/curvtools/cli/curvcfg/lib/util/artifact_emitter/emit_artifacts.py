@@ -1,6 +1,6 @@
 from __future__ import annotations
 from pathlib import Path
-from typing import Optional, Callable
+from typing import Optional, Callable, Tuple
 
 from curvpyutils.file_utils import open_write_iff_change
 from curvtools.cli.curvcfg.lib.util.config_parsing import SchemaOracle
@@ -21,7 +21,7 @@ def emit_artifacts(
     svh_template: Optional[Path] = None,
     mk_template: Optional[Path] = None,
     env_template: Optional[Path] = None,
-) -> None:
+) -> Tuple[bool, bool, bool, bool]:
     """
     Emits the artifacts based on `schema_oracle`, e.g., for cfgvars:
         - curvcfgpkg.sv
@@ -41,38 +41,43 @@ def emit_artifacts(
         svh_template: optional template override for the SystemVerilog include file.
         mk_template: optional template override for the make fragment.
         env_template: optional template override for the environment file.
+
+    Returns:
+        A tuple of 4 bools indicating whether each output file was modified:
+            (svpkg_changed, svh_changed, env_changed, mk_changed)
+        The order matches the order of the output path arguments.
     """
     unresolved = list(schema_oracle.iter_unresolved())
     if unresolved:
         missing = ", ".join(name for name, _ in unresolved)
         print(f"Error: unresolved schema variables: {missing}")
-        return
+        return (False, False, False, False)
 
     for p in (svpkg_out_path, svh_out_path, env_out_path, mk_out_path):
         p.parent.mkdir(parents=True, exist_ok=True)
 
-    _emit_one(
+    svpkg_changed = _emit_one(
         artifact=Artifact.SVPKG,
         schema_oracle=schema_oracle,
         out_path=svpkg_out_path,
         template_path=svpkg_template,
         render_fn=_emit_sv_pkg,
     )
-    _emit_one(
+    svh_changed = _emit_one(
         artifact=Artifact.SVH,
         schema_oracle=schema_oracle,
         out_path=svh_out_path,
         template_path=svh_template,
         render_fn=_emit_svh_defines,
     )
-    _emit_one(
+    env_changed = _emit_one(
         artifact=Artifact.ENV,
         schema_oracle=schema_oracle,
         out_path=env_out_path,
         template_path=env_template,
         render_fn=_emit_env_file,
     )
-    _emit_one(
+    mk_changed = _emit_one(
         artifact=Artifact.MK,
         schema_oracle=schema_oracle,
         out_path=mk_out_path,
@@ -80,25 +85,27 @@ def emit_artifacts(
         render_fn=_emit_makefile,
     )
 
+    return (svpkg_changed, svh_changed, env_changed, mk_changed)
+
 
 def _emit_one(
     artifact: Artifact,
     schema_oracle: SchemaOracle,
     out_path: Path,
     template_path: Optional[Path],
-    render_fn: Callable[[SchemaOracle, Path], None],
-) -> None:
+    render_fn: Callable[[SchemaOracle, Path], bool],
+) -> bool:
     if template_path is not None:
         rendered = render_template_to_str(template_path, schema_oracle)
         cm = open_write_iff_change(out_path, "w")
         with cm as f:
             f.write(rendered)
-        return
+        return cm.changed or False
 
-    render_fn(schema_oracle, out_path)
+    return render_fn(schema_oracle, out_path)
 
 
-def _emit_makefile(schema_oracle: SchemaOracle, out_path: Path) -> None:
+def _emit_makefile(schema_oracle: SchemaOracle, out_path: Path) -> bool:
     guard_name = f"__{out_path.name.replace('.', '_').upper()}__"
     vars_for_mk = schema_oracle.get_vars_for_artifact(Artifact.MK)
 
@@ -112,9 +119,10 @@ def _emit_makefile(schema_oracle: SchemaOracle, out_path: Path) -> None:
             f.write(f"{name} := {var.mk_display()}\n")
         f.write("\n")
         f.write(f"endif # {guard_name}\n")
+    return cm.changed or False
 
 
-def _emit_env_file(schema_oracle: SchemaOracle, out_path: Path) -> None:
+def _emit_env_file(schema_oracle: SchemaOracle, out_path: Path) -> bool:
     vars_for_env = schema_oracle.get_vars_for_artifact(Artifact.ENV)
     cm = open_write_iff_change(out_path, "w")
     with cm as f:
@@ -124,9 +132,10 @@ def _emit_env_file(schema_oracle: SchemaOracle, out_path: Path) -> None:
         for name in sorted(vars_for_env.keys()):
             var = vars_for_env[name]
             f.write(f"{name}={var.mk_display()}\n")
+    return cm.changed or False
 
 
-def _emit_svh_defines(schema_oracle: SchemaOracle, out_path: Path) -> None:
+def _emit_svh_defines(schema_oracle: SchemaOracle, out_path: Path) -> bool:
     vars_for_svh = schema_oracle.get_vars_for_artifact(Artifact.SVH)
     filename = out_path.name.upper().replace(".", "_")
     guard = f"__{filename}__"
@@ -149,9 +158,10 @@ def _emit_svh_defines(schema_oracle: SchemaOracle, out_path: Path) -> None:
                 f.write(f"`define {padding} {lit}\n")
 
         f.write(f"\n`endif // {guard}\n")
+    return cm.changed or False
 
 
-def _emit_sv_pkg(schema_oracle: SchemaOracle, out_path: Path) -> None:
+def _emit_sv_pkg(schema_oracle: SchemaOracle, out_path: Path) -> bool:
     vars_for_pkg = schema_oracle.get_vars_for_artifact(Artifact.SVPKG)
     pkg_name = out_path.stem.lower()
 
@@ -172,3 +182,4 @@ def _emit_sv_pkg(schema_oracle: SchemaOracle, out_path: Path) -> None:
 
         f.write("  // verilator lint_on UNUSEDPARAM\n\n")
         f.write(f"endpackage : {pkg_name}\n")
+    return cm.changed or False

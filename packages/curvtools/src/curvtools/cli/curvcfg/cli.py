@@ -67,7 +67,7 @@ CONTEXT_SETTINGS = {
 }
 
 _TEMPLATE_SUFFIX_TO_KEY = {
-    ".sv.jinja2": "sv_template",
+    ".sv.jinja2": "svpkg_template",
     ".svh.jinja2": "svh_template",
     ".mk.jinja2": "mk_template",
     ".env.jinja2": "env_template",
@@ -335,7 +335,7 @@ def generate_board(curvctx: CurvContext, merged_board_toml: InputMergedBoardToml
             "curv_root_dir": curv_paths.curv_root_dir,
             "build_dir": curvctx.build_dir,
             "merged_board_toml": merged_board_toml_path,
-            "sv_template": templates_by_suffix["sv_template"],
+            "svpkg_template": templates_by_suffix["svpkg_template"],
             "svh_template": templates_by_suffix["svh_template"],
             "mk_template": templates_by_suffix["mk_template"],
             "env_template": templates_by_suffix["env_template"],
@@ -347,7 +347,7 @@ def generate_board(curvctx: CurvContext, merged_board_toml: InputMergedBoardToml
     generate_board_artifacts_impl(
         curvctx,
         merged_board_toml_path,
-        sv_template=templates_by_suffix["sv_template"],
+        svpkg_template=templates_by_suffix["svpkg_template"],
         svh_template=templates_by_suffix["svh_template"],
         mk_template=templates_by_suffix["mk_template"],
         env_template=templates_by_suffix["env_template"],
@@ -454,7 +454,7 @@ def generate_cfgvars(curvctx: CurvContext, merged_config_toml: InputMergedConfig
             "curv_root_dir": curv_paths.curv_root_dir,
             "build_dir": curvctx.build_dir,
             "merged_config_toml": merged_config_toml_path,
-            "sv_template": templates_by_suffix["sv_template"],
+            "svpkg_template": templates_by_suffix["svpkg_template"],
             "svh_template": templates_by_suffix["svh_template"],
             "mk_template": templates_by_suffix["mk_template"],
             "env_template": templates_by_suffix["env_template"],
@@ -466,23 +466,23 @@ def generate_cfgvars(curvctx: CurvContext, merged_config_toml: InputMergedConfig
     generate_config_artifacts_impl(
         curvctx,
         merged_config_toml_path,
-        sv_template=templates_by_suffix["sv_template"],
+        svpkg_template=templates_by_suffix["svpkg_template"],
         svh_template=templates_by_suffix["svh_template"],
         mk_template=templates_by_suffix["mk_template"],
         env_template=templates_by_suffix["env_template"],
     )
 
 
-# ########################
-# # show vars subcommand #
-# ########################
+########################
+# show vars subcommand #
+########################
 
 @show.command(
     name="vars", 
     cls=CurvcfgHelpFormatterCommand, 
     context_settings=CONTEXT_SETTINGS,
     short_help="Show active configuration variables",
-    help=f"Show active configuration variables that apply in the current build environment based on the build directory's <merged_toml> file. If such a file does not exist, then nothing is shown.")
+    help=f"Show active configuration variables from a <merged_toml> file in the build directory")
 @click.option(
     "--merged-toml",
     "merged_toml",
