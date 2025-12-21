@@ -220,7 +220,8 @@ class TestWithFixture:
         ]
 
     def test_merged_schema_vars_toml_file_contents(self):
-        cmp = compare_toml_files(self.merged_schema_vars_toml_file, self.expected_merged_schema_vars_toml_file, show_delta=True, debug_output_silent=True)
+        merged_path = self._make_merged_schema_vars_toml()
+        cmp = compare_toml_files(merged_path, self.expected_merged_schema_vars_toml_file, show_delta=True, debug_output_silent=True)
         assert cmp is True
 
     def test_combined_schema_file_contents(self):
