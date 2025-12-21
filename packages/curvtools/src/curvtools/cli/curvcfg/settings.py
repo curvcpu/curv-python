@@ -17,7 +17,6 @@ PACKAGE_NAME: str = __package__.split(".")[0]  # "curvtools"
 class MergedTomlArtifactPaths:
     merged_cfgvars: Path
     merged_board: Path
-    final_merged_toml: Path
     config_mk_dep: Path
     board_mk_dep: Path
 
@@ -29,9 +28,8 @@ class MergedTomlArtifactPaths:
         if not isinstance(curv_paths, CurvPaths):
             raise ValueError(f"curv_paths is not a CurvPaths object: {type(curv_paths)}")
         return cls(
-            merged_cfgvars=curv_paths["DEFAULT_INTERMEDIATE_MERGED_CFGVARS_TOML_PATH"].to_path(),
-            merged_board=curv_paths["DEFAULT_INTERMEDIATE_MERGED_BOARD_TOML_PATH"].to_path(),
-            final_merged_toml=curv_paths["DEFAULT_MERGED_TOML_PATH"].to_path(),
+            merged_cfgvars=curv_paths["DEFAULT_MERGED_CFGVARS_TOML_PATH"].to_path(),
+            merged_board=curv_paths["DEFAULT_MERGED_BOARD_TOML_PATH"].to_path(),
             config_mk_dep=curv_paths["CONFIG_MK_DEP"].to_path(),
             board_mk_dep=curv_paths["BOARD_MK_DEP"].to_path(),
         )

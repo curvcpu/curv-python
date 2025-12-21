@@ -1,37 +1,17 @@
 from .opts import (
-    build_dir_opt,
-    overlay_opts_for_paths_list,
-    output_dep_opt,
-    merged_toml_input_opt,
-    merged_toml_output_opt,
     verbosity_opts,
     expand_curv_root_dir_vars,
     expand_build_dir_vars,
     shell_complete_curv_root_dir,
-    profile_file_opt,
-    schema_file_opt,
     version_opt,
-    kind_opts,
-    board_device_opts,
 )
 from .default_map import DefaultMapArgs
 
 __all__ = [
     "DefaultMapArgs",
-    "build_dir_opt",
-    "output_dep_opt",
-    "merged_toml_input_opt",
-    "merged_toml_output_opt",
     "verbosity_opts",
     "expand_curv_root_dir_vars",
     "expand_build_dir_vars",
     "shell_complete_curv_root_dir",
-    "profile_file_opt",
-    "schema_file_opt",
-    "overlay_opts_for_paths_list",
-    "profile_file_opt",
-    "schema_file_opt",
     "version_opt",
-    "kind_opts",
-    "board_device_opts",
 ]

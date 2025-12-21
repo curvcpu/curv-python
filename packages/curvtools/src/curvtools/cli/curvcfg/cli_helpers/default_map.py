@@ -17,7 +17,6 @@ class DefaultMapArgs:
     _config_mk_dep: Optional[str] = None
     _merged_board_toml: Optional[str] = None
     _board_mk_dep: Optional[str] = None
-    _merged_toml: Optional[str] = None
 
     @property
     def curvpaths(self) -> CurvPaths:
@@ -25,9 +24,8 @@ class DefaultMapArgs:
     @curvpaths.setter
     def curvpaths(self, value: CurvPaths):
         self._curvpaths = value
-        self._merged_config_toml = self._curvpaths["DEFAULT_INTERMEDIATE_MERGED_CFGVARS_TOML_PATH"].to_str()
-        self._merged_board_toml = self._curvpaths["DEFAULT_INTERMEDIATE_MERGED_BOARD_TOML_PATH"].to_str()
-        self._merged_toml = self._curvpaths["DEFAULT_MERGED_TOML_PATH"].to_str()
+        self._merged_config_toml = self._curvpaths["DEFAULT_MERGED_CFGVARS_TOML_PATH"].to_str()
+        self._merged_board_toml = self._curvpaths["DEFAULT_MERGED_BOARD_TOML_PATH"].to_str()
         self._config_mk_dep = self._curvpaths["CONFIG_MK_DEP"].to_str()
         self._board_mk_dep = self._curvpaths["BOARD_MK_DEP"].to_str()
 
@@ -90,7 +88,7 @@ class DefaultMapArgs:
                 },
                 # curvcfg show vars --merged-toml-in=...
                 "vars": {
-                    "merged_toml_in": self._merged_toml,
+                    "merged_toml_in": self._merged_config_toml,
                 },
             },
         }
