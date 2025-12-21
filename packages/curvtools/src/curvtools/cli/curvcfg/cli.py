@@ -623,6 +623,17 @@ def main(argv: Optional[list[str]] = None) -> int:
     import click
     install(show_locals=True, word_wrap=True, width=get_console_width(), suppress=[click])
 
+    if argv is None:
+        argv = sys.argv[1:]
+
+    # Short-circuit version handling so it works without CURV_ROOT_DIR/CurvPaths
+    if argv and ("--version" in argv or "-V" in argv):
+        try:
+            curvcfg.main(args=argv, standalone_mode=True)
+        except SystemExit as e:
+            return int(e.code)
+        return 0
+
     def _process_early_args(argv: Optional[list[str]] = sys.argv[1:]) -> list[EarlyArg]:
         repo_fallback_curv_root_dir = None
         build_dir_fallback = Path.cwd() / REL_BUILD_DIR_DEFAULT
