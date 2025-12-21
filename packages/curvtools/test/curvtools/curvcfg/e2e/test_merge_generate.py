@@ -68,7 +68,7 @@ def fake_root_dir() -> Path:
 
 @pytest.fixture
 def expected_build_dir() -> Path:
-    return Path(__file__).resolve().parent / "expected" / "build"
+    return Path(__file__).resolve().parent / "expected" / "builddir"
 
 
 @pytest.fixture

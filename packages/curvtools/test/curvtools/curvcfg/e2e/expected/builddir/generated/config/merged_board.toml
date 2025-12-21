@@ -1,0 +1,308 @@
+########################################################
+# Machine-generated file; do not edit
+########################################################
+
+########################################################
+#
+# Configuration section
+#
+########################################################
+
+[arrays.metadata."board.buttons"]
+lpf_name = "buttons"
+
+[arrays.metadata."board.leds"]
+lpf_name = "leds"
+
+[board]
+buttons = [
+  { active_state = 1, name = "B1" },
+  { active_state = 1, name = "B2" },
+  { active_state = 1, name = "UP" },
+  { active_state = 1, name = "DOWN" },
+  { active_state = 1, name = "LEFT" },
+  { active_state = 1, name = "RIGHT" },
+]
+leds = [
+  { name = "RT_RED_LED" },
+  { name = "RT_ORNG_LED" },
+  { name = "RT_GRN_LED" },
+  { name = "RT_BLU_LED" },
+  { name = "LFT_RED_LED" },
+  { name = "LFT_ORNG_LED" },
+  { name = "LFT_GRN_LED" },
+  { name = "LFT_BLU_LED" },
+]
+
+[board.sdram]
+native_addr_width = 13
+native_bank_width = 2
+native_col_width  = 9
+native_data_width = 16
+native_dqm_width  = 2
+native_row_width  = 13
+
+[device.flash]
+chip = "w25q128jv"
+spi  = 4
+
+[device.fpga]
+chip    = "lfe5u-85f"
+chip_id = "0x41113043"
+package = "6bg381c"
+size    = 85
+
+########################################################
+#
+# Schema section
+#
+########################################################
+
+[_schema.arrays.BOARD_BTNS]
+artifacts = [
+  "JINJA2",
+]
+
+[_schema.arrays.BOARD_BTNS._arrayvars.lpf_name.src]
+parse     = "string"
+toml_path = "arrays_metadata.\"board.buttons\".lpf_name"
+
+[_schema.arrays.BOARD_BTNS._vars.active_state.domain]
+choices = [
+  0,
+  1,
+]
+default = 1
+
+[_schema.arrays.BOARD_BTNS._vars.active_state.src]
+parse     = "int"
+toml_path = "active_state"
+
+[_schema.arrays.BOARD_BTNS._vars.name.domain]
+
+[_schema.arrays.BOARD_BTNS._vars.name.src]
+parse     = "string"
+toml_path = "name"
+
+[_schema.arrays.BOARD_BTNS.src]
+parse     = "array[object]"
+toml_path = "board.buttons"
+
+[_schema.arrays.BOARD_LEDS]
+artifacts = [
+  "JINJA2",
+]
+
+[_schema.arrays.BOARD_LEDS._arrayvars.lpf_name.src]
+parse     = "string"
+toml_path = "arrays_metadata.\"board.leds\".lpf_name"
+
+[_schema.arrays.BOARD_LEDS._vars.name.domain]
+
+[_schema.arrays.BOARD_LEDS._vars.name.src]
+parse     = "string"
+toml_path = "name"
+
+[_schema.arrays.BOARD_LEDS.src]
+parse     = "array[object]"
+toml_path = "board.leds"
+
+[_schema.vars.BLD_FLASH_CHIP]
+artifacts = [
+  "MK",
+  "ENV",
+]
+
+[_schema.vars.BLD_FLASH_CHIP.domain]
+choices = [
+  "w25q128jv",
+  "w25q64jv",
+  "w25q32jv",
+  "w25q16jv",
+]
+default = "w25q128jv"
+
+[_schema.vars.BLD_FLASH_CHIP.src]
+parse     = "string"
+toml_path = "device.flash.chip"
+
+[_schema.vars.BLD_FLASH_SPI]
+artifacts = [
+  "MK",
+  "ENV",
+]
+
+[_schema.vars.BLD_FLASH_SPI.domain]
+choices = [
+  1,
+  4,
+]
+default = 1
+
+[_schema.vars.BLD_FLASH_SPI.src]
+parse     = "int"
+toml_path = "device.flash.spi"
+
+[_schema.vars.BLD_FPGA_CHIP]
+artifacts = [
+  "MK",
+  "ENV",
+]
+
+[_schema.vars.BLD_FPGA_CHIP.domain]
+choices = [
+  "lfe5u-12f",
+  "lfe5u-25f",
+  "lfe5u-45f",
+  "lfe5u-85f",
+]
+
+[_schema.vars.BLD_FPGA_CHIP.src]
+parse     = "string"
+toml_path = "device.fpga.chip"
+
+[_schema.vars.BLD_FPGA_CHIP_ID]
+artifacts = [
+  "MK",
+  "ENV",
+]
+
+[_schema.vars.BLD_FPGA_CHIP_ID.display]
+mk = "0x{value:08x}"
+
+[_schema.vars.BLD_FPGA_CHIP_ID.domain]
+choices = [
+  "0x21111043",
+  "0x41111043",
+  "0x41112043",
+  "0x41113043",
+]
+
+[_schema.vars.BLD_FPGA_CHIP_ID.src]
+parse     = "int"
+toml_path = "device.fpga.chip_id"
+
+[_schema.vars.BLD_FPGA_PACKAGE]
+artifacts = [
+  "MK",
+  "ENV",
+]
+
+[_schema.vars.BLD_FPGA_PACKAGE.domain]
+choices = [
+  "6bg381c",
+]
+default = "6bg381c"
+
+[_schema.vars.BLD_FPGA_PACKAGE.src]
+parse     = "string"
+toml_path = "device.fpga.package"
+
+[_schema.vars.BLD_FPGA_SIZE]
+artifacts = [
+  "MK",
+  "ENV",
+]
+
+[_schema.vars.BLD_FPGA_SIZE.domain]
+choices = [
+  12,
+  25,
+  45,
+  85,
+]
+
+[_schema.vars.BLD_FPGA_SIZE.src]
+parse     = "int"
+toml_path = "device.fpga.size"
+
+[_schema.vars.SDRAM_NATIVE_ADDR_WIDTH]
+artifacts = [
+  "SVH",
+]
+
+[_schema.vars.SDRAM_NATIVE_ADDR_WIDTH.domain]
+choices = [
+  13,
+]
+default = 13
+
+[_schema.vars.SDRAM_NATIVE_ADDR_WIDTH.src]
+parse     = "int"
+toml_path = "board.sdram.native_addr_width"
+
+[_schema.vars.SDRAM_NATIVE_BANK_WIDTH]
+artifacts = [
+  "SVH",
+]
+
+[_schema.vars.SDRAM_NATIVE_BANK_WIDTH.domain]
+choices = [
+  2,
+]
+default = 2
+
+[_schema.vars.SDRAM_NATIVE_BANK_WIDTH.src]
+parse     = "int"
+toml_path = "board.sdram.native_bank_width"
+
+[_schema.vars.SDRAM_NATIVE_COL_WIDTH]
+artifacts = [
+  "SVH",
+]
+
+[_schema.vars.SDRAM_NATIVE_COL_WIDTH.domain]
+choices = [
+  9,
+]
+default = 9
+
+[_schema.vars.SDRAM_NATIVE_COL_WIDTH.src]
+parse     = "int"
+toml_path = "board.sdram.native_col_width"
+
+[_schema.vars.SDRAM_NATIVE_DATA_WIDTH]
+artifacts = [
+  "SVH",
+]
+
+[_schema.vars.SDRAM_NATIVE_DATA_WIDTH.domain]
+choices = [
+  16,
+]
+default = 16
+
+[_schema.vars.SDRAM_NATIVE_DATA_WIDTH.src]
+parse     = "int"
+toml_path = "board.sdram.native_data_width"
+
+[_schema.vars.SDRAM_NATIVE_DQM_WIDTH]
+artifacts = [
+  "SVH",
+]
+
+[_schema.vars.SDRAM_NATIVE_DQM_WIDTH.domain]
+choices = [
+  2,
+]
+default = 2
+
+[_schema.vars.SDRAM_NATIVE_DQM_WIDTH.src]
+parse     = "int"
+toml_path = "board.sdram.native_dqm_width"
+
+[_schema.vars.SDRAM_NATIVE_ROW_WIDTH]
+artifacts = [
+  "SVH",
+]
+
+[_schema.vars.SDRAM_NATIVE_ROW_WIDTH.domain]
+choices = [
+  13,
+]
+default = 13
+
+[_schema.vars.SDRAM_NATIVE_ROW_WIDTH.src]
+parse     = "int"
+toml_path = "board.sdram.native_row_width"
+

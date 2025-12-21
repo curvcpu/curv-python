@@ -1,0 +1,572 @@
+########################################################
+# Machine-generated file; do not edit
+########################################################
+
+########################################################
+#
+# Configuration section
+#
+########################################################
+
+description = "Default configuration for the Curv RISCV SoC\n"
+
+[cache]
+sets                       = 4
+tags_have_valid_dirty_bits = 0
+tags_in_lutram             = 1
+ways                       = 2
+
+[cache.cacheable_addresses]
+width = 27
+
+[cache.cachelines]
+initially_valid = 1
+latency         = 0
+num_words       = 16
+
+[cache.hex_files]
+base_addr = "0x00000100"
+
+[cache.hex_files.src]
+name = "count1234"
+type = "asm"
+
+[cache.hex_files.subdirs]
+cachelines = "cachelines"
+dcache     = "dcache"
+icache     = "icache"
+tagram     = "tagram"
+
+[cpu]
+mtvec_base   = "0x0100_0000"
+reset_vector = "0x0000_0100"
+xlen         = 32
+
+[cpu.regfile]
+use_lutram = 1
+
+[tb.cache.dcache]
+simulate_latency = 0
+
+[tb.cache.icache]
+simulate_latency = 0
+
+########################################################
+#
+# Schema section
+#
+########################################################
+
+[_schema.vars.CFG_CACHE_CACHEABLE_ADDRESSES_WIDTH]
+artifacts = [
+  "MK",
+  "SVPKG",
+  "ENV",
+]
+
+[_schema.vars.CFG_CACHE_CACHEABLE_ADDRESSES_WIDTH.display]
+mk = "int"
+sv = "int"
+
+[_schema.vars.CFG_CACHE_CACHEABLE_ADDRESSES_WIDTH.domain]
+default = 10
+range = [
+  10,
+  32,
+]
+
+[_schema.vars.CFG_CACHE_CACHEABLE_ADDRESSES_WIDTH.src]
+parse     = "int"
+toml_path = "cache.cacheable_addresses.width"
+
+[_schema.vars.CFG_CACHE_CACHELINES_INITIALLY_VALID]
+artifacts = [
+  "MK",
+  "SVPKG",
+  "ENV",
+]
+
+[_schema.vars.CFG_CACHE_CACHELINES_INITIALLY_VALID.display]
+mk = "int"
+sv = "int"
+
+[_schema.vars.CFG_CACHE_CACHELINES_INITIALLY_VALID.domain]
+choices = [
+  0,
+  1,
+]
+default = 0
+
+[_schema.vars.CFG_CACHE_CACHELINES_INITIALLY_VALID.src]
+parse     = "int"
+toml_path = "cache.cachelines.initially_valid"
+
+[_schema.vars.CFG_CACHE_CACHELINES_LATENCY]
+artifacts = [
+  "SVPKG",
+  "MK",
+  "ENV",
+  "SVH",
+]
+
+[_schema.vars.CFG_CACHE_CACHELINES_LATENCY.display]
+mk = "int"
+sv = "int"
+
+[_schema.vars.CFG_CACHE_CACHELINES_LATENCY.domain]
+choices = [
+  0,
+  1,
+  2,
+]
+default = 0
+
+[_schema.vars.CFG_CACHE_CACHELINES_LATENCY.src]
+parse     = "int"
+toml_path = "cache.cachelines.latency"
+
+[_schema.vars.CFG_CACHE_CACHELINES_NUM_WORDS]
+artifacts = [
+  "MK",
+  "SVPKG",
+  "ENV",
+]
+
+[_schema.vars.CFG_CACHE_CACHELINES_NUM_WORDS.display]
+mk = "int"
+sv = "int"
+
+[_schema.vars.CFG_CACHE_CACHELINES_NUM_WORDS.domain]
+choices = [
+  16,
+]
+default = 16
+
+[_schema.vars.CFG_CACHE_CACHELINES_NUM_WORDS.src]
+parse     = "int"
+toml_path = "cache.cachelines.num_words"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_BASE_ADDR]
+artifacts = [
+  "MK",
+  "SVPKG",
+  "ENV",
+]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_BASE_ADDR.display]
+mk = "0x{value:08x}"
+sv = "logic [31:0]"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_BASE_ADDR.domain]
+default = 0
+range = [
+  0,
+  4294967292,
+]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_BASE_ADDR.src]
+parse     = "int"
+toml_path = "cache.hex_files.base_addr"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_NAME]
+artifacts = [
+  "MK",
+  "ENV",
+]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_NAME.display]
+mk = "string"
+sv = "string"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_NAME.domain]
+choices = [
+  "count1234",
+  "jumps",
+  "jumps-small",
+  "pic",
+  "auipc-bypass",
+  "jal-jalr",
+  "branches",
+  "brcomp-haz",
+  "load-store",
+]
+default = "count1234"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_NAME.src]
+parse     = "string"
+toml_path = "cache.hex_files.src.name"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_TYPE]
+artifacts = [
+  "MK",
+  "ENV",
+]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_TYPE.display]
+mk = "string"
+sv = "string"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_TYPE.domain]
+choices = [
+  "asm",
+  "c",
+]
+default = "asm"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SRC_TYPE.src]
+parse     = "string"
+toml_path = "cache.hex_files.src.type"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_CACHELINES]
+artifacts = [
+  "ENV",
+]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_CACHELINES.display]
+mk = "string"
+sv = "string"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_CACHELINES.domain]
+default = "cachelines"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_CACHELINES.src]
+parse     = "string"
+toml_path = "cache.hex_files.subdirs.cachelines"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_DCACHE]
+artifacts = [
+  "ENV",
+]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_DCACHE.display]
+mk = "string"
+sv = "string"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_DCACHE.domain]
+default = "dcache"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_DCACHE.src]
+parse     = "string"
+toml_path = "cache.hex_files.subdirs.dcache"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_ICACHE]
+artifacts = [
+  "ENV",
+]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_ICACHE.display]
+mk = "string"
+sv = "string"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_ICACHE.domain]
+default = "icache"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_ICACHE.src]
+parse     = "string"
+toml_path = "cache.hex_files.subdirs.icache"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_TAGRAM]
+artifacts = [
+  "ENV",
+]
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_TAGRAM.display]
+mk = "string"
+sv = "string"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_TAGRAM.domain]
+default = "tagram"
+
+[_schema.vars.CFG_CACHE_HEX_FILES_SUBDIRS_TAGRAM.src]
+parse     = "string"
+toml_path = "cache.hex_files.subdirs.tagram"
+
+[_schema.vars.CFG_CACHE_SETS]
+artifacts = [
+  "MK",
+  "SVPKG",
+  "ENV",
+]
+
+[_schema.vars.CFG_CACHE_SETS.display]
+mk = "int"
+sv = "int"
+
+[_schema.vars.CFG_CACHE_SETS.domain]
+choices = [
+  4,
+  8,
+  16,
+  32,
+  64,
+  128,
+]
+default = 4
+
+[_schema.vars.CFG_CACHE_SETS.src]
+parse     = "int"
+toml_path = "cache.sets"
+
+[_schema.vars.CFG_CACHE_TAGS_HAVE_VALID_DIRTY_BITS]
+artifacts = [
+  "MK",
+  "SVPKG",
+  "ENV",
+]
+
+[_schema.vars.CFG_CACHE_TAGS_HAVE_VALID_DIRTY_BITS.display]
+mk = "int"
+sv = "int"
+
+[_schema.vars.CFG_CACHE_TAGS_HAVE_VALID_DIRTY_BITS.domain]
+choices = [
+  0,
+  1,
+]
+default = 0
+
+[_schema.vars.CFG_CACHE_TAGS_HAVE_VALID_DIRTY_BITS.src]
+parse     = "int"
+toml_path = "cache.tags_have_valid_dirty_bits"
+
+[_schema.vars.CFG_CACHE_TAGS_IN_LUTRAM]
+artifacts = [
+  "MK",
+  "SVPKG",
+  "ENV",
+  "SVH",
+]
+
+[_schema.vars.CFG_CACHE_TAGS_IN_LUTRAM.display]
+mk = "int"
+sv = "int"
+
+[_schema.vars.CFG_CACHE_TAGS_IN_LUTRAM.domain]
+choices = [
+  0,
+  1,
+]
+default = 1
+
+[_schema.vars.CFG_CACHE_TAGS_IN_LUTRAM.src]
+parse     = "int"
+toml_path = "cache.tags_in_lutram"
+
+[_schema.vars.CFG_CACHE_WAYS]
+artifacts = [
+  "MK",
+  "SVPKG",
+  "ENV",
+]
+
+[_schema.vars.CFG_CACHE_WAYS.display]
+mk = "int"
+sv = "int"
+
+[_schema.vars.CFG_CACHE_WAYS.domain]
+choices = [
+  2,
+]
+default = 2
+
+[_schema.vars.CFG_CACHE_WAYS.src]
+parse     = "int"
+toml_path = "cache.ways"
+
+[_schema.vars.CFG_CPU_MTVEC_BASE]
+artifacts = [
+  "SVPKG",
+  "ENV",
+]
+
+[_schema.vars.CFG_CPU_MTVEC_BASE.display]
+mk = "0x{value:08x}"
+sv = "logic [31:0]"
+
+[_schema.vars.CFG_CPU_MTVEC_BASE.domain]
+default = 0
+range = [
+  0,
+  4294967292,
+]
+
+[_schema.vars.CFG_CPU_MTVEC_BASE.src]
+parse     = "uint"
+toml_path = "cpu.mtvec_base"
+
+[_schema.vars.CFG_CPU_RESET_VECTOR]
+artifacts = [
+  "MK",
+  "SVPKG",
+  "ENV",
+]
+
+[_schema.vars.CFG_CPU_RESET_VECTOR.display]
+mk = "0x{value:08x}"
+sv = "logic [31:0]"
+
+[_schema.vars.CFG_CPU_RESET_VECTOR.domain]
+default = 0
+range = [
+  0,
+  4294967292,
+]
+
+[_schema.vars.CFG_CPU_RESET_VECTOR.src]
+parse     = "uint"
+toml_path = "cpu.reset_vector"
+
+[_schema.vars.CFG_CPU_XLEN]
+artifacts = [
+  "MK",
+  "SVPKG",
+  "ENV",
+]
+
+[_schema.vars.CFG_CPU_XLEN.display]
+mk = "int"
+sv = "int"
+
+[_schema.vars.CFG_CPU_XLEN.domain]
+choices = [
+  32,
+  64,
+]
+default = 32
+
+[_schema.vars.CFG_CPU_XLEN.src]
+parse     = "int"
+toml_path = "cpu.xlen"
+
+[_schema.vars.CFG_REGFILE_USE_LUTRAM]
+artifacts = [
+  "SVPKG",
+]
+
+[_schema.vars.CFG_REGFILE_USE_LUTRAM.display]
+mk = "int"
+sv = "int"
+
+[_schema.vars.CFG_REGFILE_USE_LUTRAM.domain]
+choices = [
+  0,
+  1,
+]
+default = 1
+
+[_schema.vars.CFG_REGFILE_USE_LUTRAM.src]
+parse     = "int"
+toml_path = "cpu.regfile.use_lutram"
+
+[_schema.vars.CFG_TB_CACHE_DCACHE_SIMULATE_LATENCY]
+artifacts = [
+  "SVPKG",
+  "MK",
+  "ENV",
+]
+
+[_schema.vars.CFG_TB_CACHE_DCACHE_SIMULATE_LATENCY.display]
+mk = "int"
+sv = "int"
+
+[_schema.vars.CFG_TB_CACHE_DCACHE_SIMULATE_LATENCY.domain]
+choices = [
+  0,
+  1,
+]
+default = 0
+
+[_schema.vars.CFG_TB_CACHE_DCACHE_SIMULATE_LATENCY.src]
+parse     = "int"
+toml_path = "tb.cache.dcache.simulate_latency"
+
+[_schema.vars.CFG_TB_CACHE_ICACHE_SIMULATE_LATENCY]
+artifacts = [
+  "SVPKG",
+  "MK",
+  "ENV",
+]
+
+[_schema.vars.CFG_TB_CACHE_ICACHE_SIMULATE_LATENCY.display]
+mk = "int"
+sv = "int"
+
+[_schema.vars.CFG_TB_CACHE_ICACHE_SIMULATE_LATENCY.domain]
+choices = [
+  0,
+  1,
+]
+default = 0
+
+[_schema.vars.CFG_TB_CACHE_ICACHE_SIMULATE_LATENCY.src]
+parse     = "int"
+toml_path = "tb.cache.icache.simulate_latency"
+
+[_schema.vars.CFG_TB_RISCVCPU_DISASM_IMM_FORMAT]
+artifacts = [
+  "MK",
+]
+
+[_schema.vars.CFG_TB_RISCVCPU_DISASM_IMM_FORMAT.display]
+mk = "string"
+sv = "string"
+
+[_schema.vars.CFG_TB_RISCVCPU_DISASM_IMM_FORMAT.domain]
+choices = [
+  "do",
+  "xo",
+]
+default = "do"
+
+[_schema.vars.CFG_TB_RISCVCPU_DISASM_IMM_FORMAT.src]
+parse     = "string"
+toml_path = "tb.riscvcpu.disasm.imm_format"
+
+[_schema.vars.CFG_TB_RISCVCPU_FINAL_VALIDATOR_TEST]
+artifacts = [
+  "MK",
+]
+
+[_schema.vars.CFG_TB_RISCVCPU_FINAL_VALIDATOR_TEST.display]
+mk = "string"
+sv = "string"
+
+[_schema.vars.CFG_TB_RISCVCPU_FINAL_VALIDATOR_TEST.domain]
+choices = [
+  "none",
+  "count1234",
+  "jumps",
+  "jumps-small",
+  "pic",
+  "auipc-bypass",
+  "jal-jalr",
+  "branches",
+  "brcomp-haz",
+  "load-store",
+]
+default = "none"
+
+[_schema.vars.CFG_TB_RISCVCPU_FINAL_VALIDATOR_TEST.src]
+parse     = "string"
+toml_path = "tb.riscvcpu.final_validator_test"
+
+[_schema.vars.CFG_TB_RISCVCPU_NUM_INSTRUCTIONS_TO_RUN]
+artifacts = [
+  "MK",
+]
+
+[_schema.vars.CFG_TB_RISCVCPU_NUM_INSTRUCTIONS_TO_RUN.display]
+mk = "int"
+sv = "int"
+
+[_schema.vars.CFG_TB_RISCVCPU_NUM_INSTRUCTIONS_TO_RUN.domain]
+default = 100
+range = [
+  1,
+  100000,
+]
+
+[_schema.vars.CFG_TB_RISCVCPU_NUM_INSTRUCTIONS_TO_RUN.src]
+parse     = "int"
+toml_path = "tb.riscvcpu.num_instructions_to_run"
+
