@@ -4,8 +4,8 @@
 package boardpkg;
 
     // used by top module's port definitions
-    localparam int LEDS_COUNT = 8; // lpf_name = None
-    localparam int BTN_COUNT  = 6; // lpf_name = None
+    localparam int LEDS_COUNT = 8; // lpf_name = leds
+    localparam int BTN_COUNT  = 6; // lpf_name = buttons
 
     typedef enum logic [$clog2(BTN_COUNT+1)-1:0] {
         B1 = 0,

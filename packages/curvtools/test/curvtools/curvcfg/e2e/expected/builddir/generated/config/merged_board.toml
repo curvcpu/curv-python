@@ -65,7 +65,7 @@ artifacts = [
 
 [_schema.arrays.BOARD_BTNS._arrayvars.lpf_name.src]
 parse     = "string"
-toml_path = "arrays_metadata.\"board.buttons\".lpf_name"
+toml_path = "arrays.metadata.\"board.buttons\".lpf_name"
 
 [_schema.arrays.BOARD_BTNS._vars.active_state.domain]
 choices = [
@@ -95,7 +95,7 @@ artifacts = [
 
 [_schema.arrays.BOARD_LEDS._arrayvars.lpf_name.src]
 parse     = "string"
-toml_path = "arrays_metadata.\"board.leds\".lpf_name"
+toml_path = "arrays.metadata.\"board.leds\".lpf_name"
 
 [_schema.arrays.BOARD_LEDS._vars.name.domain]
 

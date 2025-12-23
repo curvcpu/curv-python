@@ -19,7 +19,7 @@ artifacts = ["JINJA2"]
 
 # class variables are fields that are the same on all elements in the array of objects;
 [_schema.arrays.BOARD_LEDS._arrayvars.lpf_name]
-src = { toml_path = "arrays_metadata.\"board.leds\".lpf_name", parse="string" }
+src = { toml_path = "arrays.metadata.\"board.leds\".lpf_name", parse="string" }
 # domain not allowed on class variables
 # display not allowed on class variables
 # artifacts not allowed at the field level.
@@ -43,7 +43,7 @@ src = { toml_path = "board.buttons", parse="array[object]" }
 artifacts = ["JINJA2"]
 
 [_schema.arrays.BOARD_BTNS._arrayvars.lpf_name]
-src = { toml_path = "arrays_metadata.\"board.buttons\".lpf_name", parse="string" }
+src = { toml_path = "arrays.metadata.\"board.buttons\".lpf_name", parse="string" }
 
 [_schema.arrays.BOARD_BTNS._vars.name]
 src = { toml_path = "name", parse="string" }
