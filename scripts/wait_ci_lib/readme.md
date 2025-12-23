@@ -8,7 +8,7 @@ Here is how test data is created.
   - Start a capture that waits for the next CI run to file:
   
     ```sh
-    $ scripts/wait_ci_lib/gh/gh_api.py $(scripts/get_gh_run_id_for_last_commit.sh 2>/dev/null) --capture-mode=capture-json --capture-path=scripts/wait_ci_lib/test/test_vectors/captures/
+    $ scripts/wait_ci_lib/gh/gh_api.py $(scripts/get-current-ci.sh 2>/dev/null) --capture-mode=capture-json --capture-path=scripts/wait_ci_lib/test/test_vectors/captures/
     ```
   - In another terminal, push something to the repo that will trigger a CI run (e.g., `git commit -m "test" && git push`)
 
@@ -25,7 +25,7 @@ Here is how test data is created.
   - You can now test the GhRun and GhJob classes by running:
 
     ```sh
-    $ scripts/wait_ci_lib/gh_run.py scripts/wait_ci_lib/test_vectors/captures/gh_run_19322111192_capture.json
+    $ scripts/wait_ci_lib/gh/gh_run.py scripts/wait_ci_lib/test/test_vectors/captures/gh_run_19322111192_capture.json
     ```
 
   - You should see the status of the GhRun object being printed to your console along with the timestamps of each JSON response.  The times are floats representing seconds since the start of the capture.

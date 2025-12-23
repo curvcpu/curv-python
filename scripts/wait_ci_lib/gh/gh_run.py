@@ -1,3 +1,5 @@
+#!/usr/bin/env -S uv run --script --all-packages
+
 """
 This module provides a class for constructing GhRun and GhJob objects from GitHub 
 Actions run and jobs JSON, and for updating the GhRun object with new GhJob objects.
