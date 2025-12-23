@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import Union, Optional, Dict, List
-from curvtools.cli.curvcfg.lib.util.cfgvalue import CfgValues
 from rich.padding import Padding, PaddingDimensions
 from rich.panel import Panel
 from rich.box import Box, ASCII_DOUBLE_HEAD, ROUNDED, ASCII2, SIMPLE, MINIMAL_DOUBLE_HEAD, MINIMAL, MINIMAL_HEAVY_HEAD
