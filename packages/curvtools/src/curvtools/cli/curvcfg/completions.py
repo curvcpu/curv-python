@@ -3,7 +3,7 @@ import shutil
 import subprocess
 import click
 from typing import Optional, Union, Dict
-from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
+from curvtools.cli.curvcfg.lib.curv_paths.curvcontext import CurvContext
 
 def infer_shell_from_env() -> Optional[str]:
     shell_path = os.environ.get("SHELL", "")
@@ -58,24 +58,20 @@ def determine_program_name(command_path: Optional[str], info_name: Optional[str]
         return info_name
     return default_prog
 
-def completions(completions_args: CurvCliArgs, ctx_obj: dict, prog_name: str) -> int:
-    install = completions_args.get("install", False)
-    install_path = completions_args.get("install_path", None)
-    shell = completions_args.get("shell", None)
-    
+def completions(completions_install: bool, completions_install_path: Optional[str], completions_shell: Optional[str], curvctx: CurvContext, prog_name: str) -> int:
     # Determine shell and program name
-    detected_shell = shell or infer_shell_from_env() or "bash"
+    detected_shell = completions_shell or infer_shell_from_env() or "bash"
     try:
         script = generate_completion_script(prog_name, detected_shell)
     except Exception as exc:
         raise click.ClickException(f"Failed to generate completion script via {prog_name}: {exc}")
-    if not install:
+    if not completions_install:
         # Print to stdout so user can eval or redirect
         click.echo(script, nl=False)
         return 0
 
     # Install to path
-    target_path = install_path or default_install_path(detected_shell, prog_name)
+    target_path = completions_install_path or default_install_path(detected_shell, prog_name)
     try:
         install_completion_script(script, target_path)
     except PermissionError as exc:
