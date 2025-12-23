@@ -4,22 +4,18 @@ from typing import Dict, Union, Optional, Any
 from curvtools.cli.curvcfg.lib.globals.console import console
 from curvpyutils.file_utils.repo_utils import get_git_repo_root
 from dotenv import dotenv_values
-from curvtools.cli.curvcfg.lib.globals.types import CurvCliArgs
 from click import Context
 from click.core import ParameterSource
 from curvtools.cli.curvcfg.lib.globals.constants import PATHS_RAW_ENV_FILE_REL_PATH
 import inspect
-from curvtools.cli.curvcfg.lib.util import get_config_values
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
 from .curvpath import CurvPath
-# from .curvcontext import CurvContext
-from ..util.cfgvalue import CfgValues, CfgValue
 
 curvpaths: Optional[Dict[str, CurvPath]] = None
 _curvroot_dir_source: Optional[ParameterSource] = None
 
 class CurvPaths(dict[str, CurvPath]):
-    def __init__(self, curv_root_dir: str|Path, build_dir: Optional[str] = None, profile: Optional[str] = None, board: Optional[str] = None, device: Optional[str] = None, merged_toml: Optional[FsPathType | dict[str, Any]]= None):
+    def __init__(self, curv_root_dir: str|Path, build_dir: Optional[str] = None, profile: Optional[str] = None, board: Optional[str] = None, device: Optional[str] = None):
         super().__init__()
         self.curv_root_dir = Path(curv_root_dir).resolve() if curv_root_dir is not None else None
         self.env_file = self.curv_root_dir / PATHS_RAW_ENV_FILE_REL_PATH
@@ -27,17 +23,6 @@ class CurvPaths(dict[str, CurvPath]):
         self._profile = profile
         self._board = board
         self._device = device
-        self._cfg_values = None
-        if merged_toml is not None:
-            if isinstance(merged_toml, dict[str, CfgValue]):
-                self._cfg_values = CfgValues(vals=merged_toml)
-            elif isinstance(merged_toml, (str, Path, FsPathType, dict[str, Any])):
-                self._cfg_values = get_config_values(
-                    config=merged_toml, 
-                    schema=None, 
-                    is_combined_toml=True)
-            else:
-                raise ValueError(f"merged_toml must be a dictionary of CfgValue objects, a string, a path, or a FsPathType, but got {type(merged_toml)}")
         self._refresh_from_path_env_file()
 
     @property
@@ -61,14 +46,6 @@ class CurvPaths(dict[str, CurvPath]):
     def device(self, value: str):
         self.update_and_refresh(device=value)
 
-    @property
-    def merged_toml(self) -> Optional[FsPathType | dict[str, Any]]:
-        return self._cfg_values
-    @merged_toml.setter
-    def merged_toml(self, value: Optional[FsPathType | dict[str, Any]]):
-        self.update_and_refresh(merged_toml=value)
-
-
     def _refresh_from_path_env_file(self):
         """
         Read a path_raw.env file and return a dictionary of the variables with their values interpreted where possible.
@@ -77,16 +54,13 @@ class CurvPaths(dict[str, CurvPath]):
         env_values = dotenv_values(self.env_file)
 
         # now replace and $(VAR_NAME) with the value of VAR_NAME
-        replacement_vals = { 
-            'PROFILE': self._profile, 
-            'BOARD': self._board, 
+        replacement_vals = {
+            'PROFILE': self._profile,
+            'BOARD': self._board,
             'DEVICE': self._device,
-            'BUILD_DIR': self.build_dir, 
+            'BUILD_DIR': self.build_dir,
             'CURV_ROOT_DIR': self.curv_root_dir,
         }
-        if self._cfg_values is not None:
-            for k, v in self._cfg_values.items():
-                replacement_vals[k] = str(v)
         self.clear()
         for k, v in env_values.items():
             if v is None:
@@ -94,13 +68,12 @@ class CurvPaths(dict[str, CurvPath]):
             if ".." in v:
                 v = (Path(v).resolve()).as_posix()
             new_value = CurvPath(
-                path=v, 
-                PROFILE=self._profile, 
-                BOARD=self._board, 
+                path=v,
+                PROFILE=self._profile,
+                BOARD=self._board,
                 DEVICE=self._device,
-                BUILD_DIR=self.build_dir, 
-                CURV_ROOT_DIR=self.curv_root_dir, 
-                cfgvalues=self._cfg_values,
+                BUILD_DIR=self.build_dir,
+                CURV_ROOT_DIR=self.curv_root_dir,
                 uninterpolated_value_info=(
                     env_values_uninterpolated.get(k, None),
                     env_values_uninterpolated
@@ -108,23 +81,15 @@ class CurvPaths(dict[str, CurvPath]):
             )
             self[k] = new_value
     
-    def update_and_refresh(self, profile: Optional[str] = None, board: Optional[str] = None, device: Optional[str] = None, build_dir: Optional[str] = None, curv_root_dir: Optional[str] = None, merged_toml: Optional[FsPathType | dict[str, Any]] = None) -> None:
+    def update_and_refresh(self, profile: Optional[str] = None, board: Optional[str] = None, device: Optional[str] = None, build_dir: Optional[str] = None, curv_root_dir: Optional[str] = None) -> None:
         """
         Update the paths and re-read the path_raw.env file.
         """
-        self._profile = profile if (profile is not None and self._profile is None) else self._profile 
-        self._board = board if (board is not None and self._board is None) else self._board 
+        self._profile = profile if (profile is not None and self._profile is None) else self._profile
+        self._board = board if (board is not None and self._board is None) else self._board
         self._device = device if (device is not None and self._device is None) else self._device
         self.build_dir = Path(build_dir).resolve() if (build_dir is not None and self.build_dir is None) else self.build_dir
         self.curv_root_dir = Path(curv_root_dir).resolve() if (curv_root_dir is not None and self.curv_root_dir is None) else self.curv_root_dir
-        if merged_toml is not None and self._cfg_values is None:
-            if isinstance(merged_toml, dict[str, CfgValue]):
-                self._cfg_values.update(merged_toml)
-            elif isinstance(merged_toml, (str, Path, FsPathType)):
-                self._cfg_values.update(get_config_values(
-                    config=merged_toml, 
-                    schema=None, 
-                    is_combined_toml=True))
         self._refresh_from_path_env_file()
 
     def __str__(self):
@@ -226,13 +191,10 @@ def get_curv_paths(ctx: Optional[Context] = None, curv_root_dir: Optional[str] =
                     kwargs['board'] = ctx.params.get("board", None)
                 if 'device' in ctx.obj and ctx.obj['device'] is None:
                     kwargs['device'] = ctx.params.get("device", None)
-                if 'merged_toml' in ctx.obj and ctx.obj['merged_toml'] is None:
-                    kwargs['merged_toml'] = ctx.params.get("merged_toml", None)
             else:
                 kwargs['profile'] = ctx.params.get("profile", None)
                 kwargs['board'] = ctx.params.get("board", None)
                 kwargs['device'] = ctx.params.get("device", None)
-                kwargs['merged_toml'] = ctx.params.get("merged_toml", None)
         if curvpaths is None:
             curvpaths = CurvPaths(**kwargs)
         else:

@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from curvtools.cli.curvcfg.cli_helpers.paramtypes.profile import Profile
     from curvtools.cli.curvcfg.cli_helpers.paramtypes.board import Board
     from curvtools.cli.curvcfg.cli_helpers.paramtypes.device import Device
-    from curvtools.cli.curvcfg.cli_helpers.paramtypes.merged_toml import MergedToml
 
 @dataclass
 class CurvContext:
@@ -20,7 +19,6 @@ class CurvContext:
     profile:       Optional[Profile]       = None
     board:         Optional[Board]         = None
     device:        Optional[Device]        = None
-    merged_toml:   Optional[MergedToml]    = None
 
     curvpaths:     Optional[CurvPaths]     = None
 

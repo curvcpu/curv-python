@@ -5,14 +5,13 @@ import os
 from .replace_funcs import match_vars, replace_vars
 
 class CurvPath():
-    def __init__(self, path: str|Path, PROFILE: str = None, BOARD: str = None, DEVICE: str = None, BUILD_DIR: str = None, CURV_ROOT_DIR: str = None, cfgvalues: CfgValues = None, uninterpolated_value_info: tuple[str, dict[str, str]] = None):
+    def __init__(self, path: str|Path, PROFILE: str = None, BOARD: str = None, DEVICE: str = None, BUILD_DIR: str = None, CURV_ROOT_DIR: str = None, uninterpolated_value_info: tuple[str, dict[str, str]] = None):
         self.path_str = str(path)
         self.profile = PROFILE
         self.board = BOARD
         self.device = DEVICE
         self.build_dir = BUILD_DIR
         self.curv_root_dir = CURV_ROOT_DIR
-        self.cfgvalues = cfgvalues
         self._set_uninterpolated_value(uninterpolated_value_info)
         self._run_var_replacement()
 
@@ -78,15 +77,11 @@ class CurvPath():
         Replace all $(VAR_NAME) and ${VAR_NAME} patterns in the given string 
         with the value of the variable from this CurvPath object.
         """
-        replacement_vals = { 
-            'PROFILE': self.profile, 
-            'BOARD': self.board, 
+        replacement_vals = {
+            'PROFILE': self.profile,
+            'BOARD': self.board,
             'DEVICE': self.device,
-            'BUILD_DIR': str(self.build_dir) if self.build_dir is not None else None, 
+            'BUILD_DIR': str(self.build_dir) if self.build_dir is not None else None,
             'CURV_ROOT_DIR': str(self.curv_root_dir) if self.curv_root_dir is not None else None,
         }
-        if self.cfgvalues is not None:
-            for k, v in self.cfgvalues.items():
-                if v is not None:
-                    replacement_vals[k] = str(v)
         self.path_str = replace_vars(self.path_str, replacement_vals)
