@@ -15,7 +15,7 @@ import click
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
 from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
-    from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
+    from curvtools.cli.curvcfg.lib.curv_paths import CurvPaths
 from curvtools.cli.curvcfg.lib.globals.constants import PATHS_RAW_ENV_FILE_REL_PATH
 from curvtools.cli.curvcfg.lib.util.config_parsing import SchemaOracle
 from curvtools.cli.curvcfg.lib.util.config_parsing.parse_schema import SchemaScalarVar
@@ -138,7 +138,7 @@ def display_merged_toml_table(
         m = get_color_for_makefile_type(makefile_type)
         return m["open"] + s + m["close"]
 
-    from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
+    from curvtools.cli.curvcfg.lib.curv_paths import CurvPaths
     table_options = {}
     table_options["box"] = get_box(use_ascii_box)
     TitleWithSourceText = Text.assemble(

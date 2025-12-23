@@ -7,7 +7,7 @@ from curvtools.cli.curvcfg.lib.util.draw_tables import (
     display_merged_toml_table,
     display_profiles_table,
 )
-from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
+from curvtools.cli.curvcfg.lib.curv_paths import CurvPaths
 from pathlib import Path
 from curvtools.cli.curvcfg.lib.util.config_parsing import SchemaOracle, schema_oracle_from_merged_toml
 

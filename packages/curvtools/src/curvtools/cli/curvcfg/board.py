@@ -4,7 +4,7 @@ from typing import List, Optional
 from curvtools.cli.curvcfg.lib.curv_paths.curvcontext import CurvContext
 from curvtools.cli.curvcfg.cli_helpers.paramtypes import BoardResolvable, DeviceResolvable
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
-from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
+from curvtools.cli.curvcfg.lib.curv_paths import CurvPaths
 from curvtools.cli.curvcfg.cli_helpers.opts import FsPathType
 from curvtools.cli.curvcfg.lib.globals.console import console
 from curvtools.cli.curvcfg.lib.util.config_parsing.combine_merge_tomls import (

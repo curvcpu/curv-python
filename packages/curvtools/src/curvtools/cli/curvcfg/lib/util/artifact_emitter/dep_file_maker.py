@@ -1,7 +1,7 @@
 from curvpyutils.file_utils import open_write_iff_change
 from pathlib import Path
 from typing import Optional
-from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
+from curvtools.cli.curvcfg.lib.curv_paths import CurvPaths
 
 
 __all__ = ["emit_dep_file"]

@@ -4,7 +4,7 @@ from typing import Optional, Mapping, Any
 from curvtools.cli.curvcfg.lib.curv_paths.curvcontext import CurvContext
 from curvtools.cli.curvcfg.cli_helpers.paramtypes import ProfileResolvable
 from curvtools.cli.curvcfg.cli_helpers.opts.fs_path_opt import FsPathType
-from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
+from curvtools.cli.curvcfg.lib.curv_paths import CurvPaths
 from curvtools.cli.curvcfg.lib.globals.console import console
 from curvtools.cli.curvcfg.lib.util.artifact_emitter import emit_artifacts
 from curvtools.cli.curvcfg.lib.util.config_parsing import schema_oracle_from_merged_toml

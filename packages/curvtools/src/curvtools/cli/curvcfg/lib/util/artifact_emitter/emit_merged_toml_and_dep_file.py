@@ -1,7 +1,7 @@
 from __future__ import annotations
 from pathlib import Path
 from typing import Optional, Any
-from curvtools.cli.curvcfg.lib.globals.curvpaths import CurvPaths
+from curvtools.cli.curvcfg.lib.curv_paths import CurvPaths
 from curvtools.cli.curvcfg.lib.util.artifact_emitter import emit_dep_file
 import curvpyutils.tomlrw as tomlrw
 from curvpyutils.file_utils import open_write_iff_change
