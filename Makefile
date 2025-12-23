@@ -10,7 +10,7 @@ PACKAGES := packages/curv packages/curvtools packages/curvpyutils
 PKG_CURV := packages/curv
 PKG_CURVTOOLS := packages/curvtools
 PKG_CURVPYUTILS := packages/curvpyutils
-SCRIPT_WAIT_CI := scripts/wait_ci.py
+# SCRIPT_WAIT_CI is now installed via pipx as 'wait-ci'
 SCRIPT_SUBST := curv-subst
 SCRIPT_SUBST_OPTS := -f -1 -m
 SCRIPT_CHK_LATEST_VER := scripts/chk-latest-version.py
@@ -34,8 +34,20 @@ venv: $(VENVDIR)/bin/python
 $(VENVDIR)/bin/python:
 	$(UV) venv --seed
 
+.PHONY: install-wait-ci
+install-wait-ci:
+	@if command -v wait-ci >/dev/null 2>&1; then \
+		echo "🔄 wait-ci is already installed, upgrading..."; \
+		pipx upgrade wait-ci >/dev/null 2>&1 || true; \
+		echo "✓ wait-ci upgraded"; \
+	else \
+		echo "🔄 Installing wait-ci via pipx..."; \
+		pipx install wait-ci >/dev/null 2>&1 || true; \
+		echo "✓ wait-ci installed"; \
+	fi
+
 .PHONY: install-min
-install-min: venv
+install-min: venv install-wait-ci
 	@echo "🔄 Installing editable installs of workspace packages..."
 	@if $(UV) pip show -q $(notdir $(PKG_CURVPYUTILS)) >/dev/null 2>&1; then \
 		echo "✓ $(notdir $(PKG_CURVPYUTILS)) already installed"; \
@@ -101,6 +113,9 @@ unsetup-editable-installs:
 unsetup: unsetup-editable-installs clean
 	@$(UV) tool uninstall --all -q
 	@echo "✓ Removed CLI tools from uv tool environment"
+	@echo "🔄 Uninstalling wait-ci via pipx..."
+	@pipx uninstall wait-ci >/dev/null 2>&1 || true
+	@echo "✓ wait-ci uninstalled"
 
 
 .PHONY: build
@@ -303,7 +318,7 @@ publish: prepublish-checks fetch-latest-tags build test
 				 commit_msg="chore(release): prepare $$name for $$tag release"; \
 				 git commit --allow-empty -m "$$commit_msg" && git push $(REMOTE) HEAD; \
 				 echo "🔄 Waiting for CI to pass on '$$commit_msg'..."; \
-				 $(SCRIPT_WAIT_CI) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
+				 wait-ci || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
 			   } \
 			|| { echo "✓ Updated readme.md with new version numbers for $$tag release"; \
 				readme_commit_msg="chore(release): update readme.md to next version numbers before publishing $$tag release"; \
@@ -314,7 +329,7 @@ publish: prepublish-checks fetch-latest-tags build test
 				git commit --allow-empty -m "$$commit_msg" && git push $(REMOTE) HEAD; \
 				git push $(REMOTE) HEAD || { echo "❌ Failed to push commit; please do it manually"; exit 1; }; \
 				echo "🔄 Waiting for CI to pass on '$$commit_msg'..."; \
-				$(SCRIPT_WAIT_CI) || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
+				wait-ci || { echo "Error: CI failed on '$$commit_msg'"; exit 1; }; \
 				}; \
 	  \
 	  echo "🔥 Tagging $$name → $$tag"; \
@@ -325,7 +340,7 @@ publish: prepublish-checks fetch-latest-tags build test
 	echo "🔄 Tagged all packages and pushing to remote with CI waiting for success..."; \
 	git push $(REMOTE) --tags || { echo "Error: Failed to push tags"; exit 1; }; \
 	sleep 5; \
-	$(SCRIPT_WAIT_CI) || { echo "Error: CI failed on push of tags"; exit 1; }; \
+	wait-ci || { echo "Error: CI failed on push of tags"; exit 1; }; \
 	\
 	echo "🔄 Waiting for PyPI to update showing latest versions..."; \
 	wait_for_pypi_update() { \
