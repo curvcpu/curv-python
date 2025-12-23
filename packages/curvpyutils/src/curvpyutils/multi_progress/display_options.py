@@ -17,6 +17,7 @@ __all__ = [
     "SizeOptCustom",
     "StackupOpt",
     "Style",
+    "TopMessageOpt",
     "get_default_display_options",
 ]
 
@@ -124,7 +125,7 @@ class BarColors:
         )
 
 @dataclass(slots=True)
-class MessageLineOpt:
+class TopMessageOpt:
     message: Optional[str] = None
     message_style: Style | str | None = None
 
@@ -134,6 +135,16 @@ class MessageLineOpt:
     def resolved_style(self) -> Style:
         return _resolve_style(self.message_style)
 
+@dataclass(slots=True)
+class MessageLineOpt:
+    message: Optional[str] = None
+    message_style: Style | str | None = None
+
+    def is_unused(self) -> bool:
+        return self.message is None
+
+    def resolved_style(self) -> Style:
+        return _resolve_style(self.message_style)
 
 @dataclass(slots=True)
 class BoundingRectOpt:
@@ -154,6 +165,7 @@ class BoundingRectOpt:
 class DisplayOptions:
     BoundingRect: BoundingRectOpt = field(default_factory=BoundingRectOpt)
     Stackup: StackupOpt = StackupOpt.OVERALL_WORKERS_MESSAGE
+    TopMessage: TopMessageOpt = field(default_factory=TopMessageOpt)
     Message: MessageLineOpt = field(default_factory=MessageLineOpt)
     Size: Union[SizeOpt, SizeOptCustom] = SizeOpt.MEDIUM
     Transient: bool = False

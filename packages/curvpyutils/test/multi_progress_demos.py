@@ -29,6 +29,7 @@ from curvpyutils.multi_progress.display_options import (
     MessageLineOpt,
     SizeOpt,
     StackupOpt,
+    TopMessageOpt,
 )
 from curvpyutils.multi_progress.worker_progress_group import WorkerProgressGroup
 
@@ -88,7 +89,7 @@ def _summarize(
     return summary
 
 
-def demo1(
+def demo0(
     rng: random.Random,
     *,
     use_live: bool,
@@ -96,6 +97,7 @@ def demo1(
     capture: bool,
     width: int,
 ) -> str:
+    """Demo without TopMessage to verify spacing is correct when TopMessage=None."""
     display_options = DisplayOptions(
         BoundingRect=BoundingRectOpt("This is title", "green"),
         Stackup=StackupOpt.OVERALL_WORKERS_MESSAGE,
@@ -105,6 +107,67 @@ def demo1(
         OverallNameStr="Overall",
         OverallNameStrStyle=Style(color="white", bold=True),
         Message=MessageLineOpt("This is message line", Style(color="white", bold=True)),
+        Transient=False,
+    )
+    worker_group = WorkerProgressGroup(display_options=display_options)
+    for worker_id in range(3):
+        worker_group.add_worker(worker_id)
+    live_console = (
+        Console(
+            file=io.StringIO(),
+            force_terminal=True,
+            width=width,
+            color_system=None,
+        )
+        if capture
+        else None
+    )
+    iterations = _run_worker_group(
+        worker_group,
+        rng,
+        use_live=use_live,
+        step_delay=step_delay,
+        console=live_console,
+    )
+    summary = _summarize("demo0", worker_group, iterations)
+    if live_console is not None:
+        snapshot_console = Console(
+            force_terminal=True,
+            width=width,
+            color_system=None,
+        )
+        with snapshot_console.capture() as capture:
+            snapshot_console.print(worker_group.stacked_progress_table.get_progress_table())
+        rendered = capture.get().rstrip("\n")
+        return f"{rendered}\n{summary}" if rendered else summary
+    return summary
+
+
+def demo1(
+    rng: random.Random,
+    *,
+    use_live: bool,
+    step_delay: float,
+    capture: bool,
+    width: int,
+) -> str:
+    """Demo with TopMessage to verify centered top message displays correctly."""
+    display_options = DisplayOptions(
+        BoundingRect=BoundingRectOpt("This is title", "green"),
+        Stackup=StackupOpt.OVERALL_WORKERS_MESSAGE,
+        TopMessage=TopMessageOpt(
+            "This is centered top message. It is very, very long.  Extremely long,"
+            " in fact, much longer than you may have expected.  It's still going on!", 
+            Style(color="sky_blue1", bold=True)
+        ),
+        Size=SizeOpt.LARGE,
+        OverallBarColors=BarColors.green_white(),
+        WorkerBarColors=BarColors.green_white(),
+        OverallNameStr="Overall",
+        OverallNameStrStyle=Style(color="white", bold=True),
+        Message=MessageLineOpt(
+            "This is message line", 
+            Style(color="white", bold=True)),
         Transient=False,
     )
     worker_group = WorkerProgressGroup(display_options=display_options)
@@ -273,6 +336,7 @@ def main(argv: Iterable[str] | None = None) -> int:
     )
 
     outputs = [
+        demo0(rng, use_live=use_live, step_delay=step_delay, capture=capture, width=args.width),
         demo1(rng, use_live=use_live, step_delay=step_delay, capture=capture, width=args.width),
         demo2(rng, use_live=use_live, step_delay=step_delay, capture=capture, width=args.width),
         demo3(rng, use_live=use_live, step_delay=step_delay, capture=capture, width=args.width),

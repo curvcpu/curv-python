@@ -9,6 +9,7 @@ from .display_options import (
     SizeOptCustom,
     StackupOpt,
     Style,
+    TopMessageOpt,
     get_default_display_options,
 )
 from .stacked_progress_table import StackedProgressTable
@@ -23,6 +24,7 @@ __all__ = [
     "SizeOptCustom",
     "StackupOpt",
     "Style",
+    "TopMessageOpt",
     "StackedProgressTable",
     "WorkerProgressGroup",
     "get_default_display_options",

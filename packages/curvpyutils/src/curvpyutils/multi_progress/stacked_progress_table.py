@@ -19,6 +19,7 @@ from rich.table import Table
 from rich.text import Text
 from rich.align import Align
 from rich.table import Column
+from rich.constrain import Constrain
 
 from .display_options import DisplayOptions, SizeOpt, SizeOptCustom, StackupOpt
 
@@ -201,6 +202,10 @@ class StackedProgressTable:
         self.display_options.Message = message
         self.progress_table = self._build_progress_table()
 
+    def update_top_message(self, top_message: TopMessageOpt) -> None:
+        self.display_options.TopMessage = top_message
+        self.progress_table = self._build_progress_table()
+
     def update_bounding_rect(self, bounding_rect: BoundingRectOpt) -> None:
         self.display_options.BoundingRect = bounding_rect
         self.progress_table = self._build_progress_table()
@@ -214,6 +219,30 @@ class StackedProgressTable:
     def get_progress_table(self) -> Table:
         self.progress_table = self._build_progress_table()
         return self.progress_table
+
+    def _estimate_content_width(self) -> int | None:
+        """Estimate the width of progress bar content based on Size setting.
+        
+        This is used to constrain TopMessage width so it wraps at the same
+        width as the progress bars below it.
+        """
+        # Base extras: name column + spinner + percentage + padding
+        base_extra = 15
+        
+        match self.display_options.Size:
+            case SizeOpt.SMALL:
+                return 20 + base_extra  # job_bar width=20
+            case SizeOpt.MEDIUM:
+                return 40 + base_extra  # job_bar width=40
+            case SizeOpt.LARGE:
+                return 80 + base_extra  # job_bar width=80
+            case SizeOpt.FULL_SCREEN:
+                return None  # No constraint for full screen
+            case SizeOptCustom() as custom:
+                job_width = custom.job_bar_args.get("width") or 40
+                return job_width + base_extra
+            case _:
+                return None
 
     def _build_progress_table(self) -> Table:
         inner_table_args: dict[str, object] = {}
@@ -263,6 +292,45 @@ class StackedProgressTable:
                 inner_table_args["show_header"] = False
         else:
             raise ValueError(f"Unhandled stackup option: {stackup!r}")
+
+        # Handle TopMessage - display it above the highest element inside the bounding rect
+        if not self.display_options.TopMessage.is_unused():
+            top_message_text = Text(
+                self.display_options.TopMessage.message,
+                style=self.display_options.TopMessage.resolved_style()
+            )
+            # Constrain TopMessage width to match progress bar content width,
+            # then center the constrained block within the table cell
+            content_width = self._estimate_content_width()
+            if content_width is not None:
+                top_message_renderable = Align(
+                    Constrain(
+                        Align(top_message_text, align="center"),
+                        width=content_width
+                    ),
+                    align="center"
+                )
+            else:
+                top_message_renderable = Align(top_message_text, align="center")
+            
+            original_header = column_args.get("header")
+            if original_header is not None:
+                # Combine TopMessage and original header into a single header
+                # with a blank line between them
+                combined_header = Table.grid(expand=self.expand)
+                combined_header.add_column(justify="center")
+                combined_header.add_row(top_message_renderable)
+                combined_header.add_row(Text(""))  # blank line after TopMessage
+                combined_header.add_row(original_header)
+                column_args["header"] = combined_header
+            else:
+                # No original header, make TopMessage the header with blank line after
+                combined_header = Table.grid(expand=self.expand)
+                combined_header.add_column(justify="center")
+                combined_header.add_row(top_message_renderable)
+                combined_header.add_row(Text(""))  # blank line after TopMessage
+                column_args["header"] = combined_header
+                inner_table_args["show_header"] = True
 
         progress_table = Table.grid(expand=self.expand)
 
