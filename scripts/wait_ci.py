@@ -214,14 +214,16 @@ def parse_args() -> argparse.Namespace:
     print_out = mk_print_out_fn(args)
 
     # if they don't provide a GH_ACTION_RUN_ID, try to get it from the latest commit
-    if args.GH_ACTION_RUN_ID is None:
-        try:
-            args.GH_ACTION_RUN_ID = get_latest_commit_gh_run_id(args.timeout_ci_start, args.interval_ci_start)
-        except Exception as e:
-            print_out(f"Unable to get latest commit's Github Actions CI run ID:", severity=PrintSeverity.ERROR)
-            print_out(f"  {e}", severity=PrintSeverity.ERROR)
-            print_out(f"Hint: either provide a GH_ACTION_RUN_ID as a positional argument and/or make sure you actually pushed your last commit to Github", severity=PrintSeverity.ERROR)
-            sys.exit(1)
+    # (only relevant when NOT using a debug capture file, since run_id is extracted from the filename)
+    if args.debug_capture_file is None:
+        if args.GH_ACTION_RUN_ID is None:
+            try:
+                args.GH_ACTION_RUN_ID = get_latest_commit_gh_run_id(args.timeout_ci_start, args.interval_ci_start)
+            except Exception as e:
+                print_out(f"Unable to get latest commit's Github Actions CI run ID:", severity=PrintSeverity.ERROR)
+                print_out(f"  {e}", severity=PrintSeverity.ERROR)
+                print_out(f"Hint: either provide a GH_ACTION_RUN_ID as a positional argument and/or make sure you actually pushed your last commit to Github", severity=PrintSeverity.ERROR)
+                sys.exit(1)
     return args
 
 ################################################################################
