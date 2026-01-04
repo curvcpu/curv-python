@@ -24,8 +24,8 @@ class DefaultMapArgs:
     @curvpaths.setter
     def curvpaths(self, value: CurvPaths):
         self._curvpaths = value
-        self._merged_config_toml = self._curvpaths["DEFAULT_MERGED_CFGVARS_TOML_PATH"].to_str()
-        self._merged_board_toml = self._curvpaths["DEFAULT_MERGED_BOARD_TOML_PATH"].to_str()
+        self._merged_config_toml = self._curvpaths["MERGED_CFGVARS_TOML_PATH"].to_str()
+        self._merged_board_toml = self._curvpaths["MERGED_BOARD_TOML_PATH"].to_str()
         self._config_mk_dep = self._curvpaths["CONFIG_MK_D"].to_str()
         self._board_mk_dep = self._curvpaths["BOARD_MK_DEP"].to_str()
 
