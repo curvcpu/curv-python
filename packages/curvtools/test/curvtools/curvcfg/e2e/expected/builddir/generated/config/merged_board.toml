@@ -107,13 +107,13 @@ toml_path = "name"
 parse     = "array[object]"
 toml_path = "board.leds"
 
-[_schema.vars.BLD_FLASH_CHIP]
+[_schema.vars.BRD_FLASH_CHIP]
 artifacts = [
   "MK",
   "ENV",
 ]
 
-[_schema.vars.BLD_FLASH_CHIP.domain]
+[_schema.vars.BRD_FLASH_CHIP.domain]
 choices = [
   "w25q128jv",
   "w25q64jv",
@@ -122,34 +122,34 @@ choices = [
 ]
 default = "w25q128jv"
 
-[_schema.vars.BLD_FLASH_CHIP.src]
+[_schema.vars.BRD_FLASH_CHIP.src]
 parse     = "string"
 toml_path = "device.flash.chip"
 
-[_schema.vars.BLD_FLASH_SPI]
+[_schema.vars.BRD_FLASH_SPI]
 artifacts = [
   "MK",
   "ENV",
 ]
 
-[_schema.vars.BLD_FLASH_SPI.domain]
+[_schema.vars.BRD_FLASH_SPI.domain]
 choices = [
   1,
   4,
 ]
 default = 1
 
-[_schema.vars.BLD_FLASH_SPI.src]
+[_schema.vars.BRD_FLASH_SPI.src]
 parse     = "int"
 toml_path = "device.flash.spi"
 
-[_schema.vars.BLD_FPGA_CHIP]
+[_schema.vars.BRD_FPGA_CHIP]
 artifacts = [
   "MK",
   "ENV",
 ]
 
-[_schema.vars.BLD_FPGA_CHIP.domain]
+[_schema.vars.BRD_FPGA_CHIP.domain]
 choices = [
   "lfe5u-12f",
   "lfe5u-25f",
@@ -157,20 +157,20 @@ choices = [
   "lfe5u-85f",
 ]
 
-[_schema.vars.BLD_FPGA_CHIP.src]
+[_schema.vars.BRD_FPGA_CHIP.src]
 parse     = "string"
 toml_path = "device.fpga.chip"
 
-[_schema.vars.BLD_FPGA_CHIP_ID]
+[_schema.vars.BRD_FPGA_CHIP_ID]
 artifacts = [
   "MK",
   "ENV",
 ]
 
-[_schema.vars.BLD_FPGA_CHIP_ID.display]
+[_schema.vars.BRD_FPGA_CHIP_ID.display]
 mk = "0x{value:08x}"
 
-[_schema.vars.BLD_FPGA_CHIP_ID.domain]
+[_schema.vars.BRD_FPGA_CHIP_ID.domain]
 choices = [
   "0x21111043",
   "0x41111043",
@@ -178,33 +178,33 @@ choices = [
   "0x41113043",
 ]
 
-[_schema.vars.BLD_FPGA_CHIP_ID.src]
+[_schema.vars.BRD_FPGA_CHIP_ID.src]
 parse     = "int"
 toml_path = "device.fpga.chip_id"
 
-[_schema.vars.BLD_FPGA_PACKAGE]
+[_schema.vars.BRD_FPGA_PACKAGE]
 artifacts = [
   "MK",
   "ENV",
 ]
 
-[_schema.vars.BLD_FPGA_PACKAGE.domain]
+[_schema.vars.BRD_FPGA_PACKAGE.domain]
 choices = [
   "6bg381c",
 ]
 default = "6bg381c"
 
-[_schema.vars.BLD_FPGA_PACKAGE.src]
+[_schema.vars.BRD_FPGA_PACKAGE.src]
 parse     = "string"
 toml_path = "device.fpga.package"
 
-[_schema.vars.BLD_FPGA_SIZE]
+[_schema.vars.BRD_FPGA_SIZE]
 artifacts = [
   "MK",
   "ENV",
 ]
 
-[_schema.vars.BLD_FPGA_SIZE.domain]
+[_schema.vars.BRD_FPGA_SIZE.domain]
 choices = [
   12,
   25,
@@ -212,7 +212,7 @@ choices = [
   85,
 ]
 
-[_schema.vars.BLD_FPGA_SIZE.src]
+[_schema.vars.BRD_FPGA_SIZE.src]
 parse     = "int"
 toml_path = "device.fpga.size"
 

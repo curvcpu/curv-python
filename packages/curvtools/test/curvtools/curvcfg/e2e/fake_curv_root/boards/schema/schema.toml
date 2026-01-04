@@ -100,22 +100,22 @@ artifacts = ["SVH"]
 # FPGA configuration
 #
 
-[_schema.vars.BLD_FPGA_SIZE]
+[_schema.vars.BRD_FPGA_SIZE]
 src = { toml_path = "device.fpga.size", parse="int" }
 domain = { choices = [12, 25, 45, 85] }
 artifacts = ["MK", "ENV"]
 
-[_schema.vars.BLD_FPGA_PACKAGE]
+[_schema.vars.BRD_FPGA_PACKAGE]
 src = { toml_path = "device.fpga.package", parse="string" }
 domain = { choices = ["6bg381c"], default = "6bg381c" }
 artifacts = ["MK", "ENV"]
 
-[_schema.vars.BLD_FPGA_CHIP]
+[_schema.vars.BRD_FPGA_CHIP]
 src = { toml_path = "device.fpga.chip", parse="string" }
 domain = { choices = ["lfe5u-12f", "lfe5u-25f", "lfe5u-45f", "lfe5u-85f"] }
 artifacts = ["MK", "ENV"]
 
-[_schema.vars.BLD_FPGA_CHIP_ID]
+[_schema.vars.BRD_FPGA_CHIP_ID]
 src = { toml_path = "device.fpga.chip_id", parse="int" }
 domain = { choices = ["0x21111043", "0x41111043", "0x41112043", "0x41113043"] }
 display = { mk = "0x{value:08x}" }
