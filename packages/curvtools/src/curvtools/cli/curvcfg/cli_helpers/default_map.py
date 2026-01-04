@@ -27,7 +27,7 @@ class DefaultMapArgs:
         self._merged_config_toml = self._curvpaths["MERGED_CFGVARS_TOML_PATH"].to_str()
         self._merged_board_toml = self._curvpaths["MERGED_BOARD_TOML_PATH"].to_str()
         self._config_mk_dep = self._curvpaths["CONFIG_MK_D"].to_str()
-        self._board_mk_dep = self._curvpaths["BOARD_MK_DEP"].to_str()
+        self._board_mk_dep = self._curvpaths["BOARD_MK_D"].to_str()
 
     def to_default_map(self) -> Dict[str, Any]:
         """
