@@ -541,9 +541,20 @@ class SchemaScalarVar(SchemaBaseVar):
 
         return str(v)
 
-    def sv_display(self) -> str:
+    def sv_prefix_length(self) -> int:
+        """Return the length of 'sv_type + space + var_name' for alignment calculations."""
+        sv_type = self._display_sv.strip()
+        if not sv_type:
+            return 0
+        return len(sv_type) + 1 + len(self.var_name)
+
+    def sv_display(self, align_to: int = 0) -> str:
         """
         Return SystemVerilog localparam representation.
+
+        Args:
+            align_to: Target length for (type + space + name) to align '=' signs.
+                      If 0, no extra padding is added.
 
         Examples:
             display.sv = "logic [31:0]" ->
@@ -558,7 +569,12 @@ class SchemaScalarVar(SchemaBaseVar):
             return str(self._ensure_value())
 
         literal = self.sv_literal(for_macro=False)
-        return f"localparam {sv_type} {self.var_name} = {literal};"
+        
+        # Calculate padding to align '=' signs
+        current_len = len(sv_type) + 1 + len(self.var_name)
+        padding = max(0, align_to - current_len)
+        
+        return f"localparam {sv_type} {self.var_name}{' ' * padding} = {literal};"
 
     def mk_display(self, value: Any = None) -> str:
         """
